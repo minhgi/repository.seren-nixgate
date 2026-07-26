@@ -1,4 +1,4 @@
-"""Anime episode metadata enrichment — Simkl → AniZip → Jikan (MAL) → AniDB → Kitsu.
+"""Anime episode metadata enrichment — Simkl → AniZip → Tenrai (MAL) → AniDB → Kitsu.
 
 Fetches anime-specific episode titles, thumbnails, plots, air dates, and durations
 from multiple sources in a cascading fallback chain. First source that returns usable
@@ -8,7 +8,14 @@ This module is called from metadataHandler during episode list formatting.
 It overlays anime-specific data onto the standard TMDB/TVDB metadata, replacing
 generic "Episode 1" titles with actual anime episode titles and screenshots.
 
-Reference: Otaku Testing 5.2.81 uses the same Simkl → AniZip → Jikan fallback chain.
+Tenrai (api.tenrai.org) replaces Jikan (api.jikan.moe) as the MAL-backed source —
+Jikan's public API is being discontinued (brownout 2026-09-01, full shutdown
+2026-10-01). Tenrai's v1 schema is a verified drop-in match for Jikan v4's
+/anime/{id} and /anime/{id}/episodes shapes (same field names, same
+pagination.has_next_page/last_visible_page), so no parsing changes were needed.
+
+Reference: Otaku Testing 5.2.81 uses the same Simkl → AniZip → Jikan fallback chain
+(not yet migrated to Tenrai as of this writing).
 """
 
 import time
@@ -24,8 +31,8 @@ _SIMKL_BASE = 'https://api.simkl.com'
 # AniZip API
 _ANIZIP_BASE = 'https://api.ani.zip'
 
-# Jikan (MAL) API v4
-_JIKAN_BASE = 'https://api.jikan.moe/v4'
+# Tenrai (MAL-compatible, Jikan v4 schema) API — see module docstring
+_TENRAI_BASE = 'https://api.tenrai.org/v1'
 
 # AniDB HTTP API
 # Client name 'otakukodi' is registered with AniDB (shared with Otaku addon).
@@ -47,7 +54,7 @@ def get_episode_data(mal_id=None, anidb_id=None, simkl_id=None, kitsu_id=None,
     """Main entry point — fetch episode metadata using the cascading fallback chain.
 
     Checks SQLite cache first. On cache miss, tries each API source in order:
-    Simkl → AniZip → Jikan (MAL) → AniDB → Kitsu
+    Simkl → AniZip → Tenrai (MAL) → AniDB → Kitsu
 
     Args:
         mal_id: MyAnimeList ID
@@ -110,16 +117,16 @@ def get_episode_data(mal_id=None, anidb_id=None, simkl_id=None, kitsu_id=None,
             except Exception as e:
                 g.log(f"AnimeEpisodeMeta: AniZip failed (non-fatal): {e}", "debug")
 
-    # Source 3: Jikan (MAL)
+    # Source 3: Tenrai (MAL, Jikan-compatible)
     if not episodes and mal_id:
         try:
-            episodes = _fetch_jikan(mal_id, season)
+            episodes = _fetch_tenrai(mal_id, season)
             if episodes:
-                source_name = 'jikan'
-                g.log(f"AnimeEpisodeMeta: Jikan returned {len(episodes)} episodes "
+                source_name = 'tenrai'
+                g.log(f"AnimeEpisodeMeta: Tenrai returned {len(episodes)} episodes "
                       f"for mal_id={mal_id}", "info")
         except Exception as e:
-            g.log(f"AnimeEpisodeMeta: Jikan failed (non-fatal): {e}", "debug")
+            g.log(f"AnimeEpisodeMeta: Tenrai failed (non-fatal): {e}", "debug")
 
     # Source 4: AniDB (2s rate limit, XML parse)
     if not episodes and anidb_id:
@@ -292,14 +299,14 @@ def _fetch_anizip(lookup_id, id_type, season):
 
 
 # ═════════════════════════════════════════════════════════════════════════
-# Source 3: Jikan (MAL)
+# Source 3: Tenrai (MAL, Jikan-compatible)
 # ═════════════════════════════════════════════════════════════════════════
 
-def _fetch_jikan(mal_id, season):
-    """Fetch episode data from Jikan MAL API v4.
+def _fetch_tenrai(mal_id, season):
+    """Fetch episode data from Tenrai (Jikan v4-compatible MAL API).
 
-    Jikan is paginated (100 per page). Episodes have titles and some have plots.
-    Endpoint: GET /anime/{mal_id}/episodes?page={n}
+    Same schema as Jikan: paginated (100 per page), episodes have titles and
+    some have plots. Endpoint: GET /anime/{mal_id}/episodes?page={n}
     """
     episodes = {}
     page = 1
@@ -307,15 +314,15 @@ def _fetch_jikan(mal_id, season):
 
     while page <= max_pages:
         resp = requests.get(
-            f"{_JIKAN_BASE}/anime/{mal_id}/episodes",
+            f"{_TENRAI_BASE}/anime/{mal_id}/episodes",
             params={'page': page},
             timeout=_TIMEOUT,
         )
         if resp.status_code == 429:
-            # Jikan rate limit — wait and retry once
+            # Rate limit — wait and retry once
             time.sleep(1)
             resp = requests.get(
-                f"{_JIKAN_BASE}/anime/{mal_id}/episodes",
+                f"{_TENRAI_BASE}/anime/{mal_id}/episodes",
                 params={'page': page},
                 timeout=_TIMEOUT,
             )
@@ -328,14 +335,14 @@ def _fetch_jikan(mal_id, season):
             break
 
         for ep in ep_list:
-            ep_num = ep.get('mal_id')  # Jikan v4 uses mal_id as episode number
+            ep_num = ep.get('mal_id')  # Jikan/Tenrai use mal_id as episode number
             if not ep_num:
                 continue
 
             episodes[int(ep_num)] = {
                 'title': ep.get('title', '') or ep.get('title_romanji', '') or '',
                 'plot': ep.get('synopsis', '') or '',
-                'thumb': '',  # Jikan v4 episodes don't reliably have images
+                'thumb': '',  # episodes don't reliably have images
                 'airdate': ep.get('aired', '') or '',
                 'duration': 0,
             }

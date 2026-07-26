@@ -15,7 +15,10 @@ import requests
 from resources.lib.modules.globals import g
 
 ANILIST_URL = "https://graphql.anilist.co"
-JIKAN_URL = "https://api.jikan.moe/v4/anime"
+# Tenrai — Jikan v4-compatible MAL API. Jikan's own public API is being
+# discontinued (full shutdown 2026-10-01); Tenrai's /anime/{id} schema is a
+# verified drop-in match (same field names: title, title_english, title_synonyms).
+TENRAI_URL = "https://api.tenrai.org/v1/anime"
 
 # Session caches
 _title_cache = {}  # {anilist_id: [list of title variants]}
@@ -55,7 +58,7 @@ def get_enriched_aliases(anilist_id=None, mal_id=None, anidb_id=None):
     if anilist_id:
         raw_titles.update(_fetch_anilist_titles(anilist_id))
 
-    # MAL titles via Jikan
+    # MAL titles via Tenrai (Jikan-compatible)
     if mal_id:
         raw_titles.update(_fetch_mal_titles(mal_id))
 
@@ -130,10 +133,10 @@ def _fetch_anilist_titles(anilist_id):
 
 
 def _fetch_mal_titles(mal_id):
-    """Fetch title variants from MyAnimeList via Jikan API."""
+    """Fetch title variants from MyAnimeList via Tenrai (Jikan-compatible API)."""
     try:
         response = requests.get(
-            f"{JIKAN_URL}/{mal_id}",
+            f"{TENRAI_URL}/{mal_id}",
             timeout=5,
             headers={"User-Agent": "Seren"},
         )
@@ -156,7 +159,7 @@ def _fetch_mal_titles(mal_id):
 
         return titles
     except (requests.RequestException, ValueError, KeyError) as e:
-        g.log(f"MAL/Jikan title fetch error (id={mal_id}): {e}", "debug")
+        g.log(f"MAL/Tenrai title fetch error (id={mal_id}): {e}", "debug")
         return set()
 
 

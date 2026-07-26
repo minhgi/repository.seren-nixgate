@@ -69,7 +69,7 @@ _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 class Menus:
-    """MDBList-sourced menus (Recently Watched, In-Progress).
+    """MDBList-sourced menus (Recently Watched, In-Progress, Collection, Dropped Shows).
 
     Items are local mdblistSync.db (or, for in-progress, live sync/playback) rows
     keyed by tmdb_id. Each is resolved to a Trakt object via TraktAPI.search_by_tmdb_id
@@ -694,5 +694,96 @@ class Menus:
                 return
         lists = self.mdblist_api.get_json(f"lists/user/{quote(username, safe='')}") or []
         self._discover_results(lists, media_type)
+
+    # endregion
+
+    # region Collection / Dropped - live status-style menus, mirroring simklMenus.py's
+    # _status_movies/_status_shows: never written to mdblistSync.db (that table isn't
+    # read by bridgeSync.py at all today, but keeping every status-style menu live-fetch-
+    # only is the same deliberate choice simklMenus.py documents on its own class, and
+    # this stays consistent with it rather than introduce a second convention).
+
+    def _collection(self, media_type):
+        """Live MDBList sync/collection fetch for Collection Movies/Shows - resolved via
+        Trakt and rendered through list_builder, same as recent_movies()/list_items()
+        above, never written into mdblistSync.db.
+
+        Unlike list_items()'s /lists/{id}/items or dropped_shows()'s /sync/dropped below,
+        /sync/collection has no mediatype filter or path-suffix param anywhere in its spec
+        (mdblist.apib's Sync group - contrast /lists/{user}/{list}/items's documented
+        .../movie/, .../show/ suffixes): movies and shows share one offset/limit window
+        and one has_more flag. That's inferred from the response shape (a single
+        pagination block wrapping both arrays), not a documented guarantee - the spec
+        never states in prose that the two types share a cursor, only implies it
+        structurally.
+
+        Requests the documented max (limit=5000) rather than the 1000 default, then
+        slices the requested type's array client-side by page - same idiom as Simkl's
+        _status_movies/_status_shows (simklMenus.py), which have zero server pagination
+        at all and always slice a fully-fetched bucket client-side. A pathological
+        account with >5000 combined collected items, skewed so one type sorts entirely
+        outside the window, could still starve the other type on its last page or two -
+        a known limitation of the shared cursor, not fixed here.
+        """
+        response = self.mdblist_api.get_json("sync/collection", limit=5000, offset=0) or {}
+
+        entry_key = "movies" if media_type == "movie" else "shows"
+        object_key = "movie" if media_type == "movie" else "show"
+        tmdb_ids = []
+        for entry in response.get(entry_key) or []:
+            ids = (entry.get(object_key) or {}).get("ids") or {}
+            tmdb_id = ids.get("tmdb")
+            if tmdb_id is not None:
+                tmdb_ids.append(tmdb_id)
+
+        page_start = (g.PAGE - 1) * self.page_limit
+        page_end = g.PAGE * self.page_limit
+        has_more = len(tmdb_ids) > page_end
+        trakt_list = self._resolve(tmdb_ids[page_start:page_end], media_type)
+        if not trakt_list:
+            g.cancel_directory()
+            return
+        # Mirrors this addon's own Trakt Collection menus' asymmetry: my_movie_collection
+        # (movieMenus.py) doesn't override hide_watched, my_shows_collection (tvshowMenus.py)
+        # forces hide_watched=False - matched here per-type rather than picking one
+        # convention, since that's what the existing sibling menus already do.
+        if media_type == "movie":
+            self.list_builder.movie_menu_builder(trakt_list, force_next_page=has_more)
+        else:
+            self.list_builder.show_list_builder(trakt_list, hide_watched=False, force_next_page=has_more)
+
+    def collection_movies(self):
+        self._collection("movie")
+
+    def collection_shows(self):
+        self._collection("show")
+
+    def dropped_shows(self):
+        """Live MDBList sync/dropped fetch - shows only. The API's own POST rules state
+        "Shows only" (mdblist.apib's Dropped Shows section) and there is no dropped-movies
+        equivalent anywhere in the spec, unlike Simkl which has both.
+
+        Unlike _collection() above, /sync/dropped is single-type and paginates for real -
+        its own offset/limit/has_more, not inferred from response shape - so this uses
+        true server-side paging instead of fetch-then-slice. Two different pagination
+        idioms in one file is intentional, not an inconsistency to fix: each endpoint's
+        actual contract dictates which one applies.
+        """
+        offset = (g.PAGE - 1) * self.page_limit
+        response = self.mdblist_api.get_json("sync/dropped", offset=offset, limit=self.page_limit) or {}
+
+        tmdb_ids = []
+        for entry in response.get("shows") or []:
+            ids = (entry.get("show") or {}).get("ids") or {}
+            tmdb_id = ids.get("tmdb")
+            if tmdb_id is not None:
+                tmdb_ids.append(tmdb_id)
+
+        has_more = bool((response.get("pagination") or {}).get("has_more"))
+        trakt_list = self._resolve(tmdb_ids, "show")
+        if not trakt_list:
+            g.cancel_directory()
+            return
+        self.list_builder.show_list_builder(trakt_list, hide_watched=False, force_next_page=has_more)
 
     # endregion

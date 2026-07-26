@@ -166,12 +166,23 @@ _ROUTE_TABLE = {
     "mdblistTopLists":           _menu("resources.lib.gui.mdblistMenus", "top_lists", "mediatype"),
     "mdblistListSearch":         _menu("resources.lib.gui.mdblistMenus", "list_search", "action_args"),
     "mdblistUserLists":          _menu("resources.lib.gui.mdblistMenus", "user_lists", "action_args"),
+    "mdblistCollectionMovies":   _menu("resources.lib.gui.mdblistMenus", "collection_movies"),
+    "mdblistCollectionShows":    _menu("resources.lib.gui.mdblistMenus", "collection_shows"),
+    "mdblistDroppedShows":       _menu("resources.lib.gui.mdblistMenus", "dropped_shows"),
 
     # --- Simkl menus ---
     "simklRecentMovies":         _menu("resources.lib.gui.simklMenus", "recent_movies"),
     "simklRecentShows":          _menu("resources.lib.gui.simklMenus", "recent_shows"),
     "simklInProgressMovies":     _menu("resources.lib.gui.simklMenus", "in_progress_movies"),
     "simklInProgressEpisodes":   _menu("resources.lib.gui.simklMenus", "in_progress_episodes"),
+    "simklPlanToWatchMovies":    _menu("resources.lib.gui.simklMenus", "plan_to_watch_movies"),
+    "simklCompletedMovies":      _menu("resources.lib.gui.simklMenus", "completed_movies"),
+    "simklDroppedMovies":        _menu("resources.lib.gui.simklMenus", "dropped_movies"),
+    "simklWatchingShows":        _menu("resources.lib.gui.simklMenus", "watching_shows"),
+    "simklPlanToWatchShows":     _menu("resources.lib.gui.simklMenus", "plan_to_watch_shows"),
+    "simklHoldShows":            _menu("resources.lib.gui.simklMenus", "hold_shows"),
+    "simklCompletedShows":       _menu("resources.lib.gui.simklMenus", "completed_shows"),
+    "simklDroppedShows":         _menu("resources.lib.gui.simklMenus", "dropped_shows"),
 
     # --- Merge menus ---
     "mergeWatchedMovies":       _menu("resources.lib.gui.mergeMenus", "watched_movies"),

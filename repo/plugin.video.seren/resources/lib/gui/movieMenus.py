@@ -270,6 +270,12 @@ class Menus:
                 menu_item=g.create_icon_dict("movies_progress", g.ICONS_PATH),
             )
             g.add_directory_item(
+                g.get_language_string(31157),
+                action="mdblistCollectionMovies",
+                description=g.get_language_string(31158),
+                menu_item=g.create_icon_dict("movies_collected", g.ICONS_PATH),
+            )
+            g.add_directory_item(
                 g.get_language_string(30964),
                 action="mdblistRecentMovies",
                 description=g.get_language_string(30965),
@@ -295,6 +301,24 @@ class Menus:
                 action="simklInProgressMovies",
                 description=g.get_language_string(31110),
                 menu_item=g.create_icon_dict("movies_progress", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31141),
+                action="simklPlanToWatchMovies",
+                description=g.get_language_string(31142),
+                menu_item=g.create_icon_dict("movies_watched", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31143),
+                action="simklCompletedMovies",
+                description=g.get_language_string(31144),
+                menu_item=g.create_icon_dict("movies_watched", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31145),
+                action="simklDroppedMovies",
+                description=g.get_language_string(31146),
+                menu_item=g.create_icon_dict("movies_watched", g.ICONS_PATH),
             )
             g.add_directory_item(
                 g.get_language_string(31105),

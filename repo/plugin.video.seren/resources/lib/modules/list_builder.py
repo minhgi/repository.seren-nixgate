@@ -9,39 +9,6 @@ from resources.lib.database.trakt_sync import movies
 from resources.lib.database.trakt_sync import shows
 from resources.lib.modules.globals import g
 
-# L1 metadata cache — persists across plugin calls with reuselanguageinvoker.
-# Key: plugin URL string (action + page + params), Value: formatted list from DB.
-# Navigating back to a previously viewed list returns instantly from this cache
-# instead of re-running the 5-table SQL JOIN + metadata update.
-_L1_CACHE = {}
-_L1_CACHE_MAX = 30  # Max cached list results (roughly 30 pages × 20 items each)
-
-
-def _l1_key():
-    """Generate cache key from current request — uniquely identifies each list page."""
-    return f"{g.PATH}?{g.PARAM_STRING}"
-
-
-def _l1_get():
-    """Return cached list result or None."""
-    return _L1_CACHE.get(_l1_key())
-
-
-def _l1_set(result):
-    """Store list result in L1 cache, evicting oldest if over limit."""
-    if len(_L1_CACHE) >= _L1_CACHE_MAX:
-        # Remove the oldest entry (first inserted)
-        try:
-            _L1_CACHE.pop(next(iter(_L1_CACHE)))
-        except (StopIteration, RuntimeError):
-            pass
-    _L1_CACHE[_l1_key()] = result
-
-
-def clear_l1_cache():
-    """Clear the L1 metadata cache. Called when metadata settings change."""
-    _L1_CACHE.clear()
-
 
 class ListBuilder:
     """

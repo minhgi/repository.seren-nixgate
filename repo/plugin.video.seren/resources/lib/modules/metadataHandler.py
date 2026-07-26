@@ -208,7 +208,7 @@ class MetadataHandler:
         self._add_season_show_cast(result, season_cast, show_cast)
 
         # Anime episode metadata overlay — replaces generic TMDB titles/plots/thumbs
-        # with anime-specific data from Simkl/AniZip/Jikan/AniDB/Kitsu
+        # with anime-specific data from Simkl/AniZip/Tenrai/AniDB/Kitsu
         if result["info"].get("mediatype") == "episode":
             self._apply_anime_episode_meta(result, db_object)
 
@@ -988,7 +988,7 @@ class MetadataHandler:
         """Overlay anime-specific episode metadata onto the formatted result.
 
         Called from format_meta() for episode items only. Checks if the show is anime,
-        then fetches episode title/plot/thumb from the Simkl → AniZip → Jikan → AniDB → Kitsu
+        then fetches episode title/plot/thumb from the Simkl → AniZip → Tenrai → AniDB → Kitsu
         fallback chain (with SQLite caching). Overlays only non-empty fields — existing
         TMDB/TVDB data is preserved as fallback.
         """

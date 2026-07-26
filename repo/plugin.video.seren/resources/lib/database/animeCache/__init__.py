@@ -1,7 +1,7 @@
 """Anime metadata cache database.
 
 Caches anime episode metadata (titles, plots, thumbnails) fetched from external APIs
-(Simkl, AniZip, Jikan/MAL, AniDB, Kitsu) with a 30-day TTL. Also provides persistent
+(Simkl, AniZip, Tenrai/MAL, AniDB, Kitsu) with a 30-day TTL. Also provides persistent
 storage for anime ID mappings (replacing the session-level dict in anilist_mapping.py).
 
 Schema:

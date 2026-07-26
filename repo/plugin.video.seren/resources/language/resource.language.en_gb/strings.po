@@ -5509,3 +5509,91 @@ msgstr "MDBList: Item not found on MDBList, nothing removed"
 msgctxt "#31140"
 msgid "Cross-Service Sync Interval (Minutes)"
 msgstr "Cross-Service Sync Interval (Minutes)"
+
+msgctxt "#31141"
+msgid "Simkl - Plan to Watch Movies"
+msgstr "Simkl - Plan to Watch Movies"
+
+msgctxt "#31142"
+msgid "Movies on your Simkl Plan to Watch list"
+msgstr "Movies on your Simkl Plan to Watch list"
+
+msgctxt "#31143"
+msgid "Simkl - Completed Movies"
+msgstr "Simkl - Completed Movies"
+
+msgctxt "#31144"
+msgid "Movies marked Completed on Simkl"
+msgstr "Movies marked Completed on Simkl"
+
+msgctxt "#31145"
+msgid "Simkl - Dropped Movies"
+msgstr "Simkl - Dropped Movies"
+
+msgctxt "#31146"
+msgid "Movies marked Dropped on Simkl"
+msgstr "Movies marked Dropped on Simkl"
+
+msgctxt "#31147"
+msgid "Simkl - Watching Shows"
+msgstr "Simkl - Watching Shows"
+
+msgctxt "#31148"
+msgid "Shows on your Simkl Watching list"
+msgstr "Shows on your Simkl Watching list"
+
+msgctxt "#31149"
+msgid "Simkl - Plan to Watch Shows"
+msgstr "Simkl - Plan to Watch Shows"
+
+msgctxt "#31150"
+msgid "Shows on your Simkl Plan to Watch list"
+msgstr "Shows on your Simkl Plan to Watch list"
+
+msgctxt "#31151"
+msgid "Simkl - On Hold Shows"
+msgstr "Simkl - On Hold Shows"
+
+msgctxt "#31152"
+msgid "Shows on your Simkl Hold list"
+msgstr "Shows on your Simkl Hold list"
+
+msgctxt "#31153"
+msgid "Simkl - Completed Shows"
+msgstr "Simkl - Completed Shows"
+
+msgctxt "#31154"
+msgid "Shows marked Completed on Simkl"
+msgstr "Shows marked Completed on Simkl"
+
+msgctxt "#31155"
+msgid "Simkl - Dropped Shows"
+msgstr "Simkl - Dropped Shows"
+
+msgctxt "#31156"
+msgid "Shows marked Dropped on Simkl"
+msgstr "Shows marked Dropped on Simkl"
+
+msgctxt "#31157"
+msgid "MDBList - Collection Movies"
+msgstr "MDBList - Collection Movies"
+
+msgctxt "#31158"
+msgid "Movies in your MDBList collection"
+msgstr "Movies in your MDBList collection"
+
+msgctxt "#31159"
+msgid "MDBList - Collection Shows"
+msgstr "MDBList - Collection Shows"
+
+msgctxt "#31160"
+msgid "Shows in your MDBList collection"
+msgstr "Shows in your MDBList collection"
+
+msgctxt "#31161"
+msgid "MDBList - Dropped Shows"
+msgstr "MDBList - Dropped Shows"
+
+msgctxt "#31162"
+msgid "Shows marked Dropped on MDBList"
+msgstr "Shows marked Dropped on MDBList"

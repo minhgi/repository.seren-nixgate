@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.video.seren" version="3.3.250" name="Seren" provider-name="Nixgates">
+<addon id="plugin.video.seren" version="3.3.256" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -66,6 +66,15 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.3.256
+            [CHANGE] Anime episode titles, plots, and air dates now come from Tenrai instead of Jikan, whose public API is shutting down (brownout 2026-09-01, full shutdown 2026-10-01). Tenrai is a schema-compatible drop-in already used by Prism - no visible change in what's shown, same fallback order (Simkl > AniZip > Tenrai > AniDB > Kitsu).
+
+            Changelog 3.3.255
+            [FEATURE] MDBList: added Collection Movies, Collection Shows, and Dropped Shows menus (My Movies/My Shows), mirroring Simkl's status-bucket menus - live sync/collection and sync/dropped fetches, resolved via Trakt and rendered through the existing list pipeline, never written to mdblistSync.db. Dropped Shows has no movies-side equivalent - MDBList's API only supports dropped shows, not dropped movies.
+
+            Changelog 3.3.254
+            [CLEANUP] list_builder.py: removed an unused, never-invoked L1 list cache (_L1_CACHE/_l1_key/_l1_get/_l1_set/clear_l1_cache) - an orphaned duplicate of the real, active L1 list cache in trakt_sync/__init__.py (_LIST_CACHE/list_cache_get/list_cache_set), which remains untouched and is still what actually backs get_show_list/get_movie_list and the prefetch-next-page mechanism. No behavior change.
+
             Changelog 3.3.249
             [DOCS] Cross-Service Sync (Phase 7) bridge sync: no behavior change. 3.3.248's Simkl isolation recursion relies on sync/history being safe to re-post an already-succeeded item (unlike Trakt's additive play-log) - that claim was carried from a prior session without this session independently re-checking it. Now spec-confirmed directly (simkl.apib: "Already-completed items don't bump on subsequent POST /sync/history calls" absent allow_rewatch=yes, which this call never sets) and the code comment updated to cite it, instead of resting on the weaker not_found-awareness argument alone.
 

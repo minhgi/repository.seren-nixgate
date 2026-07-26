@@ -5,21 +5,30 @@ from resources.lib.modules.globals import g
 
 
 class Menus:
-    """Simkl-sourced menus (Recently Watched, In Progress).
+    """Simkl-sourced menus (Recently Watched, In Progress, and the per-status
+    browse entries - movies: Plan to Watch/Completed/Dropped; shows: Watching/Plan
+    to Watch/Hold/Completed/Dropped).
 
-    Items are local simklSync.db rows (movies/shows/bookmarks, built Phase 3) keyed by
-    tmdb_id. Each is resolved to a Trakt object via TraktAPI.search_by_tmdb_id (Trakt's
+    recent_movies/recent_shows/in_progress_* read local simklSync.db rows (built
+    Phase 3) keyed by tmdb_id. _status_movies()/_status_shows() instead call Simkl's
+    sync/all-items/{movies,shows}/{status} live, per menu-open - deliberately not
+    synced into simklSync.db, since that table's movies.watched=1 rows are read
+    directly by bridgeSync._read_simkl_watched_movies() for the cross-service push
+    (see _status_movies' own docstring; _status_shows() is lower-risk still, since
+    trakt_sync.shows has no watched/collected column at all to corrupt). Either way,
+    each item is resolved to a Trakt object via TraktAPI.search_by_tmdb_id (Trakt's
     ID lookup - no personal OAuth needed) before being handed to the existing,
     unmodified Trakt-native ListBuilder methods - identical reuse path to
-    mdblistMenus.py's Menus class. Unlike that file, there is no My Lists/Discover
-    section here: Simkl has no named-list concept (its "lists" are watch-status
-    buckets - watching/completed/hold/dropped/plantowatch - handled via the context
-    menu's status picker, not a browsable list-of-lists), so only the resolve/seed/
-    render subset is ported.
+    mdblistMenus.py's Menus class. Unlike that file, there is still no My Lists/
+    Discover section here: Simkl's "lists" are watch-status buckets, not named
+    lists - the per-status browse entries above are the closest equivalent Simkl
+    has to that concept.
     """
 
     def __init__(self):
         self.page_limit = g.get_int_setting("item.limit")
+        self.page_start = (g.PAGE - 1) * self.page_limit
+        self.page_end = g.PAGE * self.page_limit
 
     @cached_property
     def simkl_database(self):
@@ -32,6 +41,12 @@ class Menus:
         from resources.lib.indexers.trakt import TraktAPI
 
         return TraktAPI()
+
+    @cached_property
+    def simkl_api(self):
+        from resources.lib.indexers.simkl import SimklAPI
+
+        return SimklAPI()
 
     @cached_property
     def hidden_database(self):
@@ -161,3 +176,98 @@ class Menus:
             g.cancel_directory()
             return
         self.list_builder.mixed_episode_builder(episodes, no_paging=True)
+
+    def _status_movies(self, status):
+        """Live Simkl status-bucket fetch for My Movies (Plan to Watch/Completed/
+        Dropped) - resolves via Trakt and renders through list_builder same as
+        recent_movies()/in_progress_movies(), rather than writing into the local
+        simklSync.db movies table. That table's watched=1 rows are read directly by
+        bridgeSync._read_simkl_watched_movies() for the cross-service watched-movies
+        push - seeding plantowatch/dropped (i.e. unwatched) rows into it would risk
+        those being pushed to Trakt/MDBList as watched.
+
+        sync/all-items has no server-side pagination - one call always returns the
+        whole bucket - so the tmdb_id list is sliced to the current page *before*
+        the resolve step, bounding the Trakt-search cost to one page regardless of
+        bucket size (a Completed bucket can run into the hundreds).
+
+        force_next_page is passed explicitly (mirrors mdblistMenus.py's has_more
+        pattern) rather than left to list_builder's default len(list_items) >=
+        page_limit heuristic: that heuristic assumes the renderer receives at most
+        one page's worth of rows, but resolve() can silently drop tmdb_ids with no
+        Trakt match, so a full raw slice can render short. has_more instead reflects
+        whether unsliced candidates remain past this page, independent of how many
+        of this page's candidates actually resolved."""
+        page = self.simkl_api.get_json(f"sync/all-items/movies/{status}")
+        if page is None:
+            g.cancel_directory()
+            return
+
+        tmdb_ids = []
+        for entry in page.get("movies") or []:
+            ids = (entry.get("movie") or {}).get("ids") or {}
+            tmdb_id = ids.get("tmdb")
+            if tmdb_id is not None:
+                tmdb_ids.append(tmdb_id)
+
+        has_more = len(tmdb_ids) > self.page_end
+        trakt_list = self._resolve(tmdb_ids[self.page_start : self.page_end], "movie")
+        if not trakt_list:
+            g.cancel_directory()
+            return
+        self.list_builder.movie_menu_builder(trakt_list, hide_watched=False, force_next_page=has_more)
+
+    def plan_to_watch_movies(self):
+        self._status_movies("plantowatch")
+
+    def completed_movies(self):
+        self._status_movies("completed")
+
+    def dropped_movies(self):
+        self._status_movies("dropped")
+
+    def _status_shows(self, status):
+        """Show-side sibling of _status_movies - same live-fetch-then-resolve
+        rationale applies (see that method's docstring), and is in fact even lower-
+        risk here: insert_trakt_shows()'s upsert has no watched/collected column at
+        all (show-level watch state doesn't exist in trakt_sync.shows - it's tracked
+        per-episode elsewhere, untouched by this path), so there is no field this
+        could corrupt even in principle.
+
+        Also passes force_next_page explicitly - see _status_movies' docstring for
+        why the default page_limit heuristic isn't reliable here (confirmed live:
+        Completed Shows rendered 1 item but still showed a Next Page that led to a
+        genuinely empty page, before this was added)."""
+        page = self.simkl_api.get_json(f"sync/all-items/shows/{status}")
+        if page is None:
+            g.cancel_directory()
+            return
+
+        tmdb_ids = []
+        for entry in page.get("shows") or []:
+            ids = (entry.get("show") or {}).get("ids") or {}
+            tmdb_id = ids.get("tmdb")
+            if tmdb_id is not None:
+                tmdb_ids.append(tmdb_id)
+
+        has_more = len(tmdb_ids) > self.page_end
+        trakt_list = self._resolve(tmdb_ids[self.page_start : self.page_end], "show")
+        if not trakt_list:
+            g.cancel_directory()
+            return
+        self.list_builder.show_list_builder(trakt_list, hide_watched=False, force_next_page=has_more)
+
+    def watching_shows(self):
+        self._status_shows("watching")
+
+    def plan_to_watch_shows(self):
+        self._status_shows("plantowatch")
+
+    def hold_shows(self):
+        self._status_shows("hold")
+
+    def completed_shows(self):
+        self._status_shows("completed")
+
+    def dropped_shows(self):
+        self._status_shows("dropped")

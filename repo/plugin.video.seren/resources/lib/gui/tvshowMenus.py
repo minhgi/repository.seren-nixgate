@@ -317,6 +317,18 @@ class Menus:
                 menu_item=g.create_icon_dict("shows_progress", g.ICONS_PATH),
             )
             g.add_directory_item(
+                g.get_language_string(31159),
+                action="mdblistCollectionShows",
+                description=g.get_language_string(31160),
+                menu_item=g.create_icon_dict("shows_collected", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31161),
+                action="mdblistDroppedShows",
+                description=g.get_language_string(31162),
+                menu_item=g.create_icon_dict("shows_watched", g.ICONS_PATH),
+            )
+            g.add_directory_item(
                 g.get_language_string(30966),
                 action="mdblistRecentShows",
                 description=g.get_language_string(30967),
@@ -342,6 +354,36 @@ class Menus:
                 action="simklInProgressEpisodes",
                 description=g.get_language_string(31112),
                 menu_item=g.create_icon_dict("shows_progress", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31147),
+                action="simklWatchingShows",
+                description=g.get_language_string(31148),
+                menu_item=g.create_icon_dict("shows_progress", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31149),
+                action="simklPlanToWatchShows",
+                description=g.get_language_string(31150),
+                menu_item=g.create_icon_dict("shows_watched", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31151),
+                action="simklHoldShows",
+                description=g.get_language_string(31152),
+                menu_item=g.create_icon_dict("shows_collected", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31153),
+                action="simklCompletedShows",
+                description=g.get_language_string(31154),
+                menu_item=g.create_icon_dict("shows_watched", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31155),
+                action="simklDroppedShows",
+                description=g.get_language_string(31156),
+                menu_item=g.create_icon_dict("shows_watched", g.ICONS_PATH),
             )
             g.add_directory_item(
                 g.get_language_string(31107),
