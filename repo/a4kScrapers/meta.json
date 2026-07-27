@@ -1,0 +1,8 @@
+{
+  "author": "Unknown",
+  "version": "2.99.127",
+  "name": "a4kScrapers",
+  "update_directory": "https://raw.githubusercontent.com/minhgi/repository.seren-nixgate/main/repo/zips/a4kScrapers/",
+  "remote_meta": "https://raw.githubusercontent.com/minhgi/repository.seren-nixgate/main/repo/a4kScrapers/meta.json",
+  "seren_version": "0.1.37"
+}

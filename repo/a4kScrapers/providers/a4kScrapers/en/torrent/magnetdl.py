@@ -1,0 +1,13 @@
+# -*- coding: utf-8 -*-
+
+from providerModules.a4kScrapers import core
+
+class sources(core.DefaultSources):
+    def __init__(self, *args, **kwargs):
+        super(sources, self).__init__(__name__, *args, **kwargs)
+
+    def _search_request(self, url, query):
+        query_str = core.quote_plus(query)
+        search_url = url.base + url.search % query_str
+        headers = { 'Accept': 'text/html' }
+        return self._request.get(search_url, headers=headers)
