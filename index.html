@@ -1,2 +1,82 @@
 <!DOCTYPE html>
-<a href="repository.seren-nixgate-1.0.0.zip">repository.seren-nixgate-1.0.0.zip</a>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seren Nixgate — Kodi Repository</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    max-width: 40rem;
+    margin: 3rem auto;
+    padding: 0 1.25rem;
+    line-height: 1.55;
+    color: #1d1d1f;
+    background: #fff;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { color: #e6e6e6; background: #14161a; }
+    code { background: #24272d; }
+    .path { background: #1b2a20; border-color: #2e4a37; }
+    a { color: #6cb6ff; }
+  }
+  h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+  .tagline { color: #666; margin-top: 0; }
+  h2 { font-size: 1.05rem; margin-top: 2rem; }
+  code {
+    background: #f2f2f2;
+    padding: 0.1em 0.4em;
+    border-radius: 4px;
+    font-size: 0.92em;
+  }
+  .path {
+    display: block;
+    background: #eefbf1;
+    border: 1px solid #c6ebce;
+    border-radius: 6px;
+    padding: 0.6rem 0.8rem;
+    margin: 0.5rem 0 1.25rem;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 0.95em;
+    word-break: break-all;
+  }
+  ol { padding-left: 1.25rem; }
+  li { margin-bottom: 0.6rem; }
+  .note {
+    font-size: 0.9em;
+    color: #666;
+    border-left: 3px solid #ccc;
+    padding-left: 0.75rem;
+    margin-top: 1.5rem;
+  }
+  .download {
+    display: inline-block;
+    margin-top: 0.25rem;
+  }
+</style>
+</head>
+<body>
+
+<h1>Seren Nixgate</h1>
+<p class="tagline">Personal Kodi repository for a modified Seren build (Simkl + MDBList integration), plus its companion <code>context.seren</code> context-menu add-on.</p>
+
+<h2>1. Add this page as a source in Kodi</h2>
+<p>In Kodi: <strong>Settings → File Manager → Add source</strong>, then enter this exact path:</p>
+<span class="path">https://minhgi.github.io/repository.seren-nixgate/</span>
+<p>Give it any name (e.g. "Seren Nixgate") and select <strong>OK</strong>.</p>
+
+<h2>2. Install the repository add-on</h2>
+<p>In Kodi: <strong>Add-ons → Install from zip file</strong> → select the source you just added → select:</p>
+<p><a class="download" href="repository.seren-nixgate-1.0.0.zip">repository.seren-nixgate-1.0.0.zip</a></p>
+
+<h2>3. Install Seren from the repository</h2>
+<p>In Kodi: <strong>Add-ons → Install from repository → Seren Nixgate → Video add-ons → Seren</strong>.</p>
+<p><code>context.seren</code> installs automatically alongside it as a required dependency.</p>
+
+<p class="note">Whether the original (non-fork) Seren 3.0.62 needs to be installed first, as it does with the manual zip method, hasn't been tested via this repository path. If step 3 fails or behaves oddly, install Seren 3.0.62 from Kodi's official Add-on repository first, then retry step 3.</p>
+
+<p class="note">Once the repository add-on is installed, Kodi checks this repository for updates automatically — no need to repeat these steps for future Seren releases.</p>
+
+</body>
+</html>
