@@ -1,7 +1,0 @@
-{
-	"name" : "Orion",
-	"author" : "Orion",
-	"version" : "5.0.1",
-	"update_directory" : "https://raw.githubusercontent.com/minhgi/repository.seren-nixgate/main/repo/zips/Orion/",
-	"remote_meta" : "https://raw.githubusercontent.com/minhgi/repository.seren-nixgate/main/repo/Orion/meta.json"
-}

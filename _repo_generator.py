@@ -5,7 +5,6 @@
 """
 
 import hashlib
-import json
 import os
 import shutil
 import sys
@@ -158,8 +157,6 @@ class Generator:
             if self._generate_md5_file(addons_xml_path, md5_path):
                 print("Successfully updated {}".format(color_text(md5_path, 'yellow')))
 
-        self._generate_provider_packages()
-
     def _remove_binaries(self):
         """
         Removes any and all compiled Python files before operations.
@@ -240,56 +237,6 @@ class Generator:
             print(
                 "Zip created for {} ({}) - {}".format(
                     color_text(addon_id, 'cyan'),
-                    color_text(version, 'green'),
-                    color_text(size, 'yellow'),
-                )
-            )
-
-    def _create_provider_zip(self, folder, name, version):
-        """
-        Creates a zip for a meta.json-based provider package (Seren scraper /
-        newsgroup addons). Unlike _create_zip, this explicitly writes a
-        directory entry for the wrapper folder first, since Seren's provider
-        installer detects the wrapper by checking whether the zip's first
-        entry name ends with "/".
-        """
-        addon_folder = os.path.join(self.release_path, folder)
-        zip_folder = os.path.join(self.zips_path, name)
-        if not os.path.exists(zip_folder):
-            os.makedirs(zip_folder)
-
-        final_zip = os.path.join(zip_folder, "{0}-{1}.zip".format(name, version))
-        if not os.path.exists(final_zip):
-            zip = zipfile.ZipFile(final_zip, "w", compression=zipfile.ZIP_DEFLATED)
-
-            root_info = zipfile.ZipInfo(name + "/")
-            root_info.external_attr = 0o40755 << 16
-            zip.writestr(root_info, "")
-
-            for root, dirs, files in os.walk(addon_folder):
-                dirs[:] = sorted(d for d in dirs if d not in IGNORE)
-                files = [f for f in files if not any(f.startswith(i) for i in IGNORE)]
-
-                rel_dir = os.path.relpath(root, addon_folder)
-                arc_dir = name if rel_dir == "." else "{}/{}".format(
-                    name, rel_dir.replace(os.sep, "/")
-                )
-
-                if rel_dir != ".":
-                    dir_info = zipfile.ZipInfo(arc_dir + "/")
-                    dir_info.external_attr = 0o40755 << 16
-                    zip.writestr(dir_info, "")
-
-                for f in sorted(files):
-                    fullpath = os.path.join(root, f)
-                    archive_name = "{}/{}".format(arc_dir, f)
-                    zip.write(fullpath, archive_name, zipfile.ZIP_DEFLATED)
-
-            zip.close()
-            size = convert_bytes(os.path.getsize(final_zip))
-            print(
-                "Provider zip created for {} ({}) - {}".format(
-                    color_text(name, 'cyan'),
                     color_text(version, 'green'),
                     color_text(size, 'yellow'),
                 )
@@ -391,39 +338,6 @@ class Generator:
                 print(
                     "An error occurred updating {}!\n{}".format(
                         color_text(addons_xml_path, 'yellow'), color_text(e, 'red')
-                    )
-                )
-
-    def _generate_provider_packages(self):
-        """
-        Builds zips for meta.json-based provider packages (Seren scraper /
-        newsgroup addons). These have no addon.xml and are never listed in
-        addons.xml - Seren installs them directly via meta.json's
-        update_directory/remote_meta fields, not through Kodi's repository
-        browser, so they're handled as a separate pass from Kodi addons.
-        """
-        folders = [
-            i
-            for i in os.listdir(self.release_path)
-            if os.path.isdir(os.path.join(self.release_path, i))
-            and i != "zips"
-            and not i.startswith(".")
-            and os.path.exists(os.path.join(self.release_path, i, "meta.json"))
-            and not os.path.exists(os.path.join(self.release_path, i, "addon.xml"))
-        ]
-
-        for folder in folders:
-            try:
-                meta_path = os.path.join(self.release_path, folder, "meta.json")
-                with open(meta_path, "r", encoding="utf-8") as f:
-                    meta = json.load(f)
-                name = meta["name"]
-                version = meta["version"]
-                self._create_provider_zip(folder, name, version)
-            except Exception as e:
-                print(
-                    "Excluding provider {}: {}".format(
-                        color_text(folder, 'yellow'), color_text(e, 'red')
                     )
                 )
 
