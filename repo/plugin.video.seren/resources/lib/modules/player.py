@@ -50,7 +50,7 @@ class SerenPlayer(xbmc.Player):
         )
         self.pre_scrape_enabled = g.get_bool_setting("smartPlay.preScrape")
         self.playing_next_time = g.get_int_setting("playingnext.time")
-        self.trakt_enabled = bool(g.get_setting("trakt.auth", "")) and g.get_bool_setting("trakt.enabled", True)
+        self.trakt_enabled = bool(g.get_setting("trakt.auth", "")) and g.get_bool_setting("trakt.enabled", False)
         self._running_path = None
 
         # Flags

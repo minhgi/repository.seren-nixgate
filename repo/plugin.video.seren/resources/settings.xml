@@ -844,7 +844,7 @@
 			<group id="2" label="30129">
 				<setting id="trakt.enabled" type="boolean" label="30982" help="">
 					<level>0</level>
-					<default>true</default>
+					<default>false</default>
 					<control type="toggle"/>
 				</setting>
 				<setting id="trakt.username" type="string" label="30130" help="">
@@ -1175,7 +1175,7 @@
 			<group id="5" label="31137">
 				<setting id="crosssync.enabled" type="boolean" label="31138" help="">
 					<level>0</level>
-					<default>true</default>
+					<default>false</default>
 					<control type="toggle"/>
 				</setting>
 				<setting id="crosssync.intervalMinutes" type="integer" label="31140" help="" parent="crosssync.enabled">
@@ -2444,7 +2444,7 @@
 			<group id="3c" label="30814">
 				<setting id="scraping.orion" type="boolean" label="30815" help="30816">
 					<level>0</level>
-					<default>true</default>
+					<default>false</default>
 					<control type="toggle"/>
 				</setting>
 				<setting id="scraping.orion.torrent" type="boolean" label="30817">
@@ -2471,7 +2471,7 @@
 			<group id="3a" label="30811">
 				<setting id="scraping.easynews" type="boolean" label="30812" help="30813">
 					<level>0</level>
-					<default>true</default>
+					<default>false</default>
 					<control type="toggle"/>
 				</setting>
 			</group>
@@ -2566,7 +2566,7 @@
 				</setting>
 				<setting id="scraping.allTierSweep" type="boolean" label="30914" help="30915">
 					<level>0</level>
-					<default>false</default>
+					<default>true</default>
 					<control type="toggle"/>
 				</setting>
 				<setting id="general.providerPerformance" type="boolean" label="30730" help="30731">
@@ -2667,7 +2667,7 @@
 			<group id="3" label="30113">
 				<setting id="general.autocache" type="boolean" label="30114" help="">
 					<level>0</level>
-					<default>true</default>
+					<default>false</default>
 					<control type="toggle"/>
 				</setting>
 				<setting id="general.cacheAssistMode" type="integer" label="30115" help="" parent="general.autocache">
@@ -2710,7 +2710,7 @@
 			<group id="4" label="30121">
 				<setting id="preem.enabled" type="boolean" label="30122" help="">
 					<level>0</level>
-					<default>true</default>
+					<default>false</default>
 					<control type="toggle"/>
 				</setting>
 				<setting id="preem.movieres" type="integer" label="30123" help="" parent="preem.enabled">
@@ -2784,7 +2784,7 @@
 				</setting>
 				<setting id="preem.waitfor.cloudfiles" type="boolean" label="30616" help="" parent="preem.enabled">
 					<level>0</level>
-					<default>false</default>
+					<default>true</default>
 					<dependencies>
 						<dependency type="visible">
 							<condition operator="is" setting="preem.enabled">true</condition>
@@ -4474,7 +4474,7 @@
 				</setting>
 				<setting id="mf.service" type="integer" label="30918" help="30919">
 					<level>0</level>
-					<default>0</default>
+					<default>2</default>
 					<constraints>
 						<options>
 							<option label="30680">0</option>

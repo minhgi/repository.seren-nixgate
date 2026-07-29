@@ -17,7 +17,7 @@ class Menus:
             menu_item=g.create_icon_dict("shows", g.ICONS_PATH),
         )
         if (
-            (g.get_setting('trakt.auth') and g.get_bool_setting('trakt.enabled', True))
+            (g.get_setting('trakt.auth') and g.get_bool_setting('trakt.enabled', False))
             or (g.get_setting('mdblist.enabled') == "true" and g.get_setting('mdblist.apikey'))
             or (g.get_setting('simkl.auth') and g.get_bool_setting('simkl.enabled'))
         ):
@@ -148,7 +148,7 @@ class Menus:
             menu_item=g.create_icon_dict("settings", g.ICONS_PATH),
         )
         if (
-            (g.get_setting('trakt.auth') and g.get_bool_setting('trakt.enabled', True))
+            (g.get_setting('trakt.auth') and g.get_bool_setting('trakt.enabled', False))
             or (g.get_setting('mdblist.enabled') == "true" and g.get_setting('mdblist.apikey'))
             or (g.get_setting('simkl.auth') and g.get_bool_setting('simkl.enabled'))
         ):
@@ -262,7 +262,7 @@ class Menus:
             description=g.get_language_string(31125),
             menu_item=g.create_icon_dict("trakt_sync", g.ICONS_PATH),
         )
-        if g.get_setting('trakt.auth') and g.get_bool_setting('trakt.enabled', True):
+        if g.get_setting('trakt.auth') and g.get_bool_setting('trakt.enabled', False):
             g.add_directory_item(
                 g.get_language_string(31126),
                 action='rebuildTraktDatabase',

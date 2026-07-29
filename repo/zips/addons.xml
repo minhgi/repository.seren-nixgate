@@ -124,7 +124,7 @@
 			Rework for Seren 2.0
 		</news>
 	</extension>
-</addon><addon id="plugin.video.seren" version="3.3.256" name="Seren" provider-name="Nixgates">
+</addon><addon id="plugin.video.seren" version="3.3.260" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -191,6 +191,18 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.3.260
+            [CHANGE] "MediaFusion Cache Service" (Settings - Advanced - Optional API Keys) now defaults to Real-Debrid instead of Debrid-Link for new installs/profiles. If you've already set a MediaFusion token, this setting is already saved to your chosen service and nothing changes; the new default only reaches profiles that haven't configured MediaFusion yet, where it stays inert until you add a token and pick a service.
+
+            Changelog 3.3.259
+            [CHANGE] "Auto Caching Assistant" and "Preemptive Termination" (Settings - Scraping) now default to off for new installs/profiles; existing installs keep their saved setting once it's been read once (normally within the first run after upgrading). "Scrape All Tiers Within Time Budget" and Preemptive Termination's "Wait for cloud files" sub-setting now default to on - unlike the two above, these two are new behaviour for existing installs too, not just new ones, since neither is normally saved to your settings until you use the related feature; "Scrape All Tiers Within Time Budget" is unguarded by any other toggle, so it takes effect on your very next scrape. Preemptive Termination's other sub-settings ("Terminate if Cloud/Adaptive/Direct Sources are Found", resolution and time limits) and Auto Caching Assistant's own sub-settings (Cache Assist Mode, Cache Location) all keep their existing defaults, just hidden until you re-enable the relevant master toggle.
+
+            Changelog 3.3.258
+            [CHANGE] "Orion (Orionoid)" and "Easynews (a4kNewsgroups)" (Settings - Providers) now default to off for new installs/profiles. Existing installs keep your saved setting once it's been read once (normally within the first run after upgrading); only the narrow window before that first read now also defaults to off rather than on. Turn either back on the same way as before - Orion Torrents/Orion Hosters keep their own existing "on" default for once Orion itself is re-enabled.
+
+            Changelog 3.3.257
+            [CHANGE] "Enable Trakt" and "Enable Cross-Service Sync" (Settings - Watch Accounts) now default to off for new installs/profiles. Existing installs keep your saved setting once it's been read once (normally within the first run after upgrading); only the narrow window before that first read now also defaults to off rather than on. Turn either back on the same way as before; your saved Trakt login and sync data are untouched either way.
+
             Changelog 3.3.256
             [CHANGE] Anime episode titles, plots, and air dates now come from Tenrai instead of Jikan, whose public API is shutting down (brownout 2026-09-01, full shutdown 2026-10-01). Tenrai is a schema-compatible drop-in already used by Prism - no visible change in what's shown, same fallback order (Simkl &gt; AniZip &gt; Tenrai &gt; AniDB &gt; Kitsu).
 

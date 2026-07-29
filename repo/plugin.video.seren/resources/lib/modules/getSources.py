@@ -224,7 +224,7 @@ class Sources:
         self.source_sorter = SourceSorter(self.item_information)
 
         self.preem_enabled = g.get_bool_setting('preem.enabled')
-        self.preem_waitfor_cloudfiles = g.get_bool_setting("preem.waitfor.cloudfiles")
+        self.preem_waitfor_cloudfiles = g.get_bool_setting("preem.waitfor.cloudfiles", True)
         self.preem_cloudfiles = g.get_bool_setting('preem.cloudfiles')
         self.preem_adaptive_sources = g.get_bool_setting('preem.adaptiveSources')
         self.preem_direct_sources = g.get_bool_setting('preem.directSources')
@@ -571,7 +571,7 @@ class Sources:
 
         # ── All-Tier Sweep: divide timeout evenly so every tier gets a slice ──
         _MIN_TIER_SECONDS = 4  # hard floor — no tier gets less than this
-        all_tier_sweep = g.get_bool_setting('scraping.allTierSweep', False)
+        all_tier_sweep = g.get_bool_setting('scraping.allTierSweep', True)
         tier_deadlines = {}
         per_tier_budget = 0.0
         if all_tier_sweep:
@@ -820,7 +820,7 @@ class Sources:
             )
 
     def _create_direct_threads(self):
-        if not g.get_bool_setting("scraping.easynews", True):
+        if not g.get_bool_setting("scraping.easynews", False):
             g.log("Easynews provider disabled in settings, skipping direct providers", "info")
             self.direct_providers = []
             return
@@ -1349,7 +1349,7 @@ class Sources:
 
         hoster_providers, torrent_providers = self._remove_duplicate_providers(torrent_providers, hoster_providers)
 
-        orion_master = g.get_bool_setting("scraping.orion", True)
+        orion_master = g.get_bool_setting("scraping.orion", False)
         if not orion_master or not g.get_bool_setting("scraping.orion.torrent", True):
             if not orion_master:
                 g.log("Orion provider disabled in settings, skipping all Orion providers", "info")

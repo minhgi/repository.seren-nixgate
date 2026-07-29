@@ -122,7 +122,7 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
                 g.log("TraktSync: No Trakt auth present, no sync will occur", "warning")
                 return
 
-            if not g.get_bool_setting("trakt.enabled", True):
+            if not g.get_bool_setting("trakt.enabled", False):
                 g.log("TraktSync: Trakt is disabled, no sync will occur", "warning")
                 return
 

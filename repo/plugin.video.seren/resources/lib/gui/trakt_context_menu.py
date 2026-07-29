@@ -24,7 +24,7 @@ class TraktContextMenu:
         self.dialog_list = []
         options = {}
 
-        if scope == "trakt" and g.get_setting("trakt.auth") and g.get_bool_setting("trakt.enabled", True):
+        if scope == "trakt" and g.get_setting("trakt.auth") and g.get_bool_setting("trakt.enabled", False):
             self._handle_watched_options(item_information, item_type)
             self._handle_collected_options(item_information, trakt_id, display_type)
             self._handle_watchlist_options(item_type)

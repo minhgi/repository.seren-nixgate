@@ -87,7 +87,7 @@ class Menus:
             description=g.get_language_string(30417),
             menu_item=g.create_icon_dict("shows_recent", g.ICONS_PATH),
         )
-        if g.get_setting("trakt.auth") and g.get_bool_setting("trakt.enabled", True):
+        if g.get_setting("trakt.auth") and g.get_bool_setting("trakt.enabled", False):
             g.add_directory_item(
                 g.get_language_string(30005),
                 action="showsRecommended",
@@ -218,7 +218,7 @@ class Menus:
 
     @staticmethod
     def my_shows():
-        trakt_active = bool(g.get_setting('trakt.auth')) and g.get_bool_setting('trakt.enabled', True)
+        trakt_active = bool(g.get_setting('trakt.auth')) and g.get_bool_setting('trakt.enabled', False)
         mdblist_active = g.get_setting('mdblist.enabled') == "true" and bool(g.get_setting('mdblist.apikey'))
         simkl_active = bool(g.get_setting('simkl.auth')) and g.get_bool_setting('simkl.enabled')
         if sum((trakt_active, mdblist_active, simkl_active)) >= 2:
@@ -234,7 +234,7 @@ class Menus:
                 description=g.get_language_string(30980),
                 menu_item=g.create_icon_dict("shows_watched", g.ICONS_PATH),
             )
-        if g.get_setting('trakt.auth') and g.get_bool_setting('trakt.enabled', True):
+        if g.get_setting('trakt.auth') and g.get_bool_setting('trakt.enabled', False):
             g.add_directory_item(
                 g.get_language_string(30043),
                 action="onDeckShows",

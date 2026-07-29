@@ -71,7 +71,7 @@ class Menus:
 
     @staticmethod
     def _trakt_active():
-        return bool(g.get_setting('trakt.auth')) and g.get_bool_setting('trakt.enabled', True)
+        return bool(g.get_setting('trakt.auth')) and g.get_bool_setting('trakt.enabled', False)
 
     @staticmethod
     def _mdblist_active():

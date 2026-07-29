@@ -38,7 +38,7 @@ from resources.lib.modules.syncGateway import configured_providers
 
 
 def _enabled():
-    return g.get_bool_setting("crosssync.enabled", True)
+    return g.get_bool_setting("crosssync.enabled", False)
 
 
 def _targets(source):

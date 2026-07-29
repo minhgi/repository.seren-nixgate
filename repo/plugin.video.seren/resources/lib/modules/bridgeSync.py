@@ -81,7 +81,7 @@ _COLLECTION = "collection"
 
 
 def _enabled():
-    return g.get_bool_setting("crosssync.enabled", True) and len(configured_providers()) >= 2
+    return g.get_bool_setting("crosssync.enabled", False) and len(configured_providers()) >= 2
 
 
 def _interval_elapsed():
@@ -781,7 +781,7 @@ def _get_raw_json(api, url):
 
 
 def _push_progress(services):
-    if "trakt" not in services or not (g.get_setting("trakt.auth") and g.get_bool_setting("trakt.enabled", True)):
+    if "trakt" not in services or not (g.get_setting("trakt.auth") and g.get_bool_setting("trakt.enabled", False)):
         return
     try:
         from resources.lib.indexers.trakt import TraktAPI
