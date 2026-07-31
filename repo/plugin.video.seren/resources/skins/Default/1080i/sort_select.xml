@@ -1536,6 +1536,7 @@
 				<width>1032</width>
 				<height>80</height>
 				<onup>7000</onup>
+				<ondown>9000</ondown>
 				<onright>8888</onright>
 				<orientation>horizontal</orientation>
 				<focusposition>1</focusposition>
