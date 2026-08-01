@@ -1,11 +1,22 @@
+import threading
+import time
 from functools import cached_property
 from urllib import parse
 
 import xbmc
 import xbmcgui
 
+from resources.lib.common import tools
 from resources.lib.indexers.apibase import ApiBase
+from resources.lib.modules.exceptions import RanOnceAlready
+from resources.lib.modules.global_lock import GlobalLock
 from resources.lib.modules.globals import g
+
+# Registered at mdblist.com/developer/ for the Seren application itself
+# (public OAuth client - device-code and refresh grants only, no
+# client_secret involved). Overridable via the mdblist.clientid setting,
+# mirroring trakt.clientid.
+MDBLIST_CLIENT_ID = "J8KrAgKjNIFGXvK1f9QZUuHsXmTb25d6KBnuVOLX"
 
 
 class MDBListAPI(ApiBase):
@@ -14,12 +25,17 @@ class MDBListAPI(ApiBase):
     """
 
     ApiUrl = "https://api.mdblist.com/"
+    OAuthUrl = "https://api.mdblist.com/oauth/"
 
     username_setting_key = "mdblist.username"
     is_supporter_setting_key = "mdblist.is_supporter"
 
     def __init__(self):
         self.api_key = None
+        self.client_id = None
+        self.access_token = None
+        self.refresh_token = None
+        self.token_expires = 0.0
         self.username = None
         self._load_settings()
 
@@ -59,49 +75,235 @@ class MDBListAPI(ApiBase):
     # region Auth
     def authorize(self):
         """
-        Prompts for the user's personal MDBList API key, validates it against GET /user
-        and stores the key + linked username if valid
+        Performs OAuth device-code authorization with MDBList: shows a
+        scannable QR code alongside the verification URL + code (also
+        copied to clipboard), polls until the user approves on another
+        device, then stores the resulting access/refresh tokens
         :return: None
         """
-        api_key = xbmcgui.Dialog().input(g.get_language_string(30948), type=xbmcgui.INPUT_ALPHANUM)
-        if not api_key:
+        self.username = None
+        response = self._oauth_post(
+            "device-authorization/", {"client_id": self.client_id, "scope": "read write"}
+        )
+        if response is None or not response.ok:
+            xbmcgui.Dialog().ok(g.ADDON_NAME, g.get_language_string(31163))
+            return
+        try:
+            device_data = response.json()
+            device_code = device_data["device_code"]
+            user_code = device_data["user_code"]
+            verification_url = device_data.get("verification_uri", "https://mdblist.com/oauth/device/")
+            interval = int(device_data.get("interval", 5))
+            expiry = int(device_data.get("expires_in", 300))
+        except (KeyError, ValueError):
+            xbmcgui.Dialog().ok(g.ADDON_NAME, g.get_language_string(31163))
             return
 
-        self.api_key = api_key
-        self.username = None
+        tools.copy2clip(user_code)
+        qr_image = tools.make_qr(verification_url, "mdblist_qr.png")
+
+        from resources.lib.gui.windows.qr_auth_window import QRAuthWindow
+
+        window = QRAuthWindow("qr_auth_window.xml", g.ADDON_PATH)
+        window.set_title(g.get_language_string(30948))
+        window.set_qr_image(qr_image)
+        window.set_details(
+            g.get_language_string(30018).format(verification_url),
+            g.get_language_string(30019).format(user_code),
+        )
+        window_thread = threading.Thread(target=window.doModal)
+        window_thread.start()
+
+        failed = False
+        token_ttl = expiry
+        try:
+            while (
+                not failed
+                and self.username is None
+                and token_ttl > 0
+                and not window.canceled_by_user
+            ):
+                xbmc.sleep(1000)
+                if token_ttl % interval == 0:
+                    failed = self._auth_poll(device_code)
+                minutes, seconds = divmod(max(token_ttl, 0), 60)
+                window.set_status(f"{minutes:02d}:{seconds:02d}")
+                token_ttl -= 1
+        finally:
+            canceled = window.canceled_by_user
+            window.close()
+            window_thread.join(5)
+            del window
+
+        if self.username:
+            xbmcgui.Dialog().ok(g.ADDON_NAME, g.get_language_string(30952))
+            xbmc.executebuiltin(f'RunPlugin("{g.BASE_URL}?action=syncMDBListActivities")')
+        elif not canceled:
+            xbmcgui.Dialog().ok(g.ADDON_NAME, g.get_language_string(31163))
+
+    def _auth_poll(self, device_code):
+        """
+        Polls the token endpoint once. Returns True if polling should stop
+        (success or unrecoverable failure), False to keep waiting.
+        """
+        response = self._oauth_post(
+            "token/",
+            {
+                "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+                "device_code": device_code,
+                "client_id": self.client_id,
+            },
+        )
+        if response is None:
+            return True
+        if response.status_code == 200:
+            return self._auth_success(response)
+        try:
+            error = response.json().get("error")
+        except ValueError:
+            error = None
+        if response.status_code == 404 or error in ("expired_token", "access_denied"):
+            return True
+        if error == "slow_down":
+            xbmc.sleep(5 * 1000)
+        elif response.status_code == 429:
+            xbmc.sleep(1 * 1000)
+        return False
+
+    def _auth_success(self, response):
+        self._save_oauth_settings(response.json())
         username = self.get_username()
         if not username:
-            self.api_key = None
-            xbmcgui.Dialog().ok(g.ADDON_NAME, g.get_language_string(30951))
-            return
-
-        g.set_setting("mdblist.apikey", api_key)
+            return True
         self.username = username
         g.set_setting(self.username_setting_key, username)
-        xbmcgui.Dialog().ok(g.ADDON_NAME, g.get_language_string(30952))
-        xbmc.executebuiltin(f'RunPlugin("{g.BASE_URL}?action=syncMDBListActivities")')
+        return False
+
+    def try_refresh_token(self, force=False):
+        """
+        Attempts to refresh the current MDBList OAuth token
+        :param force: Set to True to force refresh regardless of cached expiry
+        :return: True if a usable access token is available after this call
+        """
+        if not self.refresh_token:
+            return False
+        if not force and self.token_expires > float(time.time()):
+            return True
+        try:
+            with GlobalLock(self.__class__.__name__, True, self.access_token):
+                g.log("MDBList Token requires refreshing...")
+                response = self._oauth_post(
+                    "token/",
+                    {
+                        "grant_type": "refresh_token",
+                        "refresh_token": self.refresh_token,
+                        "client_id": self.client_id,
+                    },
+                )
+                if response is not None and response.status_code == 200:
+                    self._save_oauth_settings(response.json())
+                    g.log("Refreshed MDBList Token")
+                    return True
+                g.log("MDBList token refresh failed, clearing auth", "error")
+                self._clear_auth_settings()
+                xbmcgui.Dialog().notification(g.ADDON_NAME, g.get_language_string(31163))
+                return False
+        except RanOnceAlready:
+            self._load_settings()
+            return bool(self.access_token)
 
     def revoke_auth(self):
         """
-        Clears the stored MDBList API key and linked username
+        Clears all stored MDBList authorization state (typed API key and/or OAuth tokens)
         :return:
         """
+        self._clear_auth_settings()
+        xbmcgui.Dialog().ok(g.ADDON_NAME, g.get_language_string(30950))
+
+    def _clear_auth_settings(self):
         g.clear_setting("mdblist.apikey")
+        g.clear_setting("mdblist.auth")
+        g.clear_setting("mdblist.refresh")
+        g.clear_setting("mdblist.expires")
         g.clear_setting(self.username_setting_key)
         g.clear_setting(self.is_supporter_setting_key)
         self.api_key = None
+        self.access_token = None
+        self.refresh_token = None
+        self.token_expires = 0.0
         self.username = None
-        xbmcgui.Dialog().ok(g.ADDON_NAME, g.get_language_string(30950))
+
+    def _save_oauth_settings(self, response):
+        if "access_token" in response:
+            g.set_setting("mdblist.auth", response["access_token"])
+            self.access_token = response["access_token"]
+        if "refresh_token" in response:
+            g.set_setting("mdblist.refresh", response["refresh_token"])
+            self.refresh_token = response["refresh_token"]
+        if "expires_in" in response:
+            expires_at = time.time() + response["expires_in"]
+            g.set_setting("mdblist.expires", str(int(expires_at)))
+            self.token_expires = expires_at
 
     def _load_settings(self):
         self.api_key = g.get_setting("mdblist.apikey") or None
+        self.client_id = g.get_setting("mdblist.clientid", MDBLIST_CLIENT_ID)
+        self.access_token = g.get_setting("mdblist.auth") or None
+        self.refresh_token = g.get_setting("mdblist.refresh") or None
+        self.token_expires = g.get_float_setting("mdblist.expires")
         self.username = g.get_setting(self.username_setting_key) or None
 
     # endregion
 
-    @staticmethod
-    def _get_headers():
-        return {"Content-Type": "application/json", "User-Agent": g.USER_AGENT}
+    def _oauth_post(self, url, data):
+        """
+        POSTs form-encoded data to an MDBList OAuth endpoint. MDBList's
+        OAuth endpoints reject JSON bodies outright (confirmed live against
+        the real API: "Content-Type must be application/x-www-form-urlencoded"),
+        so this deliberately bypasses post()/post_json(), which send JSON
+        for the regular REST API.
+        :return: request response, or None on failure
+        """
+        try:
+            return self.session.post(
+                parse.urljoin(self.OAuthUrl, url),
+                data=data,
+                headers={"User-Agent": g.USER_AGENT},
+                timeout=20,
+            )
+        except Exception as e:
+            g.log(f"Failed to contact MDBList OAuth endpoint: {e}", "error")
+            return None
+
+    def _get_headers(self):
+        headers = {"Content-Type": "application/json", "User-Agent": g.USER_AGENT}
+        if self.access_token:
+            headers["Authorization"] = f"Bearer {self.access_token}"
+        return headers
+
+    def _request(self, method, url, params=None, data=None, timeout=10):
+        """
+        Shared verb dispatcher: sends Authorization: Bearer when an OAuth
+        token is held, otherwise falls back to the legacy apikey= query
+        param, so upgrading users with a saved typed key keep working
+        until they choose to re-authorize. On a 401 with a live OAuth
+        token, tries one token refresh and retries the request once.
+        """
+        params = dict(params or {})
+        if not self.access_token:
+            params.setdefault("apikey", self.api_key)
+        kwargs = {"params": params, "headers": self._get_headers(), "timeout": timeout}
+        if data is not None:
+            kwargs["json"] = data
+        try:
+            response = getattr(self.session, method)(parse.urljoin(self.ApiUrl, url), **kwargs)
+            if response.status_code == 401 and self.access_token and self.try_refresh_token(force=True):
+                kwargs["headers"] = self._get_headers()
+                response = getattr(self.session, method)(parse.urljoin(self.ApiUrl, url), **kwargs)
+            return response
+        except Exception as e:
+            g.log(f"Failed to contact MDBList: {e}", "error")
+            return None
 
     def get(self, url, **params):
         """
@@ -111,13 +313,7 @@ class MDBListAPI(ApiBase):
         :return: request response
         """
         timeout = params.pop("timeout", 10)
-        params.setdefault("apikey", self.api_key)
-        return self.session.get(
-            parse.urljoin(self.ApiUrl, url),
-            params=params,
-            headers=self._get_headers(),
-            timeout=timeout,
-        )
+        return self._request("get", url, params=params, timeout=timeout)
 
     def get_json(self, url, **params):
         """
@@ -147,18 +343,7 @@ class MDBListAPI(ApiBase):
         :return: request response, or None on failure
         """
         timeout = params.pop("timeout", 10)
-        params.setdefault("apikey", self.api_key)
-        try:
-            return self.session.post(
-                parse.urljoin(self.ApiUrl, url),
-                params=params,
-                json=data,
-                headers=self._get_headers(),
-                timeout=timeout,
-            )
-        except Exception as e:
-            g.log(f"Failed to contact MDBList: {e}", "error")
-            return None
+        return self._request("post", url, params=params, data=data, timeout=timeout)
 
     def post_json(self, url, data, **params):
         """
@@ -185,18 +370,7 @@ class MDBListAPI(ApiBase):
         :return: request response, or None on failure
         """
         timeout = params.pop("timeout", 10)
-        params.setdefault("apikey", self.api_key)
-        try:
-            return self.session.put(
-                parse.urljoin(self.ApiUrl, url),
-                params=params,
-                json=data,
-                headers=self._get_headers(),
-                timeout=timeout,
-            )
-        except Exception as e:
-            g.log(f"Failed to contact MDBList: {e}", "error")
-            return None
+        return self._request("put", url, params=params, data=data, timeout=timeout)
 
     def delete(self, url, **params):
         """
@@ -206,22 +380,12 @@ class MDBListAPI(ApiBase):
         :return: request response, or None on failure
         """
         timeout = params.pop("timeout", 10)
-        params.setdefault("apikey", self.api_key)
-        try:
-            return self.session.delete(
-                parse.urljoin(self.ApiUrl, url),
-                params=params,
-                headers=self._get_headers(),
-                timeout=timeout,
-            )
-        except Exception as e:
-            g.log(f"Failed to contact MDBList: {e}", "error")
-            return None
+        return self._request("delete", url, params=params, timeout=timeout)
 
     def get_username(self):
         """
-        Fetch the username linked to the currently held API key
-        :return: string username, or None if the key is invalid/unreachable
+        Fetch the username linked to the currently held credentials (typed API key or OAuth token)
+        :return: string username, or None if invalid/unreachable
         """
         user_details = self.get_json("user")
         if not user_details:

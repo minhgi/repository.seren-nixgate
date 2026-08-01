@@ -106,6 +106,8 @@ _ROUTE_TABLE = {
     "providerTools":        _menu("resources.lib.gui.homeMenu", "provider_menu"),
     "syncTools":            _menu("resources.lib.gui.homeMenu", "sync_tools"),
     "clearCacheTool":       _menu("resources.lib.gui.homeMenu", "clear_cache_tool"),
+    "settingsTools":        _menu("resources.lib.gui.homeMenu", "settings_tools"),
+    "showChangelog":        _func("resources.lib.modules.changelog", "show_changelog"),
     "testWindows":          _menu("resources.lib.gui.homeMenu", "test_windows"),
 
     # --- Debrid services menus ---
@@ -1416,10 +1418,10 @@ def dispatch(params):
 
         DebridLink().account_info_to_dialog()
 
-    elif action == "connectOffCloud":
+    elif action == "authOffcloud":
         from resources.lib.debrid.offcloud import OffCloud
 
-        OffCloud().store_user_info()
+        OffCloud().authorize()
         g.open_addon_settings(3, 39)
 
     elif action == "ocAccountInfo":

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.video.seren" version="3.3.262" name="Seren" provider-name="Nixgates">
+<addon id="plugin.video.seren" version="3.3.269" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -66,6 +66,28 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.3.269
+            [CHANGE] Tools menu: consolidated Backup Settings, Restore Settings, and Wipe Addon Data (previously 3 separate entries) into one "Backup and Reset" folder. Reordered the menu so Download Manager and Sync Tools now sit right under Premium Services.
+
+            Changelog 3.3.268
+            [NEW] Tools menu: added a "Changelog" entry that displays Seren's version history and recent changes, without needing to open the Kodi Add-on browser.
+
+            Changelog 3.3.267
+            [REMOVE] TorBox: removed the "Enable TorBox Usenet Search" scraper. TorBox is discontinuing its separate usenet search API (search-api.torbox.app), so results would silently disappear or error going forward. This only affects finding new NZB sources through the search toggle - existing TorBox usenet functionality (browsing/adding/deleting downloads in My Files, resolving usenet items found via Cloud Scrapers) is unaffected and still works via TorBox's regular API.
+
+            Changelog 3.3.266
+            [NEW] Real-Debrid, Premiumize, Debrid-Link, AllDebrid, Trakt, and Simkl device-code authorization now shows the same scannable QR code (plus URL/code, also copied to clipboard) already used by MDBList/TorBox/Offcloud, replacing the old text-only progress dialog. Auth itself is unchanged - this only changes how the code is displayed.
+            [FIX] Trakt: canceling the auth window (or a rare timeout with no successful poll) could previously show a false "Successfully authenticated" message and trigger an unnecessary account sync. Now only fires on an actual successful login, matching Simkl's existing behavior.
+
+            Changelog 3.3.265
+            [NEW] Offcloud: added QR-code/device-code authorization (Settings - Debrid Accounts - Offcloud - Authorize Offcloud...), alongside the existing typed-API-key entry. Shows a scannable QR code alongside the verification URL and code (also copied to clipboard) - scan with a phone or visit the link on any device, approve, and Seren picks it up automatically. The API key field stays available for manual entry, and Account Info still confirms a typed key works.
+
+            Changelog 3.3.264
+            [NEW] TorBox: added QR-code/device-code authorization (Settings - Debrid Accounts - TorBox - Authorize TorBox...), replacing the typed-API-token flow with the same OAuth device-code pattern used by MDBList/Trakt/Simkl. Shows a scannable QR code alongside the verification URL and code (also copied to clipboard) - scan with a phone or visit the link on any device, approve, and Seren picks it up automatically.
+
+            Changelog 3.3.263
+            [NEW] MDBList: added QR-code/device-code authorization (Settings - Watch Accounts - MDBList - Authorize MDBList...), replacing the typed-API-key flow with the same OAuth device-code pattern already used by Trakt/Simkl. Shows a scannable QR code alongside the verification URL and code (also copied to clipboard) - scan with a phone or visit the link on any device, approve, and Seren picks it up automatically. Existing typed API keys keep working until you choose to re-authorize; access tokens auto-refresh in the background.
+
             Changelog 3.3.262
             [FIX] Corrected an invalid character in 3.3.261's changelog text that broke the addon's manifest file (addon.xml), which could have prevented the addon from installing or updating properly for some users. No functional code changed.
 

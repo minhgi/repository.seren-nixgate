@@ -81,6 +81,30 @@ def copy2clip(txt):
             log(f"Failure to copy to clipboard, \n{e}", "error")
 
 
+def make_qr(data, filename="qr.png"):
+    """
+    Generates a QR code PNG encoding data, saved to Seren's userdata path
+    :param data: Text/URL to encode
+    :type data: str
+    :param filename: Destination filename within the userdata folder
+    :type filename: str
+    :return: Saved file path, or None on failure
+    :rtype: str or None
+    """
+    if not data:
+        return None
+    from resources.lib.modules.globals import g
+    from resources.lib.third_party import segno
+
+    try:
+        dest = translate_path(os.path.join(g.ADDON_USERDATA_PATH, filename))
+        segno.make(data, micro=False).save(dest, scale=10, dark="black", light="white")
+        return dest
+    except Exception as e:
+        log(f"Failure to generate QR code, \n{e}", "error")
+        return None
+
+
 def parse_datetime(string_date, date_only=True):
     """
     Attempts to pass over provided string and return a date or datetime object

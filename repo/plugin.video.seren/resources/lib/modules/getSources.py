@@ -277,10 +277,6 @@ class Sources:
             # Add the users cloud inspection to the threads to be run
             self.torrent_threads.put(self._user_cloud_inspection)
 
-            # Add TorBox Usenet search (runs alongside cloud inspection)
-            if g.torbox_enabled() and g.get_bool_setting('torbox.usenet', False):
-                self.torrent_threads.put(self._torbox_usenet_search)
-
             # Load threads for all sources
             self._create_torrent_threads()
             self._create_hoster_threads()
@@ -1687,164 +1683,6 @@ class Sources:
         finally:
             self.sources_information['statistics']['remainingProviders'].remove("Cloud Inspection")
 
-    def _torbox_usenet_search(self):
-        """Search TorBox's usenet index for the current item.
-
-        Calls TorBox's search-api.torbox.app/usenet/imdb:{id} endpoint.
-        Pre-cached results are added directly to torrentCacheSources (bypassing
-        normal torrent cache check since NZB hashes aren't torrent info_hashes).
-        Uncached results are added to allTorrents for display / uncached resolution.
-
-        Reference: POV torboxnews.py — Seren equivalent built into the pipeline
-        rather than as an external scraper package."""
-        self.sources_information['statistics']['remainingProviders'].append("TorBox Usenet")
-        try:
-            import hashlib
-            tb = torbox.TorBox()
-
-            # Build search params from item_information
-            info = self.item_information.get('info', {})
-            imdb_id = info.get('imdb_id')
-            if not imdb_id:
-                g.log("TorBox Usenet: No IMDB ID available, skipping", "info")
-                return
-
-            season = info.get('season') if self.media_type == g.MEDIA_EPISODE else None
-            episode = info.get('episode') if self.media_type == g.MEDIA_EPISODE else None
-
-            g.log(
-                f"TorBox Usenet: Searching imdb:{imdb_id}"
-                + (f" S{season}E{episode}" if season else ""),
-                "info",
-            )
-
-            results = tb.search_usenet(imdb_id, season, episode)
-            if not results:
-                g.log("TorBox Usenet: No results", "info")
-                return
-
-            # Build title matching data (same approach as cloud scrapers)
-            show_title = ""
-            aliases = set()
-            if self.media_type == g.MEDIA_EPISODE:
-                show_title = source_utils.clean_title(
-                    info.get('tvshowtitle', '') or info.get('title', '')
-                )
-                if self.media_type == g.MEDIA_EPISODE:
-                    simple_info = self._build_simple_show_info(self.item_information)
-                    alias_list = simple_info.get('show_aliases', [])
-                    aliases = {source_utils.clean_title(a) for a in alias_list if a}
-                    aliases.add(show_title)
-                    aliases.discard("")
-                    ep_filter = source_utils.get_filter_single_episode_fn(simple_info)
-                    season_filter = source_utils.get_filter_season_pack_fn(simple_info)
-                    show_filter = source_utils.get_filter_show_pack_fn(simple_info)
-            else:
-                simple_info = {
-                    'year': info.get('year'),
-                    'title': info.get('title'),
-                }
-
-            cached_count = 0
-            uncached_count = 0
-            skipped_count = 0
-            user_engines_only = g.get_bool_setting('torbox.usenetUserEnginesOnly', False)
-
-            for item in results:
-                try:
-                    if user_engines_only and not item.get('user_search'):
-                        continue
-
-                    raw_title = item.get('raw_title', '')
-                    if not raw_title:
-                        continue
-
-                    nzb_url = item.get('nzb', '')
-                    if not nzb_url:
-                        continue
-
-                    # Hash: use API hash or fall back to MD5 of NZB URL
-                    hash_value = item.get('hash') or hashlib.md5(
-                        nzb_url.encode('utf-8')
-                    ).hexdigest()
-                    hash_value = hash_value.lower()
-
-                    # Title filter — match show/movie title
-                    clean = source_utils.clean_title(raw_title)
-                    if self.media_type == g.MEDIA_EPISODE:
-                        if aliases and not any(a in clean for a in aliases if a):
-                            skipped_count += 1
-                            continue
-                        if not (ep_filter(clean) or season_filter(clean) or show_filter(clean)):
-                            skipped_count += 1
-                            continue
-                    else:
-                        if not source_utils.filter_movie_title(
-                            None, clean, info.get('title', ''), simple_info
-                        ):
-                            skipped_count += 1
-                            continue
-
-                    # Extract metadata
-                    try:
-                        size_bytes = int(item.get('size', 0))
-                    except (ValueError, TypeError):
-                        size_bytes = 0
-                    size_mb = round(size_bytes / (1024 * 1024), 2)
-
-                    try:
-                        seeds = int(item.get('last_known_seeders', 0))
-                    except (ValueError, TypeError):
-                        seeds = 0
-
-                    quality = source_utils.get_quality(raw_title)
-                    info_tags = source_utils.get_info(raw_title)
-                    is_cached = bool(item.get('cached', False))
-
-                    source_dict = {
-                        'type': 'torrent',
-                        'release_title': raw_title,
-                        'hash': hash_value,
-                        'size': size_mb,
-                        'seeds': seeds,
-                        'source': 'TORBOXNEWS',
-                        'provider': 'TORBOXNEWS',
-                        'quality': quality,
-                        'info': info_tags if isinstance(info_tags, list) else list(info_tags),
-                        'language': 'en',
-                        'debrid_provider': 'torbox',
-                        'nzb_url': nzb_url,
-                        # No magnet for NZB sources — resolver detects nzb_url
-                    }
-
-                    if is_cached:
-                        # Add directly to cached sources (bypasses torrent cache check)
-                        tor_key = hash_value + 'torbox'
-                        self.sources_information['cached_hashes'].add(hash_value)
-                        if tor_key not in self.sources_information['torrentCacheSources']:
-                            self.sources_information['torrentCacheSources'][tor_key] = source_dict
-                        cached_count += 1
-                    else:
-                        # Add to allTorrents for uncached display / fallback
-                        if hash_value not in self.sources_information['allTorrents']:
-                            self.sources_information['allTorrents'][hash_value] = source_dict
-                        uncached_count += 1
-
-                except Exception:
-                    continue
-
-            g.log(
-                f"TorBox Usenet: {len(results)} results → "
-                f"{cached_count} cached, {uncached_count} uncached, "
-                f"{skipped_count} filtered out",
-                "info",
-            )
-
-        except Exception as e:
-            g.log(f"TorBox Usenet search failed: {e}", "warning")
-        finally:
-            self.sources_information['statistics']['remainingProviders'].remove("TorBox Usenet")
-
     @staticmethod
     def _color_number(number):
 
@@ -3102,7 +2940,8 @@ class TorrentCacheCheck:
 
     def _torbox_worker(self, torrent_list):
         try:
-            # Skip NZB sources — they're pre-checked by _torbox_usenet_search()
+            # Skip NZB sources — 'nzb_url' entries aren't torrent info_hashes
+            # and bypass the normal cache-check pass (resolved directly)
             torrent_list = [t for t in torrent_list if not t.get('nzb_url')]
 
             # Restore DB-cached results and filter unchecked

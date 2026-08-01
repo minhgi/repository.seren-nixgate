@@ -1,4 +1,5 @@
 import json
+import threading
 import time
 from functools import cached_property
 from functools import wraps
@@ -7,6 +8,7 @@ from urllib import parse
 import xbmc
 import xbmcgui
 
+from resources.lib.common import tools
 from resources.lib.database.cache import use_cache
 from resources.lib.modules.globals import g
 
@@ -213,63 +215,71 @@ class DebridLink:
         try:
             import pyperclip
             pyperclip.copy(user_code)
-            copied = True
         except Exception:
-            copied = False
+            pass
 
-        display = (
-            f"Go to: [B]{verification_url}[/B][CR]"
-            f"Enter code: [B]{user_code}[/B]"
+        qr_image = tools.make_qr(verification_url, "debrid_link_qr.png")
+
+        from resources.lib.gui.windows.qr_auth_window import QRAuthWindow
+
+        window = QRAuthWindow("qr_auth_window.xml", g.ADDON_PATH)
+        window.set_title(g.get_language_string(30682))
+        window.set_qr_image(qr_image)
+        window.set_details(
+            g.get_language_string(30018).format(verification_url),
+            g.get_language_string(30019).format(user_code),
         )
-        if copied:
-            display += "[CR]Code copied to clipboard"
+        window_thread = threading.Thread(target=window.doModal)
+        window_thread.start()
 
-        progress = xbmcgui.DialogProgress()
-        progress.create(f"{g.ADDON_NAME}: Debrid-Link Auth", display)
-        progress.update(100)
-
+        token_data = None
         timeout = expires_in
         token_url = f"{self.oauth_url}token"
 
-        while timeout > 0:
-            xbmc.sleep(interval * 1000)
-            timeout -= interval
+        try:
+            while timeout > 0 and not window.canceled_by_user:
+                xbmc.sleep(interval * 1000)
+                timeout -= interval
 
-            if progress.iscanceled():
-                progress.close()
-                return
+                if window.canceled_by_user:
+                    break
 
-            progress.update(int(timeout / expires_in * 100))
+                minutes, seconds = divmod(max(timeout, 0), 60)
+                window.set_status(f"{minutes:02d}:{seconds:02d}")
 
-            token_resp = self.session.post(
-                token_url,
-                data={
-                    "client_id": self.client_id,
-                    "code": device_code,
-                    "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
-                },
-                headers={"User-Agent": f"Seren/{g.VERSION}"},
-                timeout=20,
+                token_resp = self.session.post(
+                    token_url,
+                    data={
+                        "client_id": self.client_id,
+                        "code": device_code,
+                        "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+                    },
+                    headers={"User-Agent": f"Seren/{g.VERSION}"},
+                    timeout=20,
+                )
+                if token_resp.ok:
+                    candidate = token_resp.json()
+                    if candidate.get("access_token"):
+                        token_data = candidate
+                        break
+        finally:
+            window.close()
+            window_thread.join(5)
+            del window
+
+        if token_data:
+            self.token = token_data["access_token"]
+            self.refresh = token_data.get("refresh_token", "")
+            g.set_setting(DL_TOKEN_KEY, self.token)
+            g.set_setting(DL_REFRESH_KEY, self.refresh)
+            g.set_setting(
+                DL_EXPIRY_KEY,
+                str(int(time.time()) + int(token_data.get("expires_in", 3600))),
             )
-            if token_resp.ok:
-                token_data = token_resp.json()
-                if token_data.get("access_token"):
-                    progress.close()
-                    self.token = token_data["access_token"]
-                    self.refresh = token_data.get("refresh_token", "")
-                    g.set_setting(DL_TOKEN_KEY, self.token)
-                    g.set_setting(DL_REFRESH_KEY, self.refresh)
-                    g.set_setting(
-                        DL_EXPIRY_KEY,
-                        str(int(time.time()) + int(token_data.get("expires_in", 3600))),
-                    )
-                    self.store_user_info()
-                    xbmcgui.Dialog().ok(
-                        g.ADDON_NAME, f"Debrid-Link {g.get_language_string(30020)}"
-                    )
-                    return
-
-        progress.close()
+            self.store_user_info()
+            xbmcgui.Dialog().ok(
+                g.ADDON_NAME, f"Debrid-Link {g.get_language_string(30020)}"
+            )
 
     def refresh_token(self):
         """Refresh the OAuth token."""

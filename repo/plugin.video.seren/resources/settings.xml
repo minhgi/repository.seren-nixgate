@@ -242,6 +242,30 @@
 						<heading/>
 					</control>
 				</setting>
+				<setting id="mdblist.auth" type="string" help="">
+					<level>4</level>
+					<default/>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="edit" format="string">
+						<heading/>
+					</control>
+				</setting>
+				<setting id="mdblist.refresh" type="string" help="">
+					<level>4</level>
+					<default/>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="edit" format="string">
+						<heading/>
+					</control>
+				</setting>
+				<setting id="mdblist.expires" type="integer" help="">
+					<level>4</level>
+					<default>0</default>
+				</setting>
 				<setting id="rd.auth" type="string" help="">
 					<level>4</level>
 					<default/>
@@ -1908,29 +1932,6 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="torbox.usenet" type="boolean" label="30830" help="30831" parent="">
-					<level>0</level>
-					<default>false</default>
-					<dependencies>
-						<dependency type="visible">
-							<condition operator="is" setting="torbox.enabled">true</condition>
-						</dependency>
-					</dependencies>
-					<control type="toggle"/>
-				</setting>
-				<setting id="torbox.usenetUserEnginesOnly" type="boolean" label="30832" help="30833" parent="">
-					<level>0</level>
-					<default>false</default>
-					<dependencies>
-						<dependency type="visible">
-							<and>
-								<condition operator="is" setting="torbox.enabled">true</condition>
-								<condition operator="is" setting="torbox.usenet">true</condition>
-							</and>
-						</dependency>
-					</dependencies>
-					<control type="toggle"/>
-				</setting>
 				<setting id="torbox.addtocloud" type="boolean" label="30666" help="30668" parent="">
 					<level>0</level>
 					<default>false</default>
@@ -2240,13 +2241,16 @@
 				</setting>
 			<setting id="offcloud.connectOffCloud" type="action" label="30934" help="">
 				<level>0</level>
-				<data>RunPlugin(plugin://plugin.video.seren/?action=connectOffCloud)</data>
+				<data>RunPlugin(plugin://plugin.video.seren/?action=authOffcloud)</data>
 				<constraints>
 					<allowempty>true</allowempty>
 				</constraints>
 				<dependencies>
 					<dependency type="visible">
 						<condition operator="is" setting="offcloud.enabled">true</condition>
+					</dependency>
+					<dependency type="visible">
+						<condition operator="is" setting="offcloud.apikey"/>
 					</dependency>
 				</dependencies>
 				<control type="button" format="action">
@@ -2262,6 +2266,9 @@
 				<dependencies>
 					<dependency type="visible">
 						<condition operator="is" setting="offcloud.enabled">true</condition>
+					</dependency>
+					<dependency type="visible">
+						<condition operator="!is" setting="offcloud.apikey"/>
 					</dependency>
 				</dependencies>
 				<control type="button" format="action">
@@ -4437,6 +4444,16 @@
 					</constraints>
 					<control type="edit" format="string">
 						<heading>31083</heading>
+					</control>
+				</setting>
+				<setting id="mdblist.clientid" type="string" label="31164" help="">
+					<level>0</level>
+					<default/>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="edit" format="string">
+						<heading>31164</heading>
 					</control>
 				</setting>
 				<setting id="anirena.apikey" type="string" label="30912" help="30913">

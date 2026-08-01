@@ -1,4 +1,5 @@
 import contextlib
+import threading
 import time
 from functools import cached_property
 from functools import wraps
@@ -436,38 +437,43 @@ class TraktAPI(ApiBase):
             user_code = response["user_code"]
             device = response["device_code"]
             interval = int(response["interval"])
-            expiry = int(response["expires_in"])
             token_ttl = int(response["expires_in"])
         except (KeyError, ValueError):
             xbmcgui.Dialog().ok(g.ADDON_NAME, g.get_language_string(30023))
             raise
 
         tools.copy2clip(user_code)
+
+        verification_url = "https://trakt.tv/activate"
+        qr_image = tools.make_qr(verification_url, "trakt_qr.png")
+
+        from resources.lib.gui.windows.qr_auth_window import QRAuthWindow
+
+        window = QRAuthWindow("qr_auth_window.xml", g.ADDON_PATH)
+        window.set_title(g.get_language_string(30022))
+        window.set_qr_image(qr_image)
+        window.set_details(
+            g.get_language_string(30018).format(verification_url),
+            g.get_language_string(30019).format(user_code),
+        )
+        window_thread = threading.Thread(target=window.doModal)
+        window_thread.start()
+
         failed = False
         try:
-            progress_dialog = xbmcgui.DialogProgress()
-            progress_dialog.create(
-                f"{g.ADDON_NAME}: {g.get_language_string(30022)}",
-                tools.create_multiline_message(
-                    line1=g.get_language_string(30018).format(g.color_string("https://trakt.tv/activate")),
-                    line2=g.get_language_string(30019).format(g.color_string(user_code)),
-                    line3=g.get_language_string(30047),
-                ),
-            )
-            progress_dialog.update(100)
-            while not failed and self.username is None and token_ttl > 0 and not progress_dialog.iscanceled():
+            while not failed and self.username is None and token_ttl > 0 and not window.canceled_by_user:
                 xbmc.sleep(1000)
                 if token_ttl % interval == 0:
                     failed = self._auth_poll(device)
-                progress_percent = int(float((token_ttl * 100) / expiry))
-                progress_dialog.update(progress_percent)
+                minutes, seconds = divmod(max(token_ttl, 0), 60)
+                window.set_status(f"{minutes:02d}:{seconds:02d}")
                 token_ttl -= 1
-
-            progress_dialog.close()
         finally:
-            del progress_dialog
+            window.close()
+            window_thread.join(5)
+            del window
 
-        if not failed:
+        if not failed and self.username:
             xbmcgui.Dialog().ok(g.ADDON_NAME, g.get_language_string(30273))
             self._sync_trakt_user_data_if_required()
 

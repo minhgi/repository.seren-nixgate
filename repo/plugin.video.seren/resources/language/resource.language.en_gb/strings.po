@@ -4350,22 +4350,6 @@ msgctxt "#30829"
 msgid "Wait for subtitle services (e.g. a4kSubtitles) to finish before starting stall detection. Prevents false failures when subtitle downloads or stream selection cause brief playback pauses."
 msgstr "Wait for subtitle services (e.g. a4kSubtitles) to finish before starting stall detection. Prevents false failures when subtitle downloads or stream selection cause brief playback pauses."
 
-msgctxt "#30830"
-msgid "Enable TorBox Usenet Search"
-msgstr "Enable TorBox Usenet Search"
-
-msgctxt "#30831"
-msgid "Search TorBox's usenet index for NZB sources. Cached results resolve instantly through TorBox without a separate usenet provider."
-msgstr "Search TorBox's usenet index for NZB sources. Cached results resolve instantly through TorBox without a separate usenet provider."
-
-msgctxt "#30832"
-msgid "User Engines Only"
-msgstr "User Engines Only"
-
-msgctxt "#30833"
-msgid "Only show results from your configured usenet search engines on TorBox."
-msgstr "Only show results from your configured usenet search engines on TorBox."
-
 msgctxt "#30834"
 msgid "Scrape Debrid-Link Cloud"
 msgstr "Scrape Debrid-Link Cloud"
@@ -4671,7 +4655,7 @@ msgid "Enable Offcloud"
 msgstr "Enable Offcloud"
 
 msgctxt "#30934"
-msgid "Connect Offcloud"
+msgid "Authorize Offcloud..."
 msgstr "Connect Offcloud"
 
 msgctxt "#30935"
@@ -5597,3 +5581,27 @@ msgstr "MDBList - Dropped Shows"
 msgctxt "#31162"
 msgid "Shows marked Dropped on MDBList"
 msgstr "Shows marked Dropped on MDBList"
+
+msgctxt "#31163"
+msgid "Error authorizing with MDBList.\nPlease try again."
+msgstr "Error authorizing with MDBList.\nPlease try again."
+
+msgctxt "#31164"
+msgid "MDBList Client ID"
+msgstr "MDBList Client ID"
+
+msgctxt "#31165"
+msgid "Changelog"
+msgstr "Changelog"
+
+msgctxt "#31166"
+msgid "View Seren's full version history and recent changes"
+msgstr "View Seren's full version history and recent changes"
+
+msgctxt "#31167"
+msgid "Backup and Reset"
+msgstr "Backup and Reset"
+
+msgctxt "#31168"
+msgid "Backup, restore, or wipe Seren's settings and data"
+msgstr "Backup, restore, or wipe Seren's settings and data"

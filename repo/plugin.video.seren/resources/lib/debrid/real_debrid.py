@@ -1,3 +1,4 @@
+import threading
 import time
 from functools import cached_property
 
@@ -75,32 +76,40 @@ class RealDebrid:
         url = self.oauth_url + self.device_code_url.format(url)
         response = self.session.get(url).json()
         tools.copy2clip(response["user_code"])
+
+        verification_url = "https://real-debrid.com/device"
+        qr_image = tools.make_qr(verification_url, "real_debrid_qr.png")
+
+        from resources.lib.gui.windows.qr_auth_window import QRAuthWindow
+
+        window = QRAuthWindow("qr_auth_window.xml", g.ADDON_PATH)
+        window.set_title(g.get_language_string(30017))
+        window.set_qr_image(qr_image)
+        window.set_details(
+            g.get_language_string(30018).format(verification_url),
+            g.get_language_string(30019).format(response["user_code"]),
+        )
+        window_thread = threading.Thread(target=window.doModal)
+        window_thread.start()
+
+        self.oauth_timeout = int(response["expires_in"])
+        token_ttl = int(response["expires_in"])
+        self.oauth_time_step = int(response["interval"])
+        self.device_code = response["device_code"]
+
         success = False
         try:
-            progress_dialog = xbmcgui.DialogProgress()
-            progress_dialog.create(
-                f"{g.ADDON_NAME}: {g.get_language_string(30017)}",
-                tools.create_multiline_message(
-                    line1=g.get_language_string(30018).format(g.color_string("https://real-debrid.com/device")),
-                    line2=g.get_language_string(30019).format(g.color_string(response["user_code"])),
-                    line3=g.get_language_string(30047),
-                ),
-            )
-            self.oauth_timeout = int(response["expires_in"])
-            token_ttl = int(response["expires_in"])
-            self.oauth_time_step = int(response["interval"])
-            self.device_code = response["device_code"]
-            progress_dialog.update(100)
-            while not success and token_ttl > 0 and not progress_dialog.iscanceled():
+            while not success and token_ttl > 0 and not window.canceled_by_user:
                 xbmc.sleep(1000)
                 if token_ttl % self.oauth_time_step == 0:
                     success = self._auth_loop()
-                progress_percent = int(float((token_ttl * 100) / self.oauth_timeout))
-                progress_dialog.update(progress_percent)
+                minutes, seconds = divmod(max(token_ttl, 0), 60)
+                window.set_status(f"{minutes:02d}:{seconds:02d}")
                 token_ttl -= 1
-            progress_dialog.close()
         finally:
-            del progress_dialog
+            window.close()
+            window_thread.join(5)
+            del window
 
         if success:
             self.token_request()
