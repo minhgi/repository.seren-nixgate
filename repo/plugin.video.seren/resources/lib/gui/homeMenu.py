@@ -194,6 +194,31 @@ class Menus:
         g.close_directory(g.CONTENT_MENU)
 
     @staticmethod
+    def settings_tools():
+        g.add_directory_item(
+            g.get_language_string(30720),
+            action='backupSettings',
+            is_folder=False,
+            description=g.get_language_string(30722),
+            menu_item=g.create_icon_dict("settings", g.ICONS_PATH),
+        )
+        g.add_directory_item(
+            g.get_language_string(30721),
+            action='restoreSettings',
+            is_folder=False,
+            description=g.get_language_string(30723),
+            menu_item=g.create_icon_dict("settings", g.ICONS_PATH),
+        )
+        g.add_directory_item(
+            g.get_language_string(30041),
+            action='cleanInstall',
+            is_folder=False,
+            description=g.get_language_string(30383),
+            menu_item=g.create_icon_dict("clear", g.ICONS_PATH),
+        )
+        g.close_directory(g.CONTENT_MENU)
+
+    @staticmethod
     def clear_cache_tool():
         g.add_directory_item(
             g.get_language_string(31130),

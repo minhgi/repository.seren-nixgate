@@ -4670,7 +4670,7 @@
 						<heading>31083</heading>
 					</control>
 				</setting>
-				<setting id="mdblist.clientid" type="string" label="31164" help="31466">
+<setting id="mdblist.clientid" type="string" label="31164" help="31466">
 					<level>0</level>
 					<default/>
 					<constraints>

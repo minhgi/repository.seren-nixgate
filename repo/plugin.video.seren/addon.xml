@@ -95,7 +95,7 @@
             [CHANGE] Added description text to every remaining settings-box entry that didn't have any, across all 11 other tabs (Themes, Metadata &amp; Artwork, Watch Accounts, Accounts, Providers, Scraping, Sort &amp; Filter, Playback, Anime Titles, Shortcuts, Advanced) - 232 settings in total. Same approach as the 3.4.16 General pilot: every description is grounded in what the setting actually does in the code, not just its label. This surfaced a few real quirks worth knowing about: Clear Logo artwork always shows for movies/shows regardless of that toggle (dead setting, described as such); AllDebrid's and Offcloud's Auto-Delete Torrents toggles currently do nothing (cleanup for those two is controlled entirely by Add Resolved Torrents to Cloud / Smart Delete instead); Premiumize's Authorize button doubles as Revoke once you're linked, since it has no separate Revoke button like the other debrid services. No behavior changed, settings-only.
 
             Changelog 3.4.16
-            [CHANGE] Added description text to the 24 General tab settings that didn't have any (they showed no explanation at the bottom of the settings box when highlighted). Descriptions are grounded in what each setting actually does in the code, e.g. Page Item Limit, Hide Watched Items, Next Up Sort Style, the Download Location/organization settings, etc. Pilot for the General tab only - other tabs (Sort &amp; Filter, Playback, Accounts, etc.) still have the same gap and weren't touched in this pass. No behavior changed, settings-only.
+            [CHANGE] Added description text to the 24 General tab settings that didn't have any (they showed no explanation at the bottom of the settings box when highlighted). Descriptions are grounded in what each setting actually does, e.g. Page Item Limit, Hide Watched Items, Next Up Sort Style, the Download Location/organization settings, etc. Pilot for the General tab only - other tabs (Sort &amp; Filter, Playback, Accounts, etc.) still have the same gap and weren't touched in this pass. No behavior changed, settings-only.
 
             Changelog 3.4.15
             [CHANGE] Download Manager is now off by default on new installs (previously on by default). If you're already using it, your setting is untouched - this only changes what a fresh install starts with. Turn it on any time in Settings -&gt; General -&gt; Downloads. NAS/local file scraping was checked as part of this and was already off by default - no change needed there.
@@ -133,17 +133,18 @@
             [FIX] Downloads: on a fresh install or upgrade, the "Enable Downloads" toggle could render on while its dependent settings (Download Location, Concurrent Downloads, etc.) stayed hidden until the toggle was touched once. The default is now written explicitly on first launch so all settings display correctly immediately.
 
             Changelog 3.4.5
-            [NEW] Downloads: added an "Enable Downloads" master toggle (Settings > General > Downloads) that hides Download Location and all other download settings when off, and removes the "Download" option from the source selection menu.
+            [NEW] Downloads: added an "Enable Downloads" master toggle (Settings &gt; General &gt; Downloads) that hides Download Location and all other download settings when off, and removes the "Download" option from the source selection menu.
 
             Changelog 3.4.4
             [FIX] Downloads: "auto-move completed downloads to Local Scraper folder" was copying files instead of moving them, leaving the original behind in the download folder and doubling disk usage. The download's file handle is now closed before the move is attempted.
 
             Changelog 3.4.3
-            [NEW] Downloads: added a concurrent-download limit (Settings > General > Downloads) so multiple queued downloads no longer all stream at once uncapped - choose "One at a Time" or a limit of 1-8.
+            [NEW] Downloads: added a concurrent-download limit (Settings &gt; General &gt; Downloads) so multiple queued downloads no longer all stream at once uncapped - choose "One at a Time" or a limit of 1-8.
             [NEW] Downloads: optional subfolder organization (Movies/TV Shows/Anime, per-show, per-season, optional movie year) and optional auto-move of completed downloads into your Local Scraper folder, so they're picked up by local playback automatically.
 
             Changelog 3.4.0
-            [NEW] Local/NAS file scraper: scans a configured local or network-mounted (SMB/NFS) folder for video files matching your library and surfaces them as a "Local" direct source alongside torrent/debrid/hoster results. Enable under Settings > Providers > Local Files.
+            [NEW] Local/NAS file scraper: scans a configured local or network-mounted (SMB/NFS) folder for video files matching your library and surfaces them as a "Local" direct source alongside torrent/debrid/hoster results. Enable under Settings &gt; Providers &gt; Local Files.
+
 
             Changelog 3.3.269
             [CHANGE] Tools menu: consolidated Backup Settings, Restore Settings, and Wipe Addon Data (previously 3 separate entries) into one "Backup and Reset" folder. Reordered the menu so Download Manager and Sync Tools now sit right under Premium Services.
