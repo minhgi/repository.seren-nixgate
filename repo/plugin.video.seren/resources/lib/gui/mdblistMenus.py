@@ -225,6 +225,104 @@ class Menus:
             return
         self.list_builder.show_list_builder(trakt_list, no_paging=True, hide_watched=False)
 
+    def next_up(self):
+        """MDBList-scoped 'Next Up': one row per actively-watched show (per MDBList's own
+        watched history), each showing that show's next unwatched episode - most recently
+        watched show first. Modeled on Red Light's 'MDBList Next Up' (episode.mdblist_next),
+        which solves the same naming/identity problem this does: Seren already has a
+        Trakt-native Next Up (showsNextUp), so this needs its own label and must work
+        entirely off MDBList's own watched state, not trakt_sync's - trakt_sync.episodes.
+        watched only reflects Trakt's own activity sync and is meaningless for a
+        Trakt-disabled user.
+
+        Anchor and sort are different aggregates over the same watched rows:
+        get_recent_shows sorts by MAX(last_watched_at) per show (recency, used for list
+        order), while _pick_next_unwatched below checks the full watched set per show to
+        find the first gap - not just "one after the last watched" - so an out-of-order
+        rewatch doesn't misplace the anchor and a show only leaves the list once every
+        episode is watched, matching the reporter's spec exactly.
+
+        Shows are resolved one at a time (like in_progress_episodes above), not through
+        the batched _resolve() - _resolve() only echoes back Trakt's own tmdb_id per
+        result (which can legitimately differ from the id it was queried with), in
+        as_completed() arrival order. This method needs the original MDBList tmdb_id
+        intact on every result, both to look up that show's watched set and to preserve
+        recent_shows' own recency order, so it keeps that id in scope directly instead of
+        trusting it to round-trip through Trakt. get_episode_list() self-bootstraps the
+        show row on a cache miss (_try_update_episodes -> _get_single_show_meta ->
+        _update_single_meta), so skipping _resolve()'s own seeding step is safe.
+
+        hide_watched=False on the final mixed_episode_builder call is load-bearing, not
+        cosmetic: get_mixed_episode_list() re-applies TraktSyncDatabase's own hide_watched
+        default against trakt_sync's e.watched column, which - same as above - is Trakt's
+        own flag and not meaningful here. Without the override it can silently empty the
+        list for exactly this feature's target users (Trakt disabled, MDBList/Simkl only)."""
+        recent_shows = self.mdblist_database.get_recent_shows(self.page_limit)
+        if not recent_shows:
+            g.cancel_directory()
+            return
+
+        watched_by_show = {}
+        for row in self.mdblist_database.get_all_watched_episode_tmdb_keys():
+            watched_by_show.setdefault(row["show_tmdb_id"], set()).add((row["season"], row["number"]))
+
+        from resources.lib.database.trakt_sync.shows import TraktSyncDatabase as ShowsDatabase
+
+        shows_db = ShowsDatabase()
+        episodes = []
+        for row in recent_shows:
+            show_tmdb_id = row["tmdb_id"]
+            watched_set = watched_by_show.get(show_tmdb_id)
+            if not watched_set:
+                continue
+            trakt_show = self.trakt_api.search_by_tmdb_id(show_tmdb_id, "show")
+            if not trakt_show or not trakt_show.get("trakt_id"):
+                g.log(
+                    f"MDBList menus: no Trakt match for tmdb_id {show_tmdb_id} (show), "
+                    "skipping next-up",
+                    "debug",
+                )
+                continue
+            show_episodes = (
+                shows_db.get_episode_list(trakt_show["trakt_id"], hide_unaired=False, hide_watched=False) or []
+            )
+            next_episode = self._pick_next_unwatched(show_episodes, watched_set)
+            if next_episode:
+                episodes.append(next_episode)
+
+        if not episodes:
+            g.cancel_directory()
+            return
+        self.list_builder.mixed_episode_builder(episodes, no_paging=True, hide_watched=False)
+
+    @staticmethod
+    def _pick_next_unwatched(episodes, watched_set):
+        """First already-aired, non-special episode not in watched_set, in season/number
+        order (get_episode_list's own order). Specials (season 0) are skipped explicitly -
+        get_episode_list only drops them when hide_specials is on, and season/number order
+        otherwise sorts them first, where they'd wrongly win as 'next' for every show
+        (absent from MDBList's watched set by construction, same as any real unwatched
+        episode). Unaired episodes are skipped too, so a caught-up show disappears from
+        the list instead of offering an unplayable row as its 'next' episode."""
+        import datetime
+
+        from resources.lib.modules.calendar_data import get_air_date
+
+        now = g.datetime_to_string(datetime.datetime.utcnow())
+        for episode in episodes:
+            info = episode.get("info") or {}
+            season = info.get("season")
+            number = info.get("episode")
+            if not season or number is None:
+                continue
+            if (season, number) in watched_set:
+                continue
+            air_date = get_air_date(episode)
+            if not air_date or air_date > now:
+                continue
+            return episode
+        return None
+
     def in_progress_movies(self):
         rows = self._live_playback_rows("movie")
         trakt_list = self._resolve([r["tmdb_id"] for r in rows], "movie")

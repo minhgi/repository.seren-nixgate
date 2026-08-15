@@ -124,7 +124,7 @@
 			Rework for Seren 2.0
 		</news>
 	</extension>
-</addon><addon id="plugin.video.seren" version="3.3.260" name="Seren" provider-name="Nixgates">
+</addon><addon id="plugin.video.seren" version="3.4.25" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -191,6 +191,113 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.4.25
+            [FIX] MDBList Next Up renamed to "MDBList - Next Up" to match the section's naming convention, and moved to directly below MDBList - In Progress Episodes.
+
+            Changelog 3.4.24
+            [NEW] MDBList Next Up (My Shows, MDBList section) - a row per show you're actively watching on MDBList, each showing its next unwatched episode, most recently watched show first. A show drops off the list once every episode is watched, and returns once a new season airs. Works entirely off MDBList's own watched history, independent of Trakt.
+
+            Changelog 3.4.23
+            [FIX] My Watch List Calendar only showed up in My Shows when Trakt was enabled, even though it also works with just Simkl or just MDBList on their own. Now shows whenever any one of the three is configured.
+
+            Changelog 3.4.22
+            [FIX] The unified Calendar fetched Trakt's calendar data even when Trakt wasn't configured, instead of skipping it the way Simkl and MDBList already were when unconfigured. Now skipped the same way.
+            [FIX] Offcloud was missing from the periodic background check that refreshes the other five debrid services' premium status, so its status stayed stuck at whatever it showed right after connecting. Now included in that check.
+
+            Changelog 3.4.21
+            [FIX] MDBList menus, Home tiles, Merge entries, and Cross-Service Sync could all stay invisible or inactive after authorizing MDBList via the Authorize/QR flow, even though Settings showed it connected. Every place that checked "is MDBList usable" was still looking only for a legacy typed API key, which the current login flow never sets. They now also recognize the OAuth login the Authorize button actually produces.
+
+            Changelog 3.4.20
+            [CHANGE] Renamed the "Calendar" entry in My Shows to "My Watch List Calendar" and moved it to the top of the My Shows menu, above Merge - In Progress Episodes. Label and position only, no behavior changed.
+
+            Changelog 3.4.19
+            [FEATURE] Added a Calendar window (My Shows), styled to match Seren's own theme rather than a plain list: one browsable window showing recently aired and upcoming episodes together, replacing the need to check two separate flat menus. If Simkl and/or MDBList are configured, shows that are only on those services' watchlists (not your Trakt list) are now included too - each resolved to its own next/most recent episode individually, capped at 25 such shows per open to keep the window responsive. Rating shown is TMDB's - it's the only rating available in the same shape across all three services.
+
+            Changelog 3.4.18
+            [FIX] "Enable Cross-Service Sync" could stay switched on in Settings even after you dropped below the 2 connected services it needs to do anything (disabling a service, revoking one, etc.) - the toggle just kept showing on while sync silently did nothing. It's now automatically switched back off whenever fewer than 2 services are configured, checked on Seren's regular background sync cycle (usually within about a minute of Kodi starting, and roughly every 15 minutes after) and immediately if you use Sync Tools -&gt; Force a sync. This only ever turns the toggle off, never back on - once you've reconnected a second service, re-enabling it is still a manual step.
+
+            Changelog 3.4.17
+            [CHANGE] Added description text to every remaining settings-box entry that didn't have any, across all 11 other tabs (Themes, Metadata &amp; Artwork, Watch Accounts, Accounts, Providers, Scraping, Sort &amp; Filter, Playback, Anime Titles, Shortcuts, Advanced) - 232 settings in total. Same approach as the 3.4.16 General pilot: every description is grounded in what the setting actually does in the code, not just its label. This surfaced a few real quirks worth knowing about: Clear Logo artwork always shows for movies/shows regardless of that toggle (dead setting, described as such); AllDebrid's and Offcloud's Auto-Delete Torrents toggles currently do nothing (cleanup for those two is controlled entirely by Add Resolved Torrents to Cloud / Smart Delete instead); Premiumize's Authorize button doubles as Revoke once you're linked, since it has no separate Revoke button like the other debrid services. No behavior changed, settings-only.
+
+            Changelog 3.4.16
+            [CHANGE] Added description text to the 24 General tab settings that didn't have any (they showed no explanation at the bottom of the settings box when highlighted). Descriptions are grounded in what each setting actually does in the code, e.g. Page Item Limit, Hide Watched Items, Next Up Sort Style, the Download Location/organization settings, etc. Pilot for the General tab only - other tabs (Sort &amp; Filter, Playback, Accounts, etc.) still have the same gap and weren't touched in this pass. No behavior changed, settings-only.
+
+            Changelog 3.4.15
+            [CHANGE] Download Manager is now off by default on new installs (previously on by default). If you're already using it, your setting is untouched - this only changes what a fresh install starts with. Turn it on any time in Settings -&gt; General -&gt; Downloads. NAS/local file scraping was checked as part of this and was already off by default - no change needed there.
+
+            Changelog 3.4.14
+            [FIX] Movie list loads (Trending, Most Favorited, etc.) re-fetched full metadata from TMDB/Fanart/OMDB on every single visit, even for movies whose data hadn't changed since the last visit. Root cause was in the movie upsert's needs_update flag: once set, a nested SQL CASE expression had no path back to false, so every movie was permanently flagged as needing a re-fetch after its first save. Fixed the flag to clear correctly once a real metadata fetch completes, so repeat visits to an already-seen list only re-fetch items that actually changed. Measured effect on a test list: forced-refetch count on a 20-item repeat visit dropped from 20/20 to 0/20, cutting that list's load time from ~0.5-2.3s to ~0.18s. Movies only; shows/seasons/episodes were not touched (same-shaped code exists there but wasn't verified).
+
+            Changelog 3.4.13
+            [FIX] Settings navigation: closing "Playback Locale" always returned to the top of the settings dialog (General tab) instead of back to Playback where it was opened from. Root cause was a stale control-ID formula shared by every settings-return call in the addon - the underlying constants were wrong for every one of the addon's 12 settings categories, most of which happened to still land close enough to look right, masking the bug everywhere except Playback Locale. Corrected the shared formula and re-verified all 22 call sites against it (Playback Locale, Choose Sorting/Choose Filters, Download Location prompt, Theme color picker, and every Trakt/MDBList/Simkl/Real-Debrid/AllDebrid/TorBox/Debrid-Link/Offcloud/Premiumize authorize-and-revoke action) so each now returns focus to the correct row it was opened from.
+
+            Changelog 3.4.12
+            [NEW] Settings -&gt; Playback -&gt; "Playback Locale": set a preferred audio and subtitle language independently for Movies, TV, and Anime. Applies automatically during playback and restores your normal Kodi settings afterward. Anime also gets one-click "Sub" (Japanese audio / English subtitles) and "Dub" (English audio / English subtitles) presets.
+
+            Changelog 3.4.11
+            [FIX] "Browse Cast" (added in 3.4.10) could navigate to the wrong person when their name is shared by someone else in TMDB (e.g. selecting Tom Holland the actor could land on Tom Holland the horror-film director's filmography instead). Now resolves the selected cast member by TMDB/Trakt ID instead of matching by name.
+
+            Changelog 3.4.10
+            [NEW] Right-click a movie, show, season, or episode that has cast data and choose "Browse Cast" to jump straight to another title from that actor.
+            [FIX] "My Upcoming Episodes" (calendar) only ever showed the first page of results and never offered a Next Page. Now paginates through the full 30-day window correctly.
+            [FIX] The "Hide un-aired" and "Date delay" settings could disagree with each other - an episode within the delay window could still slip past the show/season/episode/mixed-episode/next-up list filters even though it was still marked as not-yet-aired everywhere else. All five list-building queries now respect the date delay consistently.
+
+            Changelog 3.4.9
+            [FIX] Download Manager: selecting Download on a source from an unsupported debrid provider (e.g. Offcloud) crashed silently with no error shown. Now shows a clear message instead.
+            [FIX] Download Manager: confirming the multi-file picker with nothing selected (or canceling it) showed a false "Download task started" message instead of doing nothing. Now shows an accurate message, or nothing on cancel.
+            [FIX] Download Manager: clicking "Clear Completed" while a freshly-started download shared the list with a finished one could crash with a TypeError. Fixed a type-comparison bug in the progress check.
+
+            Changelog 3.4.8
+            [FIX] Download Manager: download.concurrency.limit was tracked in a plain in-memory counter, which only applied within a single Kodi Python session and did not actually limit simultaneous downloads across separate download actions. The slot count is now shared correctly, so the concurrency limit is enforced as intended.
+
+            Changelog 3.4.7
+            [NEW] Download Manager: pause and resume individual downloads, plus Pause All / Resume All / Cancel All buttons. Right-click (or context-menu key) a download in the list for per-item Pause/Resume/Cancel/Remove.
+            [FIX] Download Manager: the window's busy-dialog cleanup never ran while the window was open due to an initialization ordering bug; fixed.
+
+            Changelog 3.4.6
+            [FIX] Downloads: on a fresh install or upgrade, the "Enable Downloads" toggle could render on while its dependent settings (Download Location, Concurrent Downloads, etc.) stayed hidden until the toggle was touched once. The default is now written explicitly on first launch so all settings display correctly immediately.
+
+            Changelog 3.4.5
+            [NEW] Downloads: added an "Enable Downloads" master toggle (Settings &gt; General &gt; Downloads) that hides Download Location and all other download settings when off, and removes the "Download" option from the source selection menu.
+
+            Changelog 3.4.4
+            [FIX] Downloads: "auto-move completed downloads to Local Scraper folder" was copying files instead of moving them, leaving the original behind in the download folder and doubling disk usage. The download's file handle is now closed before the move is attempted.
+
+            Changelog 3.4.3
+            [NEW] Downloads: added a concurrent-download limit (Settings &gt; General &gt; Downloads) so multiple queued downloads no longer all stream at once uncapped - choose "One at a Time" or a limit of 1-8.
+            [NEW] Downloads: optional subfolder organization (Movies/TV Shows/Anime, per-show, per-season, optional movie year) and optional auto-move of completed downloads into your Local Scraper folder, so they're picked up by local playback automatically.
+
+            Changelog 3.4.0
+            [NEW] Local/NAS file scraper: scans a configured local or network-mounted (SMB/NFS) folder for video files matching your library and surfaces them as a "Local" direct source alongside torrent/debrid/hoster results. Enable under Settings &gt; Providers &gt; Local Files.
+
+            Changelog 3.3.269
+            [CHANGE] Tools menu: consolidated Backup Settings, Restore Settings, and Wipe Addon Data (previously 3 separate entries) into one "Backup and Reset" folder. Reordered the menu so Download Manager and Sync Tools now sit right under Premium Services.
+
+            Changelog 3.3.268
+            [NEW] Tools menu: added a "Changelog" entry that displays Seren's version history and recent changes, without needing to open the Kodi Add-on browser.
+
+            Changelog 3.3.267
+            [REMOVE] TorBox: removed the "Enable TorBox Usenet Search" scraper. TorBox is discontinuing its separate usenet search API (search-api.torbox.app), so results would silently disappear or error going forward. This only affects finding new NZB sources through the search toggle - existing TorBox usenet functionality (browsing/adding/deleting downloads in My Files, resolving usenet items found via Cloud Scrapers) is unaffected and still works via TorBox's regular API.
+
+            Changelog 3.3.266
+            [NEW] Real-Debrid, Premiumize, Debrid-Link, AllDebrid, Trakt, and Simkl device-code authorization now shows the same scannable QR code (plus URL/code, also copied to clipboard) already used by MDBList/TorBox/Offcloud, replacing the old text-only progress dialog. Auth itself is unchanged - this only changes how the code is displayed.
+            [FIX] Trakt: canceling the auth window (or a rare timeout with no successful poll) could previously show a false "Successfully authenticated" message and trigger an unnecessary account sync. Now only fires on an actual successful login, matching Simkl's existing behavior.
+
+            Changelog 3.3.265
+            [NEW] Offcloud: added QR-code/device-code authorization (Settings - Debrid Accounts - Offcloud - Authorize Offcloud...), alongside the existing typed-API-key entry. Shows a scannable QR code alongside the verification URL and code (also copied to clipboard) - scan with a phone or visit the link on any device, approve, and Seren picks it up automatically. The API key field stays available for manual entry, and Account Info still confirms a typed key works.
+
+            Changelog 3.3.264
+            [NEW] TorBox: added QR-code/device-code authorization (Settings - Debrid Accounts - TorBox - Authorize TorBox...), replacing the typed-API-token flow with the same OAuth device-code pattern used by MDBList/Trakt/Simkl. Shows a scannable QR code alongside the verification URL and code (also copied to clipboard) - scan with a phone or visit the link on any device, approve, and Seren picks it up automatically.
+
+            Changelog 3.3.263
+            [NEW] MDBList: added QR-code/device-code authorization (Settings - Watch Accounts - MDBList - Authorize MDBList...), replacing the typed-API-key flow with the same OAuth device-code pattern already used by Trakt/Simkl. Shows a scannable QR code alongside the verification URL and code (also copied to clipboard) - scan with a phone or visit the link on any device, approve, and Seren picks it up automatically. Existing typed API keys keep working until you choose to re-authorize; access tokens auto-refresh in the background.
+
+            Changelog 3.3.262
+            [FIX] Corrected an invalid character in 3.3.261's changelog text that broke the addon's manifest file (addon.xml), which could have prevented the addon from installing or updating properly for some users. No functional code changed.
+
+            Changelog 3.3.261
+            [BUG] Fixed a navigation dead-end in Settings - Sort &amp; Filter - Choose Sorting. Setting any sort tier's method to "None" hides all lower tiers, by design, since tiers below a stopped chain aren't meaningful - but pressing Down from the last visible tier had nowhere to go and froze there, which is what "locked out of the menu" was. Down now reaches the Close button instead of dead-ending.
+
             Changelog 3.3.260
             [CHANGE] "MediaFusion Cache Service" (Settings - Advanced - Optional API Keys) now defaults to Real-Debrid instead of Debrid-Link for new installs/profiles. If you've already set a MediaFusion token, this setting is already saved to your chosen service and nothing changes; the new default only reaches profiles that haven't configured MediaFusion yet, where it stays inert until you add a token and pick a service.
 

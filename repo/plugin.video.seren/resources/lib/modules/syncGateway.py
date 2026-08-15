@@ -5,7 +5,7 @@ def configured_providers():
     providers = []
     if g.get_setting('trakt.auth') and g.get_bool_setting('trakt.enabled', False):
         providers.append('trakt')
-    if g.get_setting('mdblist.enabled') == "true" and g.get_setting('mdblist.apikey'):
+    if g.get_setting('mdblist.enabled') == "true" and (g.get_setting('mdblist.auth') or g.get_setting('mdblist.apikey')):
         providers.append('mdblist')
     if g.get_setting('simkl.auth') and g.get_bool_setting('simkl.enabled'):
         providers.append('simkl')

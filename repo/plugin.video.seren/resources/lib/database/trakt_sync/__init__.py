@@ -400,6 +400,12 @@ class TraktSyncDatabase(Database):
     def _get_datetime_now():
         return g.datetime_to_string(datetime.datetime.utcnow())
 
+    def _get_aired_cutoff(self):
+        now = datetime.datetime.utcnow()
+        if self.date_delay:
+            now -= datetime.timedelta(days=1)
+        return g.datetime_to_string(now)
+
     def refresh_activities(self):
         self.activities = self.fetchone("SELECT * FROM activities WHERE sync_id=1")
 
@@ -1531,10 +1537,8 @@ class TraktSyncDatabase(Database):
                                                     CASE
                                                         WHEN old.needs_update
                                                             THEN CASE
-                                                                     WHEN new.info <> old.info
-                                                                         OR new.art <> old.art
-                                                                         OR new.cast <> old.cast
-                                                                         THEN TRUE
+                                                                     WHEN new.info IS NOT NULL
+                                                                         THEN FALSE
                                                                      ELSE old.needs_update END
                                                         ELSE CASE
                                                                  WHEN Datetime(coalesce(old.last_updated, 0))

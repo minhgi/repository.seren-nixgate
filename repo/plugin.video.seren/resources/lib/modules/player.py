@@ -13,7 +13,7 @@ import xbmcplugin
 from resources.lib.common import tools
 from resources.lib.database.trakt_sync import bookmark
 from resources.lib.indexers import trakt
-from resources.lib.modules import smartPlay
+from resources.lib.modules import catalog_profiles, locale_playback, smartPlay
 from resources.lib.modules.globals import g
 
 
@@ -61,11 +61,12 @@ class SerenPlayer(xbmc.Player):
         self.playback_stopped = False
         self.stop_event_received = False  # Set by onPlayBackStopped regardless of playback_started
         self._end_playback_done = False  # Guard: prevents double-execution of _end_playback()
+        self._locale_backup = None  # Pre-override Kodi locale snapshot from apply_catalog_locale()
         self.scrobbled = False
         self.scrobble_started = False
         self.last_attempted_scrobble_stop = 0
         self.last_attempted_scrobble_pause = 0
-        self.mdblist_enabled = g.get_bool_setting("mdblist.enabled") and bool(g.get_setting("mdblist.apikey"))
+        self.mdblist_enabled = g.get_bool_setting("mdblist.enabled") and bool(g.get_setting("mdblist.auth") or g.get_setting("mdblist.apikey"))
         self.mdblist_scrobbled = False
         self.last_attempted_mdblist_stop = 0
         self.last_attempted_mdblist_pause = 0
@@ -155,6 +156,10 @@ class SerenPlayer(xbmc.Player):
         self.mediatype = self.item_information["info"]["mediatype"]
         self.trakt_id = self.item_information["info"]["trakt_id"]
 
+        self._locale_backup = locale_playback.apply_catalog_locale(
+            catalog_profiles.resolve_catalog_from_item_information(self.item_information)
+        )
+
         if self.item_information.get("resume", "false") == "true":
             self._try_get_bookmark()
 
@@ -206,6 +211,10 @@ class SerenPlayer(xbmc.Player):
         self.smart_module = smartPlay.SmartPlay(item_information)
         self.mediatype = self.item_information["info"]["mediatype"]
         self.trakt_id = self.item_information["info"]["trakt_id"]
+
+        self._locale_backup = locale_playback.apply_catalog_locale(
+            catalog_profiles.resolve_catalog_from_item_information(self.item_information)
+        )
 
         if self.item_information.get("resume", "false") == "true":
             self._try_get_bookmark()
@@ -469,6 +478,7 @@ class SerenPlayer(xbmc.Player):
         if self._end_playback_done:
             return
         self._end_playback_done = True
+        locale_playback.restore_catalog_locale(self._locale_backup)
         self._handle_bookmark()
         self._trakt_stop_watching()
         self._mdblist_stop_watching()

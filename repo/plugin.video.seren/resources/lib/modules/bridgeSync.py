@@ -9,7 +9,10 @@ actually executes once per crosssync.intervalMinutes (default 180) - the
 Sync Tools "Force a sync" button bypasses the interval via run(force=True).
 Also gated on at least 2 of {trakt, mdblist, simkl} being configured - a
 genuinely N-way design, not Trakt-hub-centric, so a Simkl+MDBList-only setup
-with no Trakt still gets a full bridge between the two.
+with no Trakt still gets a full bridge between the two. If crosssync.enabled
+is left on from before a service dropped below that threshold (disabled,
+revoked, or never re-authed), _enabled() self-heals it back to off as a side
+effect - see its own comment. Only ever forces off, never back on.
 
 Snapshot-delta reconciliation, not a raw current-state diff. Each
 (domain, service, media_type) keeps a persisted snapshot of its last fully-
@@ -81,7 +84,16 @@ _COLLECTION = "collection"
 
 
 def _enabled():
-    return g.get_bool_setting("crosssync.enabled", False) and len(configured_providers()) >= 2
+    if not g.get_bool_setting("crosssync.enabled", False):
+        return False
+    if len(configured_providers()) < 2:
+        # Stale "on" toggle from before a service dropped below the 2-provider minimum
+        # (disabled, revoked, or never re-authed) - correct it here, on Seren's existing
+        # maintenance-loop cadence (service.py) and on-demand via Force a sync, rather than
+        # only reactively on the next settings-dialog close. Never auto-enables back on.
+        g.set_setting("crosssync.enabled", False)
+        return False
+    return True
 
 
 def _interval_elapsed():

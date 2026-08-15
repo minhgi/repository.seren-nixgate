@@ -17,6 +17,7 @@ from resources.lib.modules.seren_version import do_version_change
 from resources.lib.modules.serenMonitor import SerenMonitor
 from resources.lib.modules.update_news import do_update_news
 from resources.lib.modules.manual_timezone import validate_timezone_detected
+from resources.lib.modules.locale_playback import recover_orphaned_locale_override
 from resources.lib.modules.accountmgr_sync import sync_accountmgr_credentials, snapshot_enabled_flags, protect_enabled_flags
 
 g.init_globals(sys.argv)
@@ -58,6 +59,7 @@ try:
 
     do_update_news()
     validate_timezone_detected()
+    recover_orphaned_locale_override()
     try:
         g.clear_kodi_bookmarks()
     except TypeError:

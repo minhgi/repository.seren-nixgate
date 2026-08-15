@@ -1,3 +1,4 @@
+import threading
 import time
 from functools import cached_property
 from functools import wraps
@@ -5,6 +6,7 @@ from functools import wraps
 import xbmc
 import xbmcgui
 
+from resources.lib.common import tools
 from resources.lib.modules.globals import g
 
 OC_APIKEY_KEY = "offcloud.apikey"
@@ -13,6 +15,7 @@ OC_USERNAME_KEY = "offcloud.username"
 OC_STATUS_KEY = "offcloud.premiumstatus"
 
 _BASE_URL = "https://offcloud.com/api/"
+_OAUTH_BASE_URL = "https://offcloud.com/oauth/"
 
 
 def offcloud_guard_response(func):
@@ -122,6 +125,123 @@ class OffCloud:
             return resp.json()
         except Exception:
             return None
+
+    # ── Auth (Device Code / QR) ─────────────────────────────────────────────
+
+    def authorize(self):
+        """
+        Performs Offcloud's device-code authorization: shows a scannable QR
+        code alongside the verification URL + code (also copied to
+        clipboard), polls until the user approves on another device, then
+        stores the resulting access token as the account's API key.
+
+        Undocumented in Offcloud's official API docs (which describe only
+        API-key and username/password auth), but confirmed working via a
+        live device/code + token call, and independently confirmed by both
+        Umbrella's and POV's shipped offcloud implementations - see
+        TorBox_Offcloud_QR_Auth_Implementation_Plan.md for the verification
+        trail. The resulting access token is stored directly into
+        OC_APIKEY_KEY (not a separate field) since get_user_info(), the
+        cache/cloud endpoints, and getSources.py/globals.py's enabled-checks
+        all read that key by name.
+        """
+        self.api_key = None
+        try:
+            resp = self.session.post(_OAUTH_BASE_URL + "device/code", timeout=20)
+            data = resp.json()
+        except Exception as e:
+            g.log(f"Offcloud device-code start failed: {e}", "error")
+            data = None
+
+        if not isinstance(data, dict):
+            xbmcgui.Dialog().ok(g.ADDON_NAME, g.get_language_string(30024).format("Offcloud"))
+            return
+
+        try:
+            device_code = data["device_code"]
+            user_code = data["user_code"]
+            verification_url = data.get("verification_uri_complete") or data.get(
+                "verification_uri", "https://offcloud.com/activate"
+            )
+            interval = int(data.get("interval", 5))
+            token_ttl = int(data.get("expires_in", 600))
+        except (KeyError, ValueError):
+            xbmcgui.Dialog().ok(g.ADDON_NAME, g.get_language_string(30024).format("Offcloud"))
+            return
+
+        tools.copy2clip(user_code)
+        qr_image = tools.make_qr(verification_url, "offcloud_qr.png")
+
+        from resources.lib.gui.windows.qr_auth_window import QRAuthWindow
+
+        window = QRAuthWindow("qr_auth_window.xml", g.ADDON_PATH)
+        window.set_title(g.get_language_string(30934))
+        window.set_qr_image(qr_image)
+        window.set_details(
+            g.get_language_string(30018).format(verification_url),
+            g.get_language_string(30019).format(user_code),
+        )
+        window_thread = threading.Thread(target=window.doModal)
+        window_thread.start()
+
+        failed = False
+        try:
+            while (
+                not failed
+                and self.api_key is None
+                and token_ttl > 0
+                and not window.canceled_by_user
+            ):
+                xbmc.sleep(1000)
+                if token_ttl % interval == 0:
+                    failed = self._auth_poll(device_code)
+                minutes, seconds = divmod(max(token_ttl, 0), 60)
+                window.set_status(f"{minutes:02d}:{seconds:02d}")
+                token_ttl -= 1
+        finally:
+            canceled = window.canceled_by_user
+            window.close()
+            window_thread.join(5)
+            del window
+
+        if self.api_key:
+            g.set_setting(OC_APIKEY_KEY, self.api_key)
+            self.store_user_info()
+        elif not canceled:
+            xbmcgui.Dialog().ok(g.ADDON_NAME, g.get_language_string(30024).format("Offcloud"))
+
+    def _auth_poll(self, device_code):
+        """
+        Polls the token endpoint once. Returns True if polling should stop
+        (success or unrecoverable failure), False to keep waiting.
+        """
+        try:
+            resp = self.session.post(
+                _OAUTH_BASE_URL + "token",
+                json={
+                    "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+                    "device_code": device_code,
+                },
+                timeout=20,
+            )
+            data = resp.json()
+        except Exception:
+            return False
+
+        if not isinstance(data, dict):
+            return False
+
+        error = data.get("error")
+        if error in ("authorization_pending", "slow_down"):
+            return False
+        if error in ("expired_token", "access_denied"):
+            return True
+
+        access_token = data.get("access_token")
+        if not access_token:
+            return False
+        self.api_key = access_token
+        return True
 
     # ── Cache Check ────────────────────────────────────────────────────────
 

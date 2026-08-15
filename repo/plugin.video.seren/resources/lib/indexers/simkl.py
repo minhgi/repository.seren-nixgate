@@ -1,3 +1,4 @@
+import threading
 import time
 from functools import cached_property
 from functools import wraps
@@ -143,36 +144,40 @@ class SimklAPI(ApiBase):
             user_code = data["user_code"]
             verification_uri = data.get("verification_uri") or data.get("verification_url")
             interval = int(data["interval"])
-            expiry = int(data["expires_in"])
             token_ttl = int(data["expires_in"])
         except (KeyError, ValueError):
             xbmcgui.Dialog().ok(g.ADDON_NAME, g.get_language_string(31080))
             raise
 
         tools.copy2clip(user_code)
+
+        qr_image = tools.make_qr(verification_uri, "simkl_qr.png")
+
+        from resources.lib.gui.windows.qr_auth_window import QRAuthWindow
+
+        window = QRAuthWindow("qr_auth_window.xml", g.ADDON_PATH)
+        window.set_title(g.get_language_string(31074))
+        window.set_qr_image(qr_image)
+        window.set_details(
+            g.get_language_string(31075).format(verification_uri),
+            g.get_language_string(31076).format(user_code),
+        )
+        window_thread = threading.Thread(target=window.doModal)
+        window_thread.start()
+
         failed = False
         try:
-            progress_dialog = xbmcgui.DialogProgress()
-            progress_dialog.create(
-                f"{g.ADDON_NAME}: {g.get_language_string(31074)}",
-                tools.create_multiline_message(
-                    line1=g.get_language_string(31075).format(g.color_string(verification_uri)),
-                    line2=g.get_language_string(31076).format(g.color_string(user_code)),
-                    line3=g.get_language_string(31077),
-                ),
-            )
-            progress_dialog.update(100)
-            while not failed and self.username is None and token_ttl > 0 and not progress_dialog.iscanceled():
+            while not failed and self.username is None and token_ttl > 0 and not window.canceled_by_user:
                 xbmc.sleep(1000)
                 if token_ttl % interval == 0:
                     failed = self._auth_poll(user_code)
-                progress_percent = int(float((token_ttl * 100) / expiry))
-                progress_dialog.update(progress_percent)
+                minutes, seconds = divmod(max(token_ttl, 0), 60)
+                window.set_status(f"{minutes:02d}:{seconds:02d}")
                 token_ttl -= 1
-
-            progress_dialog.close()
         finally:
-            del progress_dialog
+            window.close()
+            window_thread.join(5)
+            del window
 
         if not failed and self.username:
             xbmcgui.Dialog().ok(g.ADDON_NAME, g.get_language_string(31078))

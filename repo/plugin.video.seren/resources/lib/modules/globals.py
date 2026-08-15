@@ -1125,7 +1125,7 @@ class GlobalVariables:
             color -= 1
             self.set_setting("general.textColor", colorChart[color])
             self.set_setting("general.displayColor", colorChart[color])
-        self.open_addon_settings(1, 2)
+        self.open_addon_settings(1, 1)
 
     @staticmethod
     def _try_get_color_from_skin():
@@ -1315,6 +1315,31 @@ class GlobalVariables:
 
     def debrid_available(self):
         return self._debrid_available
+
+    def local_scraping_configured(self):
+        """Settings-only check, no I/O — safe to call from the synchronous dispatch path."""
+        if not self.get_bool_setting('local.fileInspection'):
+            return False
+        for setting_id in ('local.location', 'download.location'):
+            folder = (self.get_setting(setting_id) or '').strip()
+            if folder and folder.lower() != 'userdata':
+                return True
+        return False
+
+    def local_playback_available(self):
+        """Adds a filesystem liveness probe on top of local_scraping_configured() —
+        only call this from a worker thread, never the synchronous dispatch path."""
+        if not self.local_scraping_configured():
+            return False
+        tried = []
+        for setting_id in ('local.location', 'download.location'):
+            folder = (self.get_setting(setting_id) or '').strip()
+            if folder and folder.lower() != 'userdata':
+                tried.append(folder)
+                if xbmcvfs.exists(tools.ensure_path_is_dir(folder)):
+                    return True
+        self.log(f"Local scraper: configured folder(s) not accessible: {tried}", "info")
+        return False
 
     @cached_property
     def _premiumize_enabled(self):
@@ -1888,9 +1913,9 @@ class GlobalVariables:
         :return:
         """
         xbmc.executebuiltin(f"Addon.OpenSettings({self.ADDON_ID})")
-        xbmc.executebuiltin(f"SetFocus({-(100 - section_offset)})")
+        xbmc.executebuiltin(f"SetFocus({-(200 - section_offset)})")
         if setting_offset is not None:
-            xbmc.executebuiltin(f"SetFocus({-(80 - setting_offset)})")
+            xbmc.executebuiltin(f"SetFocus({-(179 - setting_offset)})")
 
     def create_icon_dict(self, icon_slug, base_path, art_types=None):
         keys = art_types or ['icon', 'poster', 'thumb', 'fanart']

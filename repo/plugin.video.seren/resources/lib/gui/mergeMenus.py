@@ -75,7 +75,7 @@ class Menus:
 
     @staticmethod
     def _mdblist_active():
-        return g.get_setting('mdblist.enabled') == "true" and bool(g.get_setting('mdblist.apikey'))
+        return g.get_setting('mdblist.enabled') == "true" and bool(g.get_setting('mdblist.auth') or g.get_setting('mdblist.apikey'))
 
     @staticmethod
     def _simkl_active():

@@ -97,7 +97,7 @@ class TraktContextMenu:
                 }
             )
 
-        if scope == "mdblist" and g.get_bool_setting("mdblist.enabled") and g.get_setting("mdblist.apikey"):
+        if scope == "mdblist" and g.get_bool_setting("mdblist.enabled") and (g.get_setting("mdblist.auth") or g.get_setting("mdblist.apikey")):
             self.dialog_list.extend(
                 [
                     g.get_language_string(30954),

@@ -81,6 +81,30 @@ def copy2clip(txt):
             log(f"Failure to copy to clipboard, \n{e}", "error")
 
 
+def make_qr(data, filename="qr.png"):
+    """
+    Generates a QR code PNG encoding data, saved to Seren's userdata path
+    :param data: Text/URL to encode
+    :type data: str
+    :param filename: Destination filename within the userdata folder
+    :type filename: str
+    :return: Saved file path, or None on failure
+    :rtype: str or None
+    """
+    if not data:
+        return None
+    from resources.lib.modules.globals import g
+    from resources.lib.third_party import segno
+
+    try:
+        dest = translate_path(os.path.join(g.ADDON_USERDATA_PATH, filename))
+        segno.make(data, micro=False).save(dest, scale=10, dark="black", light="white")
+        return dest
+    except Exception as e:
+        log(f"Failure to generate QR code, \n{e}", "error")
+        return None
+
+
 def parse_datetime(string_date, date_only=True):
     """
     Attempts to pass over provided string and return a date or datetime object
@@ -645,6 +669,28 @@ def safe_dict_get(dictionary, *path):
 
     result = copy.deepcopy(result)
     return result
+
+
+def is_anime_by_genre(item_information):
+    """Detect anime content from genre metadata - shared heuristic used across the addon.
+
+    :param item_information: Item metadata, expected to contain an "info" sub-dict with "genre"/"country_origin"
+    :type item_information: dict
+    :return: Whether the item is likely anime
+    :rtype: bool
+    """
+    info = (item_information or {}).get('info', {}) or {}
+    genres = info.get('genre', [])
+    if not isinstance(genres, list):
+        genres = [genres] if genres else []
+    genres_lower = [genre.lower() for genre in genres]
+    is_anime = any('anime' in genre for genre in genres_lower)
+    if not is_anime and any('animation' in genre for genre in genres_lower):
+        # "Animation" genre appears for both anime and western animation.
+        # Use country of origin to distinguish: anime scrapers index Japanese content.
+        country = (info.get('country_origin', '') or '').upper()
+        is_anime = country in ('JP', 'JPN', 'JAPAN', 'CN', 'CHN', 'CHINA')
+    return is_anime
 
 
 @total_ordering

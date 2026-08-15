@@ -10,6 +10,7 @@ from resources.lib.database.premiumizeTransfers import PremiumizeTransfers
 from resources.lib.database.skinManager import SkinManager
 from resources.lib.debrid import all_debrid
 from resources.lib.debrid import debrid_link
+from resources.lib.debrid import offcloud
 from resources.lib.debrid import premiumize
 from resources.lib.debrid import real_debrid
 from resources.lib.debrid import torbox
@@ -144,6 +145,7 @@ def account_premium_status_checks():
         ("All Debrid", all_debrid.AllDebrid, "alldebrid"),
         ("TorBox", torbox.TorBox, "torbox"),
         ("Debrid-Link", debrid_link.DebridLink, "debridlink"),
+        ("Offcloud", offcloud.OffCloud, "offcloud"),
     ]
 
     for service in valid_debrid_providers:

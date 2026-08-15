@@ -122,6 +122,14 @@ class ListBuilder:
             **params,
         )
 
+    @staticmethod
+    def _cast_cm(item):
+        cm = list(item.get("cm") or [])
+        if item.get("cast") and item.get("args"):
+            url = g.create_url(g.BASE_URL, {"action": "castBrowse", "action_args": item.get("args")})
+            cm.append((g.get_language_string(31200), f'RunPlugin("{url}")'))
+        return cm
+
     def _common_menu_builder(self, trakt_list, content_type, action="getSources", **params):
         # Background prefetch call (RunPlugin, PLUGIN_HANDLE=-1): data loading already done
         # by the caller (get_movie_list/_update_movies), L1 cache populated. Skip rendering.
@@ -154,7 +162,7 @@ class ListBuilder:
                     action=action,
                     menu_item=item,
                     action_args=item.get("args"),
-                    cm=item.get("cm"),
+                    cm=self._cast_cm(item),
                     **params,
                 )
                 for item in self._post_process_list(trakt_list, prepend_date, mixed_list)

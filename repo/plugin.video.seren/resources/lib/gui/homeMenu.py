@@ -18,7 +18,7 @@ class Menus:
         )
         if (
             (g.get_setting('trakt.auth') and g.get_bool_setting('trakt.enabled', False))
-            or (g.get_setting('mdblist.enabled') == "true" and g.get_setting('mdblist.apikey'))
+            or (g.get_setting('mdblist.enabled') == "true" and (g.get_setting('mdblist.auth') or g.get_setting('mdblist.apikey')))
             or (g.get_setting('simkl.auth') and g.get_bool_setting('simkl.enabled'))
         ):
             g.add_directory_item(
@@ -113,6 +113,25 @@ class Menus:
                 menu_item=g.create_icon_dict("cloud", g.ICONS_PATH),
             )
         g.add_directory_item(
+            'Download Manager',
+            action='downloadManagerView',
+            is_folder=False,
+            description='View Current Downloads',
+            menu_item=g.create_icon_dict("download", g.ICONS_PATH),
+        )
+        if (
+            (g.get_setting('trakt.auth') and g.get_bool_setting('trakt.enabled', False))
+            or (g.get_setting('mdblist.enabled') == "true" and (g.get_setting('mdblist.auth') or g.get_setting('mdblist.apikey')))
+            or (g.get_setting('simkl.auth') and g.get_bool_setting('simkl.enabled'))
+        ):
+            g.add_directory_item(
+                g.get_language_string(31122),
+                action='syncTools',
+                is_folder=True,
+                description=g.get_language_string(31123),
+                menu_item=g.create_icon_dict("settings", g.ICONS_PATH),
+            )
+        g.add_directory_item(
             g.get_language_string(31128),
             action='clearCacheTool',
             is_folder=True,
@@ -127,12 +146,30 @@ class Menus:
             menu_item=g.create_icon_dict("settings", g.ICONS_PATH),
         )
         g.add_directory_item(
-            g.get_language_string(30041),
-            action='cleanInstall',
-            is_folder=False,
-            description=g.get_language_string(30383),
-            menu_item=g.create_icon_dict("clear", g.ICONS_PATH),
+            g.get_language_string(31167),
+            action='settingsTools',
+            is_folder=True,
+            description=g.get_language_string(31168),
+            menu_item=g.create_icon_dict("settings", g.ICONS_PATH),
         )
+        g.add_directory_item(
+            g.get_language_string(31165),
+            action='showChangelog',
+            is_folder=False,
+            description=g.get_language_string(31166),
+            menu_item=g.create_icon_dict("list", g.ICONS_PATH),
+        )
+        if g.get_bool_setting("skin.testmenu", False):
+            g.add_directory_item(
+                'Window Tests',
+                action='testWindows',
+                description=g.get_language_string(30385),
+                menu_item=g.create_icon_dict("test", g.ICONS_PATH),
+            )
+        g.close_directory(g.CONTENT_MENU)
+
+    @staticmethod
+    def settings_tools():
         g.add_directory_item(
             g.get_language_string(30720),
             action='backupSettings',
@@ -147,32 +184,13 @@ class Menus:
             description=g.get_language_string(30723),
             menu_item=g.create_icon_dict("settings", g.ICONS_PATH),
         )
-        if (
-            (g.get_setting('trakt.auth') and g.get_bool_setting('trakt.enabled', False))
-            or (g.get_setting('mdblist.enabled') == "true" and g.get_setting('mdblist.apikey'))
-            or (g.get_setting('simkl.auth') and g.get_bool_setting('simkl.enabled'))
-        ):
-            g.add_directory_item(
-                g.get_language_string(31122),
-                action='syncTools',
-                is_folder=True,
-                description=g.get_language_string(31123),
-                menu_item=g.create_icon_dict("settings", g.ICONS_PATH),
-            )
         g.add_directory_item(
-            'Download Manager',
-            action='downloadManagerView',
+            g.get_language_string(30041),
+            action='cleanInstall',
             is_folder=False,
-            description='View Current Downloads',
-            menu_item=g.create_icon_dict("download", g.ICONS_PATH),
+            description=g.get_language_string(30383),
+            menu_item=g.create_icon_dict("clear", g.ICONS_PATH),
         )
-        if g.get_bool_setting("skin.testmenu", False):
-            g.add_directory_item(
-                'Window Tests',
-                action='testWindows',
-                description=g.get_language_string(30385),
-                menu_item=g.create_icon_dict("test", g.ICONS_PATH),
-            )
         g.close_directory(g.CONTENT_MENU)
 
     @staticmethod

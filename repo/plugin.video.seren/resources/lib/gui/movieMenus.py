@@ -202,7 +202,7 @@ class Menus:
     @staticmethod
     def my_movies():
         trakt_active = bool(g.get_setting('trakt.auth')) and g.get_bool_setting('trakt.enabled', False)
-        mdblist_active = g.get_setting('mdblist.enabled') == "true" and bool(g.get_setting('mdblist.apikey'))
+        mdblist_active = g.get_setting('mdblist.enabled') == "true" and bool(g.get_setting('mdblist.auth') or g.get_setting('mdblist.apikey'))
         simkl_active = bool(g.get_setting('simkl.auth')) and g.get_bool_setting('simkl.enabled')
         if sum((trakt_active, mdblist_active, simkl_active)) >= 2:
             g.add_directory_item(
@@ -262,7 +262,7 @@ class Menus:
                 description=g.get_language_string(30415),
                 menu_item=g.create_icon_dict("movies_watched", g.ICONS_PATH),
             )
-        if g.get_setting('mdblist.enabled') == "true" and g.get_setting('mdblist.apikey'):
+        if g.get_setting('mdblist.enabled') == "true" and (g.get_setting('mdblist.auth') or g.get_setting('mdblist.apikey')):
             g.add_directory_item(
                 g.get_language_string(30968),
                 action="mdblistInProgressMovies",

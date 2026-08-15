@@ -43,7 +43,7 @@ class MDBListSyncDatabase(mdblist_sync.MDBListSyncDatabase):
 
     def sync_activities(self):
         with GlobalLock("mdblist.sync"):
-            if not g.get_bool_setting("mdblist.enabled") or not g.get_setting("mdblist.apikey"):
+            if not g.get_bool_setting("mdblist.enabled") or not (g.get_setting("mdblist.auth") or g.get_setting("mdblist.apikey")):
                 g.log("MDBListSync: MDBList disabled or no auth present, no sync will occur", "warning")
                 return
 
