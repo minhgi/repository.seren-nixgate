@@ -78,6 +78,30 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
                 "movies_rated",
                 self._sync_rated_movies,
             ),
+            (
+                "Watchlist Movies",
+                ("movies", "watchlisted_at"),
+                "movies_watchlisted",
+                self._sync_watchlist_movies,
+            ),
+            (
+                "Watchlist Shows",
+                ("shows", "watchlisted_at"),
+                "shows_watchlisted",
+                self._sync_watchlist_shows,
+            ),
+            (
+                "Favorited Movies",
+                ("movies", "favorited_at"),
+                "movies_favorited",
+                self._sync_favorited_movies,
+            ),
+            (
+                "Favorited Shows",
+                ("shows", "favorited_at"),
+                "shows_favorited",
+                self._sync_favorited_shows,
+            ),
         ]
 
     def clear_last_sync(self):
@@ -277,6 +301,86 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
                     WHERE trakt_id IN ({','.join(str(i.get('trakt_id')) for i in trakt_collection)})
                     """,
                 ]
+            )
+        except Exception as e:
+            raise ActivitySyncFailure(e) from e
+
+    def _sync_watchlist_movies(self):
+        try:
+            trakt_watchlist = []
+            for paged_items in self.trakt_api.get_all_pages_json(
+                "sync/watchlist/movies", extended="full", limit=100, ignore_cache=True
+            ):
+                trakt_watchlist.extend(paged_items)
+            self.execute_sql("UPDATE movies SET watchlisted=0")
+            if len(trakt_watchlist) == 0:
+                return
+            self.insert_trakt_movies(trakt_watchlist)
+            self.execute_sql(
+                f"""
+                UPDATE movies SET watchlisted=1
+                WHERE trakt_id IN ({','.join(str(i.get('trakt_id')) for i in trakt_watchlist)})
+                """
+            )
+        except Exception as e:
+            raise ActivitySyncFailure(e) from e
+
+    def _sync_watchlist_shows(self):
+        try:
+            trakt_watchlist = []
+            for paged_items in self.trakt_api.get_all_pages_json(
+                "sync/watchlist/shows", extended="full", limit=100, ignore_cache=True
+            ):
+                trakt_watchlist.extend(paged_items)
+            self.execute_sql("UPDATE shows SET watchlisted=0")
+            if len(trakt_watchlist) == 0:
+                return
+            self.insert_trakt_shows(trakt_watchlist)
+            self.execute_sql(
+                f"""
+                UPDATE shows SET watchlisted=1
+                WHERE trakt_id IN ({','.join(str(i.get('trakt_id')) for i in trakt_watchlist)})
+                """
+            )
+        except Exception as e:
+            raise ActivitySyncFailure(e) from e
+
+    def _sync_favorited_movies(self):
+        try:
+            trakt_favorites = []
+            for paged_items in self.trakt_api.get_all_pages_json(
+                "sync/favorites/movies", extended="full", limit=100, ignore_cache=True
+            ):
+                trakt_favorites.extend(paged_items)
+            self.execute_sql("UPDATE movies SET favorited=0")
+            if len(trakt_favorites) == 0:
+                return
+            self.insert_trakt_movies(trakt_favorites)
+            self.execute_sql(
+                f"""
+                UPDATE movies SET favorited=1
+                WHERE trakt_id IN ({','.join(str(i.get('trakt_id')) for i in trakt_favorites)})
+                """
+            )
+        except Exception as e:
+            raise ActivitySyncFailure(e) from e
+
+    def _sync_favorited_shows(self):
+        try:
+            trakt_favorites = []
+            for paged_items in self.trakt_api.get_all_pages_json(
+                "sync/favorites/shows", extended="full", limit=100, ignore_cache=True
+            ):
+                trakt_favorites.extend(paged_items)
+            self.execute_sql("UPDATE shows SET favorited=0")
+            if len(trakt_favorites) == 0:
+                return
+            self.insert_trakt_shows(trakt_favorites)
+            self.execute_sql(
+                f"""
+                UPDATE shows SET favorited=1
+                WHERE trakt_id IN ({','.join(str(i.get('trakt_id')) for i in trakt_favorites)})
+                """
             )
         except Exception as e:
             raise ActivitySyncFailure(e) from e

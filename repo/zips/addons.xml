@@ -124,7 +124,7 @@
 			Rework for Seren 2.0
 		</news>
 	</extension>
-</addon><addon id="plugin.video.seren" version="3.4.25" name="Seren" provider-name="Nixgates">
+</addon><addon id="plugin.video.seren" version="3.5.12" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -191,6 +191,51 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.5.12
+            [FIX] MDBList "Next Up" could take upwards of a minute or more to load and could show a long-since-watched early-season episode as "next" for an actively-watched show. Two separate causes: (1) the feature capped itself at the general item.limit browse-page setting (default 20), and every one of those shows can trigger a one-time-per-show cold TMDb bootstrap of its entire episode catalog if never browsed elsewhere in Seren - now capped at 10 shows regardless of item.limit, bounding worst-case synchronous load time. (2) the "next unwatched episode" match compared MDBList's real season/episode numbers against get_episode_list()'s cached info blob, which can hold TMDb absolute numbering (e.g. season=1/number=48) instead of the show's real numbering for some shows - every real watched episode then silently failed to match, and the first episode in air order (usually season 1) won every time. Now matches against the same DB-authoritative season/number columns the episode list is already sorted by.
+            [FIX] MDBList's watched-history sync now also reads the server's bulk-marked whole-show and whole-season watched entries, not just individually-tracked episodes - live-confirmed a second, often larger contributor to the "wrong next episode" symptom above: marking a whole show or season watched via MDBList's own site/app produces no per-episode record at all, so Next Up had nothing locally to treat as watched for that content and fell back to season 1 episode 1. A whole-season mark now credits every episode in that season; a whole-show mark credits every episode aired on or before the mark's own timestamp. One side effect worth knowing: a show that's entirely covered by a whole-show mark (fully aired and fully bulk-marked) now correctly disappears from Next Up instead of showing a stale wrong episode - there's no real gap left to report for it.
+
+            Changelog 3.5.11
+            [FIX] Trakt's context menu "Add to List" and "Remove From List" entries are now labelled "Add to Custom List (Trakt)" and "Remove From Custom List (Trakt)" - previously "List" sat directly under "Add to Watchlist" and "Add to Favorites" in the same menu with nothing to say it wasn't just another one of those. These two are the only entries that open a picker over your own Trakt-created lists (with "create new list" as an option), so the label now says "Custom" to make that the visibly different thing it is. No behaviour change, label only.
+            [FIX] MDBList's equivalent "Add to List (MDBList)" and "Remove from List (MDBList)" context menu entries are now "Add to Custom List (MDBList)" and "Remove from Custom List (MDBList)" for the same reason and the same fix. No behaviour change, label only.
+
+            Changelog 3.5.10
+            [NEW] Trakt Watchlist and Favorites context menu options (movie/show only) now show only "Add" or "Remove", matching the existing Collection/Watched/Progress gates - previously both always appeared regardless of state. Backed by two new local boolean columns per item, kept current by a new periodic sync pass (mirroring Collection's) and by an immediate local write on every add/remove action, so the gate never waits on the next sync cycle.
+
+            Changelog 3.5.9
+            [NEW] MDBList "Clear Progress" and Simkl "Remove Playback History" context menu options now only show when a local playback bookmark actually exists for that item, instead of always appearing and dead-ending in a "nothing to clear" notification when there was nothing to clear - matching Trakt's existing Remove Playback History gate. Both read local bookmark tables already populated by each service's periodic sync (MDBList) or by the existing playback-clear handler (Simkl); no new API calls, no schema changes.
+
+            Changelog 3.5.8
+            [NEW] MDBList show/season context menu now shows only "Mark Watched" or "Mark Unwatched", closing the gap left open in 3.5.6 - compares MDBList's own local per-episode watched count against the episode count already loaded from Trakt's local data (used identically across all three scopes' menus), so no extra API calls are needed. For a currently-airing show/season this counts episodes aired so far, the same way Trakt's own gate does. Local reflection isn't immediate here the way it is for movie/episode: marking a show/season watched updates MDBList's server right away, but the local count driving this gate only catches up on the next periodic MDBList sync, since that sync unconditionally resets and repopulates the whole table - reopening the menu in that window can still show the pre-toggle option. Simkl season/episode remains ungated - Simkl has no local per-episode data at all, and the two remote alternatives (a heavier bulk-sync payload that can return placeholder episodes not backed by real history, or an on-demand lookup Simkl's own docs warn against combining with the existing sync) were both evaluated and rejected; see Project_Report_Full.md for details.
+
+            Changelog 3.5.7
+            [FIX] Simkl's scrobbler (auto mark-watched at the end of playback) now writes the local sync database immediately, matching Trakt/MDBList's existing behavior - previously it only posted to Simkl's API, so the 3.5.6 context-menu toggle could keep showing "Mark Watched" for an item Simkl already had marked watched, until the next periodic sync. Movies upsert using the id in the scrobble response when the response includes one, so even a first-ever watch can be captured immediately; otherwise falls back to the existing update-only write (same as before this fix, waits for the next sync). Shows increment the existing local episode count (clamped to the known total), since Simkl's local schema has no per-episode table - a rewatched episode can be double-counted until the next full sync reconciles it; accepted, since nothing currently reads per-episode Simkl state.
+
+            Changelog 3.5.6
+            [NEW] MDBList and Simkl context menus now show only "Mark Watched" or "Mark Unwatched" for a movie/episode (MDBList) or movie/show (Simkl), never both - matching Trakt's existing behavior and TMDb Helper's equivalent toggle. Show/season (MDBList) and season/episode (Simkl) have no local per-item watched data to gate on, so both options still show there.
+            [FIX] MDBList mark-unwatched and Simkl mark-watched/unwatched now write the local sync database immediately instead of only the remote API - previously only MDBList's mark-watched did this, so the local watched flag could go stale until the next periodic sync.
+
+            Changelog 3.5.5
+            [FIX] Manage Lists (Trakt) context menu option moved to sit directly after Remove From List (My Movies / My Shows, Trakt section), matching where MDBList already places its own Manage Lists entry relative to Add/Remove From List. Previously it was near the end of the Trakt section, after Hide and Refresh Item Metadata.
+
+            Changelog 3.5.4
+            [NEW] Manage Lists (Trakt) context menu option (My Movies / My Shows, Trakt section) - Edit List (rename and/or change privacy in one step) and Delete List for any Trakt list you own, matching the existing MDBList Manage Lists flow.
+            [CHANGE] MDBList Manage Lists consolidated from three actions (Rename List / Make Private-Public / Delete List) to two (Edit List / Delete List) - Edit List combines rename and privacy into a single prompt and a single save, for consistency with the new Trakt flow above.
+
+            Changelog 3.5.3
+            [NEW] Trakt - Search Movie Lists / Trakt - Search Show Lists (My Movies / My Shows, Trakt section) - search Trakt's public lists by name, filtered to lists containing at least one item of that media type.
+            [NEW] Create new list... option added to the Trakt "Add to list" context menu, matching the existing MDBList create-list flow - prompts for a name and private/public, then adds the item to the newly created list.
+
+            Changelog 3.5.2
+            [FIX] Trakt - Dropped Shows moved to sit directly before Trakt - Recent Episodes (My Shows, Trakt section), matching where MDBList and Simkl already place their own Dropped Shows entry relative to their Recent/Recently Watched item. Previously it was the last item in the Trakt section.
+
+            Changelog 3.5.1
+            [FIX] MDBList Discover renamed to "MDBList - Discover Movie List" (Movies section) and "MDBList - Discover TV Show List" (TV Shows section), split into separate labels to match the section's naming convention. Previously both sections shared one label, "Discover MDBList Lists".
+
+            Changelog 3.5.0
+            [NEW] Trakt - Dropped Shows (My Shows, Trakt section) - browse every show you've marked Dropped on Trakt, live from users/hidden/dropped, matching the existing MDBList/Simkl Dropped Shows menus. Includes a Restore Dropped Shows control item that opens a multi-select picker to un-drop one or more shows in a single batched request.
+            [NEW] Hide/Unhide context menu (Trakt) - shows now offer a third "Dropped" option alongside Watched Progress and Calendar, posting to Trakt's real users/hidden/dropped endpoint. Movies and season/episode-level items are unaffected; Dropped is a whole-show action only.
+
             Changelog 3.4.25
             [FIX] MDBList Next Up renamed to "MDBList - Next Up" to match the section's naming convention, and moved to directly below MDBList - In Progress Episodes.
 
@@ -220,7 +265,7 @@
             [CHANGE] Added description text to every remaining settings-box entry that didn't have any, across all 11 other tabs (Themes, Metadata &amp; Artwork, Watch Accounts, Accounts, Providers, Scraping, Sort &amp; Filter, Playback, Anime Titles, Shortcuts, Advanced) - 232 settings in total. Same approach as the 3.4.16 General pilot: every description is grounded in what the setting actually does in the code, not just its label. This surfaced a few real quirks worth knowing about: Clear Logo artwork always shows for movies/shows regardless of that toggle (dead setting, described as such); AllDebrid's and Offcloud's Auto-Delete Torrents toggles currently do nothing (cleanup for those two is controlled entirely by Add Resolved Torrents to Cloud / Smart Delete instead); Premiumize's Authorize button doubles as Revoke once you're linked, since it has no separate Revoke button like the other debrid services. No behavior changed, settings-only.
 
             Changelog 3.4.16
-            [CHANGE] Added description text to the 24 General tab settings that didn't have any (they showed no explanation at the bottom of the settings box when highlighted). Descriptions are grounded in what each setting actually does, e.g. Page Item Limit, Hide Watched Items, Next Up Sort Style, the Download Location/organization settings, etc. Pilot for the General tab only - other tabs (Sort &amp; Filter, Playback, Accounts, etc.) still have the same gap and weren't touched in this pass. No behavior changed, settings-only.
+            [CHANGE] Added description text to the 24 General tab settings that didn't have any (they showed no explanation at the bottom of the settings box when highlighted). Descriptions are grounded in what each setting actually does in the code, e.g. Page Item Limit, Hide Watched Items, Next Up Sort Style, the Download Location/organization settings, etc. Pilot for the General tab only - other tabs (Sort &amp; Filter, Playback, Accounts, etc.) still have the same gap and weren't touched in this pass. No behavior changed, settings-only.
 
             Changelog 3.4.15
             [CHANGE] Download Manager is now off by default on new installs (previously on by default). If you're already using it, your setting is untouched - this only changes what a fresh install starts with. Turn it on any time in Settings -&gt; General -&gt; Downloads. NAS/local file scraping was checked as part of this and was already off by default - no change needed there.
@@ -269,7 +314,6 @@
 
             Changelog 3.4.0
             [NEW] Local/NAS file scraper: scans a configured local or network-mounted (SMB/NFS) folder for video files matching your library and surfaces them as a "Local" direct source alongside torrent/debrid/hoster results. Enable under Settings &gt; Providers &gt; Local Files.
-
 
             Changelog 3.3.269
             [CHANGE] Tools menu: consolidated Backup Settings, Restore Settings, and Wipe Addon Data (previously 3 separate entries) into one "Backup and Reset" folder. Reordered the menu so Download Manager and Sync Tools now sit right under Premium Services.

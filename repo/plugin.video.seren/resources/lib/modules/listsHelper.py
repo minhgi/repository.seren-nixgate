@@ -66,6 +66,12 @@ class ListsHelper:
             self.lists_database.extract_trakt_page('lists/popular', media_type, page=g.PAGE), media_type=media_type
         )
 
+    def search_lists(self, media_type, query):
+        self._create_list_menu(
+            self.lists_database.extract_trakt_page('search/list', media_type, query=query, page=g.PAGE),
+            media_type=media_type,
+        )
+
     def _create_list_menu(self, trakt_lists, **params):
         trakt_object = MetadataHandler.trakt_object
         get = MetadataHandler.get_trakt_info

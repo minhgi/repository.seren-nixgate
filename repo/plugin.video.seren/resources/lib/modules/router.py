@@ -95,6 +95,8 @@ _ROUTE_TABLE = {
     "flatEpisodes":         _menu("resources.lib.gui.tvshowMenus", "flat_episode_list", "action_args"),
     "myUpcomingEpisodes":   _menu("resources.lib.gui.tvshowMenus", "my_upcoming_episodes"),
     "myWatchedEpisodes":    _menu("resources.lib.gui.tvshowMenus", "my_watched_episode"),
+    "traktDroppedShows":    _menu("resources.lib.gui.tvshowMenus", "dropped_shows"),
+    "traktDroppedShowsRestore": _menu("resources.lib.gui.tvshowMenus", "dropped_shows_bulk_restore"),
     "showsByActor":         _menu("resources.lib.gui.tvshowMenus", "shows_by_actor", "action_args"),
     "castBrowse":           _func("resources.lib.gui.castMenus", "browse_cast", "action_args"),
     "showsPopularRecent":   _menu("resources.lib.gui.tvshowMenus", "shows_popular_recent"),
@@ -135,6 +137,8 @@ _ROUTE_TABLE = {
     "TrendingLists":        _call("resources.lib.modules.listsHelper", "ListsHelper", "trending_lists", "mediatype"),
     "PopularLists":         _call("resources.lib.modules.listsHelper", "ListsHelper", "popular_lists", "mediatype"),
     "traktList":            _call("resources.lib.modules.listsHelper", "ListsHelper", "get_list_items"),
+    "searchTraktMovieLists": _menu("resources.lib.gui.movieMenus", "search_trakt_movie_lists", "action_args"),
+    "searchTraktShowLists": _menu("resources.lib.gui.tvshowMenus", "search_trakt_show_lists", "action_args"),
 
     # --- Trakt sync ---
     "syncTraktActivities":  _call("resources.lib.database.trakt_sync.activities", "TraktSyncDatabase", "sync_activities"),

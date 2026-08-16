@@ -764,6 +764,16 @@ class TraktAPI(ApiBase):
         return self.post(url, data).json()
 
     @trakt_guard_response
+    def put(self, url, data):
+        """
+        Performs a put request to the specified endpoint and returns response
+        :param url: URL endpoint to perform request to
+        :param data: PUT Data to send to endpoint
+        :return: requests response
+        """
+        return self.session.put(parse.urljoin(self.ApiUrl, url), json=data, headers=self._get_headers())
+
+    @trakt_guard_response
     def delete_request(self, url):
         """
         Performs a delete request to the specified endpoint and returns response

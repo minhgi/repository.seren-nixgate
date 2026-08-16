@@ -25,6 +25,11 @@ from resources.lib.modules.sync_lock import SyncLock
 _LIST_CACHE = {}
 _LIST_CACHE_MAX = 50  # Max entries to prevent unbounded growth
 
+# Session-level set of db_file paths already migrated for the watchlisted/favorited
+# columns below - avoids a PRAGMA table_info() round trip on every TraktSyncDatabase()
+# construction (this happens on nearly every context-menu open).
+_WATCHLIST_FAVORITES_MIGRATED = set()
+
 
 def _list_cache_key(method_name, id_list, **params):
     """Generate a cache key from method name, trakt IDs, and relevant params."""
@@ -339,6 +344,7 @@ class TraktSyncDatabase(Database):
         self,
     ):
         super().__init__(g.TRAKT_SYNC_DB_PATH, schema)
+        self._migrate_watchlist_favorites_columns()
 
         self.activities = {}
         self.item_list = []
@@ -395,6 +401,30 @@ class TraktSyncDatabase(Database):
 
     def _insert_last_activities_column(self):
         self.execute_sql("ALTER TABLE activities ADD last_activities_call INTEGER NOT NULL DEFAULT 1")
+
+    def _migrate_watchlist_favorites_columns(self):
+        """ALTER TABLE, deliberately not a `schema` dict entry: the dict's contents
+        feed _integrity_check_db's md5 checksum, and any change there is treated as
+        a schema mismatch - rebuild_database() then drops every table in this db file
+        (DELETE FROM sqlite_master + VACUUM) before recreating them empty. Declaring
+        watchlisted/favorited in `schema` would wipe every existing user's local Trakt
+        cache (watched/collected/rated/hidden/bookmarks/lists) on their next launch.
+        Do not "clean up" the dict/live-schema divergence by moving these there."""
+        if self._db_file in _WATCHLIST_FAVORITES_MIGRATED:
+            return
+        for table in ("movies", "shows"):
+            existing = {row["name"] for row in self.fetchall(f"PRAGMA table_info({table})")}
+            for column in ("watchlisted", "favorited"):
+                if column not in existing:
+                    self.execute_sql(f"ALTER TABLE {table} ADD COLUMN {column} INTEGER NOT NULL DEFAULT 0")
+
+        existing_activity_columns = {row["name"] for row in self.fetchall("PRAGMA table_info(activities)")}
+        for column in ("movies_watchlisted", "shows_watchlisted", "movies_favorited", "shows_favorited"):
+            if column not in existing_activity_columns:
+                self.execute_sql(
+                    f"ALTER TABLE activities ADD COLUMN {column} TEXT NOT NULL DEFAULT '1970-01-01T00:00:00'"
+                )
+        _WATCHLIST_FAVORITES_MIGRATED.add(self._db_file)
 
     @staticmethod
     def _get_datetime_now():

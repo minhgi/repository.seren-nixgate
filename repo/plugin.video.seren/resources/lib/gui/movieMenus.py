@@ -257,6 +257,12 @@ class Menus:
                 menu_item=g.create_icon_dict("list_liked", g.ICONS_PATH),
             )
             g.add_directory_item(
+                g.get_language_string(31487),
+                action="searchTraktMovieLists",
+                description=g.get_language_string(31488),
+                menu_item=g.create_icon_dict("list_trakt", g.ICONS_PATH),
+            )
+            g.add_directory_item(
                 g.get_language_string(30326),
                 action="myWatchedMovies",
                 description=g.get_language_string(30415),
@@ -441,6 +447,17 @@ class Menus:
                 cm=[(g.get_language_string(30565), f"RunPlugin({remove_path})")],
             )
         g.close_directory(g.CONTENT_MENU)
+
+    def search_trakt_movie_lists(self, query=None):
+        if query is None:
+            query = g.get_keyboard_input(heading=g.get_language_string(30013))
+            if not query:
+                g.cancel_directory(silent=True)
+                return
+
+        from resources.lib.modules.listsHelper import ListsHelper
+
+        ListsHelper().search_lists("movies", query)
 
     def movies_search(self, query=None):
         if query is None:

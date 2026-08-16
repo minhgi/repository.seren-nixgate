@@ -115,9 +115,26 @@ class MDBListSyncDatabase(mdblist_sync.MDBListSyncDatabase):
         narrow window before MDBList's backend surfaces that same write back
         through this endpoint; that's a bounded, self-correcting risk (next
         sync repopulates it once MDBList catches up), the same risk profile
-        already accepted for Simkl's removal reconciliation."""
+        already accepted for Simkl's removal reconciliation.
+
+        This endpoint's response also carries "shows" and "seasons" buckets (per
+        mdblist.apib) for bulk mark-watched actions taken on a whole show/season on
+        MDBList's own site/app - MDBList has no per-episode record for those. Live-
+        confirmed 2026-08-16 against a real account that these buckets are routinely
+        populated, not an edge case (88 shows, 193 seasons, against 3427 individually-
+        tracked episodes) - e.g. a 176-episode show bulk-marked watched as a whole,
+        with only a handful of incidental season-0 specials individually tracked. A
+        show/season bulk-marked that way contributes no local "episodes" rows, which
+        surfaced as a stale/wrong "next episode" downstream (see
+        mdblistMenus.Menus.next_up and its _expand_bulk_watched helper, which is what
+        actually consumes bulk_watched_shows/bulk_watched_seasons below - this method
+        only persists them). Reset+repopulated the same way as movies/episodes: a full
+        DELETE, not a delta, since this is a complete paginated fetch of current server
+        state each cycle."""
         movie_rows = []
         episode_rows = []
+        show_rows = []
+        season_rows = []
         offset = 0
         limit = 100
         try:
@@ -128,6 +145,8 @@ class MDBListSyncDatabase(mdblist_sync.MDBListSyncDatabase):
 
                 movies = page.get("movies") or []
                 episodes = page.get("episodes") or []
+                shows = page.get("shows") or []
+                seasons = page.get("seasons") or []
 
                 movie_rows.extend(
                     (m["movie"]["ids"]["tmdb"], m["movie"]["ids"].get("imdb"), m.get("last_watched_at"))
@@ -143,6 +162,21 @@ class MDBListSyncDatabase(mdblist_sync.MDBListSyncDatabase):
                     )
                     for e in episodes
                     if e.get("episode", {}).get("show", {}).get("ids", {}).get("tmdb")
+                )
+                show_rows.extend(
+                    (s["show"]["ids"]["tmdb"], s.get("last_watched_at"))
+                    for s in shows
+                    if s.get("show", {}).get("ids", {}).get("tmdb")
+                )
+                season_rows.extend(
+                    (
+                        s["season"]["show"]["ids"]["tmdb"],
+                        s["season"]["number"],
+                        s.get("last_watched_at"),
+                    )
+                    for s in seasons
+                    if s.get("season", {}).get("show", {}).get("ids", {}).get("tmdb")
+                    and s.get("season", {}).get("number") is not None
                 )
 
                 pagination = page.get("pagination") or {}
@@ -163,11 +197,23 @@ class MDBListSyncDatabase(mdblist_sync.MDBListSyncDatabase):
                     "REPLACE INTO movies (tmdb_id, imdb_id, watched, last_watched_at) VALUES (?, ?, 1, ?)",
                     movie_rows,
                 )
+            self.execute_sql("DELETE FROM bulk_watched_shows")
+            if show_rows:
+                self.execute_sql(
+                    "REPLACE INTO bulk_watched_shows (show_tmdb_id, last_watched_at) VALUES (?, ?)",
+                    show_rows,
+                )
+            self.execute_sql("DELETE FROM bulk_watched_seasons")
+            if season_rows:
+                self.execute_sql(
+                    "REPLACE INTO bulk_watched_seasons (show_tmdb_id, season, last_watched_at) VALUES (?, ?, ?)",
+                    season_rows,
+                )
         except ActivitySyncFailure:
             raise
         except Exception as e:
             raise ActivitySyncFailure(e) from e
-        return len(movie_rows) + len(episode_rows)
+        return len(movie_rows) + len(episode_rows) + len(show_rows) + len(season_rows)
 
     def _sync_playback(self):
         """Pulls GET /sync/playback (flat array, not paginated per the

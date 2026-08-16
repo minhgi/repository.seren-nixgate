@@ -8,6 +8,7 @@ import xbmcplugin
 from resources.lib.common import tools
 from resources.lib.indexers import trakt_auth_guard
 from resources.lib.modules.globals import g
+from resources.lib.modules.metadataHandler import MetadataHandler
 
 _PERIOD_ENDPOINTS = frozenset({"played", "watched", "collected", "favorited"})
 
@@ -268,6 +269,12 @@ class Menus:
                 menu_item=g.create_icon_dict("list_liked", g.ICONS_PATH),
             )
             g.add_directory_item(
+                g.get_language_string(31478),
+                action="traktDroppedShows",
+                description=g.get_language_string(31479),
+                menu_item=g.create_icon_dict("shows_watched", g.ICONS_PATH),
+            )
+            g.add_directory_item(
                 g.get_language_string(30972),
                 action="showsRecentlyWatched",
                 description=g.get_language_string(30479),
@@ -310,6 +317,12 @@ class Menus:
                 mediatype="shows",
                 description=g.get_language_string(30441),
                 menu_item=g.create_icon_dict("list_liked", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31489),
+                action="searchTraktShowLists",
+                description=g.get_language_string(31490),
+                menu_item=g.create_icon_dict("list_trakt", g.ICONS_PATH),
             )
             g.add_directory_item(
                 g.get_language_string(30325),
@@ -356,7 +369,7 @@ class Menus:
                 menu_item=g.create_icon_dict("list_trakt", g.ICONS_PATH),
             )
             g.add_directory_item(
-                g.get_language_string(31063),
+                g.get_language_string(31486),
                 action="mdblistDiscover",
                 mediatype="shows",
                 description=g.get_language_string(31064),
@@ -466,6 +479,81 @@ class Menus:
             hide_unaired=False,
             hide_watched=False,
         )
+
+    @trakt_auth_guard
+    def dropped_shows(self):
+        paginate = not g.get_bool_setting("general.paginatetraktlists")
+        trakt_list = self.shows_database.extract_trakt_page(
+            "users/hidden/dropped",
+            type="show",
+            extended="full",
+            page=g.PAGE,
+            ignore_cache=True,
+            no_paging=paginate,
+            hide_unaired=False,
+            hide_watched=False,
+        )
+        if not trakt_list:
+            g.cancel_directory()
+            return
+        if g.PAGE == 1:
+            g.add_directory_item(
+                g.get_language_string(31480),
+                action="traktDroppedShowsRestore",
+                description=g.get_language_string(31481),
+                menu_item=g.create_icon_dict("shows_watched", g.ICONS_PATH),
+            )
+        self.list_builder.show_list_builder(
+            trakt_list,
+            no_paging=paginate,
+            hide_unaired=False,
+            hide_watched=False,
+        )
+
+    @trakt_auth_guard
+    def dropped_shows_bulk_restore(self):
+        # Live-fetch only, same as dropped_shows() above - the hidden DB table is a local
+        # filter cache for other screens (calendar/recommendations), not a mirror of Trakt's
+        # dropped state, so it is never read here. It is still cleared per-show on restore to
+        # keep it consistent with _hide_item()'s own write when a show is dropped.
+        trakt_list = self.shows_database.extract_trakt_page(
+            "users/hidden/dropped",
+            type="show",
+            extended="full",
+            ignore_cache=True,
+            no_paging=True,
+            hide_unaired=False,
+            hide_watched=False,
+        )
+        if not trakt_list:
+            g.notification(g.ADDON_NAME, g.get_language_string(31485))
+            self.dropped_shows()
+            return
+
+        list_items = [
+            xbmcgui.ListItem(label=item.get("title") or MetadataHandler.get_trakt_info(item, "title") or "")
+            for item in trakt_list
+        ]
+        selected = xbmcgui.Dialog().multiselect(
+            f"{g.ADDON_NAME}: {g.get_language_string(31482)}", list_items, useDetails=True
+        )
+
+        if not selected:
+            self.dropped_shows()
+            return
+
+        show_ids = [trakt_list[i].get("trakt_id") for i in selected]
+        show_ids = [i for i in show_ids if i is not None]
+
+        self.trakt_api.post_json(
+            "users/hidden/dropped/remove", {"shows": [{"ids": {"trakt": i}} for i in show_ids]}
+        )
+        for trakt_id in show_ids:
+            self.hidden_database.remove_item("dropped", trakt_id)
+
+        g.notification(g.ADDON_NAME, g.get_language_string(31484).format(len(show_ids)))
+        g.trigger_widget_refresh()
+        self.dropped_shows()
 
     @trakt_auth_guard
     def my_shows_favorites(self):
@@ -624,6 +712,17 @@ class Menus:
                 cm=[(g.get_language_string(30565), f"RunPlugin({remove_path})")],
             )
         g.close_directory(g.CONTENT_MENU)
+
+    def search_trakt_show_lists(self, query=None):
+        if not query:
+            query = g.get_keyboard_input(g.get_language_string(30013))
+        if not query:
+            g.cancel_directory(silent=True)
+            return
+
+        from resources.lib.modules.listsHelper import ListsHelper
+
+        ListsHelper().search_lists("shows", query)
 
     def shows_search(self, query=None):
         if not query:

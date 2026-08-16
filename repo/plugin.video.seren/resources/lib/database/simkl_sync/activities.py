@@ -253,10 +253,16 @@ class SimklSyncDatabase(simkl_sync.SimklSyncDatabase):
     def _sync_shows(self):
         """Pulls GET /sync/all-items/shows/{completed,watching}. Stores Simkl's own
         watched_episodes_count/total_episodes_count/next_to_watch summary per show -
-        deliberately no per-episode mill (the default response doesn't carry
-        seasons[].episodes[] at all without extended=full, and even then only for
-        watching/plantowatch/hold - milling to per-episode granularity would mean a
-        second, much heavier API contract). Per-episode watched checkmarks are
+        deliberately no per-episode mill. Two remote paths for real per-episode data
+        were evaluated and rejected, not just the default response's omission:
+        extended=full alone excludes seasons[].episodes[] for completed/dropped
+        (simkl.apib:9582); include_all_episodes=yes extends coverage to those buckets
+        (simkl.apib:9589, :3628) but may synthesize virtual episode rows for shows
+        without real per-episode history, so the data itself isn't trustworthy. The
+        on-demand POST /sync/watched?extended=episodes (simkl.apib:84, 4586-4645)
+        returns real per-episode watched booleans, but simkl.apib:4594 documents
+        calling it alongside the bulk /sync/all-items pull this method already does
+        as a client_id-suspension pattern. Per-episode watched checkmarks are
         therefore not available from Simkl-sourced rows; this is a deliberate
         deferral, documented in Simkl_Implementation_Plan.md, not an oversight."""
         total = 0

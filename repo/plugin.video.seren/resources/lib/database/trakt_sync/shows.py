@@ -150,6 +150,22 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
     def _mark_show_record(self, column, value, show_id):
         self.execute_sql(f"UPDATE shows SET {column}=? WHERE trakt_id=?", (value, show_id))
 
+    def is_show_watchlisted(self, trakt_id):
+        row = self.fetchone("SELECT watchlisted FROM shows WHERE trakt_id=?", (trakt_id,))
+        return bool(row and row["watchlisted"])
+
+    def is_show_favorited(self, trakt_id):
+        row = self.fetchone("SELECT favorited FROM shows WHERE trakt_id=?", (trakt_id,))
+        return bool(row and row["favorited"])
+
+    @guard_against_none()
+    def mark_show_watchlisted(self, trakt_id, watchlisted):
+        self._mark_show_record("watchlisted", 1 if watchlisted else 0, trakt_id)
+
+    @guard_against_none()
+    def mark_show_favorited(self, trakt_id, favorited):
+        self._mark_show_record("favorited", 1 if favorited else 0, trakt_id)
+
     @guard_against_none()
     def _mark_episode_record(self, column, value, show_id, season, number):
         if column == "watched":
@@ -361,7 +377,15 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
         g.log("Fetching Episode list from sync database and updating", "debug")
         self._try_update_episodes(trakt_show_id, trakt_season_id, trakt_id)
         g.log("Updated required episodes", "debug")
+        # e.season/e.number are exposed alongside e.info because they can diverge: e.info's
+        # season/episode keys reflect whatever _format_episodes last merged in (which can be
+        # TMDb absolute numbering, e.g. season=1/number=48), while e.season/e.number are the
+        # DB-authoritative (Trakt-numbering) columns _format_episodes coalesces back to on
+        # every upsert (see its own comment). Callers that need to match episodes against an
+        # external season/number pair (e.g. mdblistMenus.Menus._pick_next_unwatched) must use
+        # db_season/db_number, not info["season"]/info["episode"].
         statement = """SELECT e.trakt_id, e.trakt_show_id, e.trakt_season_id, e.info, e.cast, e.art, e.args, e.watched as play_count,
+         e.season as db_season, e.number as db_number,
          b.resume_time as resume_time, b.percent_played as percent_played, e.user_rating FROM episodes as e
          LEFT JOIN bookmarks as b on e.trakt_id = b.trakt_id WHERE """
 

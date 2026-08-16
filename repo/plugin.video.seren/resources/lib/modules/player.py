@@ -927,13 +927,17 @@ class SerenPlayer(xbmc.Player):
             # means "already marked watched in the last hour" - treat as success.
             if response.ok or response.status_code == 409:
                 self.simkl_scrobbled = True
+                response_json = {}
                 if response.ok:
                     try:
-                        action = response.json().get("action")
+                        response_json = response.json() or {}
+                        action = response_json.get("action")
                         if action != "scrobble":
                             g.log(f"Simkl scrobble/stop returned action: {action}", "warning")
                     except Exception:
                         g.log_stacktrace()
+                        response_json = {}
+                self._simkl_write_watched_locally(response_json)
             else:
                 g.log(f"Simkl scrobble/stop returned status code: {response.status_code}", "warning")
         elif self.current_time > self.simkl_ignoreSecondsAtStart:
@@ -948,6 +952,44 @@ class SerenPlayer(xbmc.Player):
                 self.last_attempted_simkl_pause = time.time()
             if not response.ok:
                 g.log(f"Simkl scrobble/pause returned status code: {response.status_code}", "warning")
+
+    def _simkl_write_watched_locally(self, response_json):
+        """Write-through counterpart to _mdblist_write_watched_locally, closing the gap
+        where Simkl's scrobbler never wrote local state at all (unlike MDBList/Trakt).
+        Prefers the simkl id echoed back in the scrobble/stop response - simkl.apib
+        documents its body shape as identical to /scrobble/start, whose own response
+        includes the media object's ids, but /stop's response shape isn't
+        independently confirmed in the docs, hence the debug log (to settle it via
+        live test) and the safe fallback to the existing UPDATE-only mark methods
+        when no id comes back."""
+        from resources.lib.database.simkl_sync import SimklSyncDatabase
+
+        info = self.item_information["info"]
+        media_key = "movie" if self.mediatype == "movie" else "show"
+        ids = (response_json.get(media_key) or {}).get("ids") or {}
+        simkl_id = ids.get("simkl") or ids.get("simkl_id")
+        g.log(f"Simkl scrobble/stop response ids: {ids}", "debug")
+
+        db = SimklSyncDatabase()
+        if self.mediatype == "movie":
+            tmdb_id = info.get("tmdb_id")
+            if simkl_id:
+                db.upsert_movie_watched_locally(simkl_id, tmdb_id, ids.get("imdb") or info.get("imdb_id"))
+            else:
+                db.mark_movie_watched_locally(tmdb_id)
+        elif self.mediatype == "episode":
+            tmdb_show_id = info.get("tmdb_show_id")
+            if simkl_id:
+                db.upsert_show_episode_watched_locally(tmdb_show_id, simkl_id, ids.get("imdb"), ids.get("tvdb"))
+            else:
+                g.log("Simkl scrobble/stop response carried no show ids - skipping local episode write", "warning")
+
+        try:
+            from resources.lib.database.trakt_sync import clear_list_cache
+
+            clear_list_cache()
+        except Exception:
+            pass
 
     # endregion
 
