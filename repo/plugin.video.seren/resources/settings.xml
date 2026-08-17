@@ -2587,6 +2587,16 @@
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
+				<setting id="scraping.easynews.noseek" type="boolean" label="31499" help="31500">
+					<level>0</level>
+					<default>false</default>
+					<dependencies>
+						<dependency type="visible">
+							<condition operator="is" setting="scraping.easynews">true</condition>
+						</dependency>
+					</dependencies>
+					<control type="toggle"/>
+				</setting>
 			</group>
 			<group id="3b" label="31169">
 				<setting id="local.fileInspection" type="boolean" label="31170" help="31171">

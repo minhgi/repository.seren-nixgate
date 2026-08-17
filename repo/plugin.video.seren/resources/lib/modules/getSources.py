@@ -811,9 +811,8 @@ class Sources:
 
     def _create_direct_threads(self):
         if not g.get_bool_setting("scraping.easynews", False):
-            g.log("Easynews provider disabled in settings, skipping direct providers", "info")
-            self.direct_providers = []
-            return
+            g.log("Easynews provider disabled in settings, skipping Easynews direct providers", "info")
+            self.direct_providers = [p for p in self.direct_providers if p[2] != "a4kNewsgroups"]
         for i in self.direct_providers:
             self.direct_threads.put(
                 self._get_provider_sources, self.item_information, i, 'direct', self._process_direct_source

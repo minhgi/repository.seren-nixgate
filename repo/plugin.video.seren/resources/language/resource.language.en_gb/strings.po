@@ -6956,3 +6956,11 @@ msgstr "Rebuild Database"
 msgctxt "#31498"
 msgid "Remove all information in your connected services' sync databases (Trakt, MDBList, Simkl) and force a re-sync of each"
 msgstr "Remove all information in your connected services' sync databases (Trakt, MDBList, Simkl) and force a re-sync of each"
+
+msgctxt "#31499"
+msgid "Disable Seeking"
+msgstr "Disable Seeking"
+
+msgctxt "#31500"
+msgid "Marks Easynews streams as non-seekable, preventing Kodi from issuing HTTP range requests against Easynews's tokenised CDN links, which can otherwise cause playback failures on some setups. Off by default - scrubbing/seeking during playback is disabled only when this is turned on."
+msgstr "Marks Easynews streams as non-seekable, preventing Kodi from issuing HTTP range requests against Easynews's tokenised CDN links, which can otherwise cause playback failures on some setups. Off by default - scrubbing/seeking during playback is disabled only when this is turned on."
