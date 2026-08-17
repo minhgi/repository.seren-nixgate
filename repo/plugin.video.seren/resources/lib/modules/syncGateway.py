@@ -1,3 +1,5 @@
+import xbmcgui
+
 from resources.lib.modules.globals import g
 
 
@@ -65,6 +67,41 @@ def force_all_sync():
         from resources.lib.database.simkl_sync.activities import SimklSyncDatabase
 
         SimklSyncDatabase().force_sync()
+
+    if len(providers) >= 2:
+        from resources.lib.modules.bridgeSync import run as run_bridge_sync
+
+        run_bridge_sync(force=True)
+
+
+def rebuild_all_sync():
+    """Rebuild-button gateway: physically drops and recreates each configured provider's
+    database tables (a heavier reset than Force/Clear's cursor-only reset - see each
+    provider's re_build_database()), then resyncs. One confirm dialog up front covers
+    every provider about to be wiped, since this is destructive; each provider then runs
+    silently and lets its own resync notification fire naturally, same reasoning as
+    force_all_sync() above."""
+    providers = configured_providers()
+    if not providers:
+        return
+
+    if not xbmcgui.Dialog().yesno(g.ADDON_NAME, g.get_language_string(30179)):
+        return
+
+    if 'trakt' in providers:
+        from resources.lib.database.trakt_sync import TraktSyncDatabase
+
+        TraktSyncDatabase().re_build_database(silent=True)
+
+    if 'mdblist' in providers:
+        from resources.lib.database.mdblist_sync import MDBListSyncDatabase
+
+        MDBListSyncDatabase().re_build_database(silent=True)
+
+    if 'simkl' in providers:
+        from resources.lib.database.simkl_sync import SimklSyncDatabase
+
+        SimklSyncDatabase().re_build_database(silent=True)
 
     if len(providers) >= 2:
         from resources.lib.modules.bridgeSync import run as run_bridge_sync

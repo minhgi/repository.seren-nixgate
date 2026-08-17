@@ -83,6 +83,16 @@ class MDBListSyncDatabase(mdblist_sync.MDBListSyncDatabase):
                 except ActivitySyncFailure as e:
                     g.log(f"Failed to sync MDBList playback: {e}", "error")
 
+            # No last_activities signal exists for list contents (checked: this
+            # endpoint only returns watched_at/episode_watched_at/paused_at/
+            # episode_paused_at), so this always runs whenever the outer sync runs
+            # rather than being gated on a delta timestamp - same reasoning as
+            # TraktSyncDatabase._sync_list_items's gate=None wiring.
+            try:
+                self._sync_list_items()
+            except ActivitySyncFailure as e:
+                g.log(f"Failed to sync MDBList list items: {e}", "error")
+
             if watched_count or playback_count:
                 g.notification(g.ADDON_NAME, g.get_language_string(30953).format(watched_count, playback_count))
                 xbmc.executebuiltin('RunPlugin("plugin://plugin.video.seren/?action=widgetRefresh&playing=False")')
@@ -265,5 +275,64 @@ class MDBListSyncDatabase(mdblist_sync.MDBListSyncDatabase):
                     rows,
                 )
             return len(rows)
+        except Exception as e:
+            raise ActivitySyncFailure(e) from e
+
+    def _sync_list_items(self):
+        """Full per-list content sync backing the Add/Remove Custom List menu gate in
+        trakt_context_menu.py. No delta endpoint exists for list item changes, so this
+        is a full walk of every static list's full contents each time it runs - cost
+        scales with list count x list size, an accepted tradeoff (see
+        Project_Report_Full.md, session ListMembershipGating). GET lists/{id}/items is
+        offset/limit paginated like sync/watched (pagination.has_more, no cursor) -
+        live-confirmed 2026-08-16 against a real list: movies/shows entries are flat
+        (item["ids"]["tmdb"] directly, not nested under an extra "movie"/"show" key the
+        way sync/watched's entries are). Filtered to non-dynamic lists only, matching
+        _mdblist_static_lists() exactly - a dynamic/smart list's items reject manual
+        add/remove per the API, so counting them here would make Remove From Custom
+        List appear for a list the picker can never target."""
+        try:
+            lists = self.mdblist_api.get_json("lists/user")
+            if lists is None:
+                # None means the fetch itself failed - see the matching guard
+                # in TraktSyncDatabase._sync_list_items for why this can't
+                # collapse to [] via `or []`: that would fall through to the
+                # unconditional DELETE FROM list_items below with nothing to
+                # reinsert, wiping every list's membership data on a single
+                # transient hiccup. A genuinely-empty account (lists == [])
+                # is fine to proceed with - list_ids ends up [], rows stays
+                # [], and the delete correctly leaves the table empty.
+                raise ActivitySyncFailure("empty response from MDBList (lists/user)")
+            list_ids = [lst["id"] for lst in lists if not lst.get("dynamic")]
+
+            rows = []
+            for list_id in list_ids:
+                offset = 0
+                limit = 100
+                for _ in range(500):  # safety cap well above any realistic page count
+                    page = self.mdblist_api.get_json(f"lists/{list_id}/items", offset=offset, limit=limit)
+                    if page is None:
+                        raise ActivitySyncFailure(f"empty response from MDBList (lists/{list_id}/items)")
+
+                    for media_type in ("movies", "shows"):
+                        rows.extend(
+                            (list_id, item["ids"]["tmdb"], media_type[:-1])
+                            for item in (page.get(media_type) or [])
+                            if item.get("ids", {}).get("tmdb")
+                        )
+
+                    pagination = page.get("pagination") or {}
+                    if not pagination.get("has_more"):
+                        break
+                    offset += limit
+
+            self.execute_sql("DELETE FROM list_items")
+            if rows:
+                self.execute_sql(
+                    "INSERT OR IGNORE INTO list_items(list_id, tmdb_id, mediatype) VALUES(?,?,?)",
+                    rows,
+                )
+        except ActivitySyncFailure:
+            raise
         except Exception as e:
             raise ActivitySyncFailure(e) from e

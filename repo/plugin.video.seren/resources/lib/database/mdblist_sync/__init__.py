@@ -1,6 +1,8 @@
 import collections
 import datetime
 
+import xbmcgui
+
 from resources.lib.common import tools
 from resources.lib.database import Database
 from resources.lib.modules.globals import g
@@ -95,9 +97,17 @@ schema = {
 }
 
 
+# Session-level set of db_file paths already migrated for the list_items table
+# below - mirrors trakt_sync's _WATCHLIST_FAVORITES_MIGRATED/_LIST_ITEMS_MIGRATED
+# pattern, avoiding a repeat CREATE TABLE IF NOT EXISTS round trip on every
+# MDBListSyncDatabase() construction.
+_LIST_ITEMS_MIGRATED = set()
+
+
 class MDBListSyncDatabase(Database):
     def __init__(self):
         super().__init__(g.MDBLIST_SYNC_DB_PATH, schema)
+        self._migrate_list_items_tables()
 
         self.activities = {}
         self.base_date = "1970-01-01T00:00:00"
@@ -115,6 +125,68 @@ class MDBListSyncDatabase(Database):
             (g.get_setting("mdblist.username"),),
         )
         self.activities = self.fetchone("SELECT * FROM activities WHERE sync_id=1")
+
+    def re_build_database(self, silent=False):
+        """Mirrors TraktSyncDatabase.re_build_database's shape (trakt_sync/__init__.py) -
+        physical drop+recreate via the inherited rebuild_database(), then a full resync via
+        force_sync(), reusing that method's already-correct set_base_activities()+
+        clear_list_cache()+sync_activities() sequence instead of duplicating it."""
+        if not silent:
+            confirm = xbmcgui.Dialog().yesno(g.ADDON_NAME, g.get_language_string(30179))
+            if confirm == 0:
+                return
+
+        self.rebuild_database()
+        # list_items lives outside the schema dict (see _migrate_list_items_tables'
+        # docstring) so a fresh MDBListSyncDatabase() below won't recreate it unless this
+        # process-lifetime migration guard is cleared first - see the identical fix/comment
+        # in trakt_sync/__init__.py's re_build_database for the full failure mode.
+        _LIST_ITEMS_MIGRATED.discard(self._db_file)
+
+        from resources.lib.database.mdblist_sync import activities
+
+        activities.MDBListSyncDatabase().force_sync()
+
+    def _migrate_list_items_tables(self):
+        """CREATE TABLE IF NOT EXISTS, deliberately not a `schema` dict entry - see
+        trakt_sync's identical _migrate_list_items_tables docstring for why: any change
+        to `schema` changes _integrity_check_db's md5 checksum, and a mismatch triggers
+        rebuild_database(), which drops every table in this db file before recreating
+        them empty. Keyed by tmdb_id (MDBList's own item identifier, matching
+        _info_to_mdblist_list_object's payload shape and MDBListSyncDatabase's existing
+        watched-status tables) rather than trakt_id."""
+        if self._db_file in _LIST_ITEMS_MIGRATED:
+            return
+        self.execute_sql(
+            "CREATE TABLE IF NOT EXISTS list_items ("
+            "list_id INTEGER NOT NULL, tmdb_id INTEGER NOT NULL, mediatype TEXT NOT NULL, "
+            "PRIMARY KEY(list_id, tmdb_id, mediatype))"
+        )
+        self.execute_sql(
+            "CREATE INDEX IF NOT EXISTS idx_list_items_lookup ON list_items(tmdb_id, mediatype)"
+        )
+        _LIST_ITEMS_MIGRATED.add(self._db_file)
+
+    def get_list_membership_count(self, tmdb_id, mediatype):
+        """Returns how many synced lists this item is currently in. Mirrors
+        TraktSyncDatabase.get_list_membership_count."""
+        in_count = self.fetchone(
+            "SELECT COUNT(*) as c FROM list_items WHERE tmdb_id=? AND mediatype=?",
+            (tmdb_id, mediatype),
+        )
+        return in_count["c"]
+
+    def add_list_membership(self, list_id, tmdb_id, mediatype):
+        self.execute_sql(
+            "INSERT OR IGNORE INTO list_items(list_id, tmdb_id, mediatype) VALUES(?,?,?)",
+            (list_id, tmdb_id, mediatype),
+        )
+
+    def remove_list_membership(self, list_id, tmdb_id, mediatype):
+        self.execute_sql(
+            "DELETE FROM list_items WHERE list_id=? AND tmdb_id=? AND mediatype=?",
+            (list_id, tmdb_id, mediatype),
+        )
 
     @staticmethod
     def _get_datetime_now():

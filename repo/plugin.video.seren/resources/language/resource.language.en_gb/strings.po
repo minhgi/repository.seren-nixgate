@@ -991,6 +991,10 @@ msgstr "Starting Source Select"
 
 #: /resources/lib/database/trakt_sync/__init__.py:443
 #: /resources/lib/database/trakt_sync/__init__.py:470
+#: /resources/lib/database/trakt_sync/__init__.py:593
+#: /resources/lib/database/mdblist_sync/__init__.py:135
+#: /resources/lib/database/simkl_sync/__init__.py:141
+#: /resources/lib/modules/syncGateway.py:88
 msgctxt "#30179"
 msgid ""
 "[COLOR red]WARNING[/COLOR]\n"
@@ -6942,3 +6946,13 @@ msgstr "MDBList: List updated"
 msgctxt "#31496"
 msgid "Trakt: List '{0}' deleted"
 msgstr "Trakt: List '{0}' deleted"
+
+#: /resources/lib/gui/homeMenu.py
+msgctxt "#31497"
+msgid "Rebuild Database"
+msgstr "Rebuild Database"
+
+#: /resources/lib/gui/homeMenu.py
+msgctxt "#31498"
+msgid "Remove all information in your connected services' sync databases (Trakt, MDBList, Simkl) and force a re-sync of each"
+msgstr "Remove all information in your connected services' sync databases (Trakt, MDBList, Simkl) and force a re-sync of each"

@@ -1,6 +1,8 @@
 import collections
 import datetime
 
+import xbmcgui
+
 from resources.lib.database import Database
 from resources.lib.modules.globals import g
 
@@ -126,6 +128,25 @@ class SimklSyncDatabase(Database):
         g.set_setting("simkl.anime_completed_at", self.base_date)
         g.set_setting("simkl.anime_watching_at", self.base_date)
         g.set_setting("simkl.anime_removed_at", self.base_date)
+
+    def re_build_database(self, silent=False):
+        """Mirrors TraktSyncDatabase.re_build_database's shape (trakt_sync/__init__.py) -
+        physical drop+recreate via the inherited rebuild_database(), then a full resync via
+        force_sync(). No process-lifetime migration guard to discard here (unlike Trakt/
+        MDBList's list_items) - SimklSyncDatabase has no tables/columns added outside the
+        schema dict, so rebuild_database()'s recreate-from-schema step is already complete
+        on its own; set_base_activities() (called inside force_sync()) also resets the
+        removal-reconciliation cursors it always writes to settings."""
+        if not silent:
+            confirm = xbmcgui.Dialog().yesno(g.ADDON_NAME, g.get_language_string(30179))
+            if confirm == 0:
+                return
+
+        self.rebuild_database()
+
+        from resources.lib.database.simkl_sync import activities
+
+        activities.SimklSyncDatabase().force_sync()
 
     def flush_activities(self):
         """Wipes local watch-state and resets sync cursors to base_date - called on a

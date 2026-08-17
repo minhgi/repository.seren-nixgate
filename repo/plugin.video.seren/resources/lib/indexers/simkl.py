@@ -9,6 +9,7 @@ import xbmcgui
 
 from resources.lib.common import tools
 from resources.lib.indexers.apibase import ApiBase
+from resources.lib.modules.exceptions import UnexpectedResponse
 from resources.lib.modules.globals import g
 
 
@@ -283,6 +284,28 @@ class SimklAPI(ApiBase):
             return response.json()
         except ValueError:
             return None
+
+    def get_json_or_raise(self, url, **params):
+        """
+        Performs a GET request to specified endpoint and returns JSON response.
+        Unlike get_json(), raises on a genuine failure (non-ok status,
+        unparseable body) instead of returning None - so a legitimate `null`
+        JSON body (Simkl's documented empty-result convention for some
+        endpoints, e.g. sync/all-items/{type}/{status}) can be trusted by the
+        caller as confirmed data, not mistaken for a failed request. A
+        connection-level exception from self.get() is left to propagate as-is
+        (already logged by simkl_guard_response).
+        :param url: endpoint to perform request against
+        :param params: URL params for request
+        :return: JSON response, which may legitimately be None
+        """
+        response = self.get(url, **params)
+        if response is None or not response.ok:
+            raise UnexpectedResponse(response)
+        try:
+            return response.json()
+        except ValueError as e:
+            raise UnexpectedResponse(response) from e
 
     @simkl_guard_response
     def post(self, url, data=None, **params):

@@ -226,9 +226,7 @@ class SimklSyncDatabase(simkl_sync.SimklSyncDatabase):
         )
         try:
             params = {"date_from": date_from} if date_from else {}
-            page = self.simkl_api.get_json("sync/all-items/movies/completed", **params)
-            if page is None:
-                raise ActivitySyncFailure("empty response from Simkl (sync/all-items/movies/completed)")
+            page = self.simkl_api.get_json_or_raise("sync/all-items/movies/completed", **params) or {}
 
             rows = []
             for entry in page.get("movies") or []:
@@ -287,9 +285,7 @@ class SimklSyncDatabase(simkl_sync.SimklSyncDatabase):
 
     def _sync_shows_status(self, status, date_from):
         params = {"date_from": date_from} if date_from else {}
-        page = self.simkl_api.get_json(f"sync/all-items/shows/{status}", **params)
-        if page is None:
-            raise ActivitySyncFailure(f"empty response from Simkl (sync/all-items/shows/{status})")
+        page = self.simkl_api.get_json_or_raise(f"sync/all-items/shows/{status}", **params) or {}
 
         rows = []
         for entry in page.get("shows") or []:
@@ -355,9 +351,7 @@ class SimklSyncDatabase(simkl_sync.SimklSyncDatabase):
 
     def _sync_anime_status(self, status, date_from):
         params = {"date_from": date_from} if date_from else {}
-        page = self.simkl_api.get_json(f"sync/all-items/anime/{status}", **params)
-        if page is None:
-            raise ActivitySyncFailure(f"empty response from Simkl (sync/all-items/anime/{status})")
+        page = self.simkl_api.get_json_or_raise(f"sync/all-items/anime/{status}", **params) or {}
 
         movie_rows = []
         show_rows = []
@@ -413,10 +407,11 @@ class SimklSyncDatabase(simkl_sync.SimklSyncDatabase):
         entirely (some other unexpected shape) would slip past an is-None-only
         check and be misread as "zero movies", deleting every locally-cached
         row. The unlike-_sync_movies() distinction is what makes this
-        dangerous specifically here: _sync_movies() makes the same is-None-only
-        check safe because it's additive-only (REPLACE, no DELETE), so an
-        empty/malformed page there just means "nothing new this cycle." This
-        method deletes on the same empty result, so it also requires the
+        dangerous specifically here: _sync_movies() can safely treat a
+        confirmed-empty or malformed page as "zero movies" because it's
+        additive-only (REPLACE, no DELETE), so nothing new this cycle is the
+        only consequence. This method deletes on the same empty result, so it
+        also requires the
         "movies" key to genuinely be present - true even for a legitimately
         empty list ({"movies": []}) - before treating the fetch as trustworthy
         enough to diff against for deletion.

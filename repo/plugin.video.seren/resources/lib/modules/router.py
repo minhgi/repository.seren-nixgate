@@ -155,6 +155,7 @@ _ROUTE_TABLE = {
     # --- Combined sync gateway (fans out to whichever of Trakt/MDBList/Simkl are configured) ---
     "clearAllSync": _func("resources.lib.modules.syncGateway", "clear_all_sync"),
     "forceAllSync": _func("resources.lib.modules.syncGateway", "force_all_sync"),
+    "rebuildAllSync": _func("resources.lib.modules.syncGateway", "rebuild_all_sync"),
 
     # --- Cross-service bridge sync (Phase 7) ---
     "bridgeSync": _func("resources.lib.modules.bridgeSync", "run"),

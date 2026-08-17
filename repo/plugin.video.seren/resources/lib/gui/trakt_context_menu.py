@@ -29,10 +29,9 @@ class TraktContextMenu:
             self._handle_collected_options(item_information, trakt_id, display_type)
             self._handle_watchlist_options(item_information, item_type, trakt_id)
             self._handle_favorited_options(item_information, item_type, trakt_id)
+            self._handle_list_options(item_information, trakt_id)
 
             standard_list = [
-                g.get_language_string(30280),
-                g.get_language_string(30281),
                 g.get_language_string(31491),
                 g.get_language_string(30282).format(display_type),
                 g.get_language_string(30283),
@@ -134,13 +133,22 @@ class TraktContextMenu:
                     watched_count = MDBListSyncDatabase().get_watched_episode_count(info.get("tmdb_id"))
                 watched = total > 0 and watched_count >= total
             self.dialog_list.append(g.get_language_string(30955 if watched else 30954))
-            self.dialog_list.extend(
-                [
-                    g.get_language_string(31044),
-                    g.get_language_string(31045),
-                    g.get_language_string(31062),
-                ]
-            )
+
+            # Add to Custom List always shows (its picker has its own "New List..."
+            # entry, see _mdblist_add_to_list, so it's never a dead end - and hiding it
+            # once an item is in every synced list would lock the user out of adding it
+            # to a list created after the last sync until the next one lands, since
+            # list_items has no delta signal to shrink that window). Remove From Custom
+            # List has no such fallback, so it degrades safely: hidden whenever local
+            # sync data shows zero membership. Mirrors Trakt's identical
+            # _handle_list_options asymmetry in trakt_context_menu.py above.
+            list_lookup_id = info.get("tmdb_id") if item_type in ("movie", "tvshow") else info.get("tmdb_show_id")
+            list_mediatype = "movie" if item_type == "movie" else "show"
+            self.dialog_list.append(g.get_language_string(31044))
+            if MDBListSyncDatabase().get_list_membership_count(list_lookup_id, list_mediatype) > 0:
+                self.dialog_list.append(g.get_language_string(31045))
+            self.dialog_list.append(g.get_language_string(31062))
+
             options.update(
                 {
                     g.get_language_string(30954): {
@@ -319,6 +327,30 @@ class TraktContextMenu:
             favorited = TraktSyncDatabase().is_show_favorited(self._get_show_id(item_information["info"]))
         self.dialog_list.append(g.get_language_string(30990 if favorited else 30989))
 
+    def _handle_list_options(self, item_information, trakt_id):
+        """Unlike the watchlist/favorited toggles above, Add to Custom List always
+        shows regardless of membership - it opens a picker with its own "New List..."
+        entry (see _add_to_list), so it's never a dead end, and hiding it once an item
+        is in every synced list would lock the user out of adding it to a list created
+        on trakt.tv after the last sync until the next sync lands (list_items has no
+        delta signal to shrink that window - see _sync_list_items). Remove From Custom
+        List has no such fallback, so it degrades safely: hidden whenever local sync
+        data shows zero membership (matches the false-positive no-op _remove_from_list
+        already guards against). No item_type early-return here (unlike
+        _handle_watchlist_options/_handle_favorited_options) - season/episode already
+        get both entries today, just resolved to their parent show, matching
+        _info_to_trakt_object's force_show=True write behaviour."""
+        from resources.lib.database.trakt_sync import TraktSyncDatabase
+
+        if item_information["info"]["mediatype"] == "movie":
+            lookup_id, mediatype = trakt_id, "movie"
+        else:
+            lookup_id, mediatype = self._get_show_id(item_information["info"]), "show"
+
+        self.dialog_list.append(g.get_language_string(30280))
+        if TraktSyncDatabase().get_list_membership_count(lookup_id, mediatype) > 0:
+            self.dialog_list.append(g.get_language_string(30281))
+
     def _handle_progress_option(self, item_type, trakt_id):
         from resources.lib.database.trakt_sync.bookmark import TraktSyncDatabase
 
@@ -386,6 +418,17 @@ class TraktContextMenu:
             g.get_language_string(30287),
         )
         g.log(f"Failed to mark item as unwatched\nTrakt Response: {response}")
+        return False
+
+    @staticmethod
+    def _confirm_removed_from_list(response, type):
+        if response["deleted"][type] > 0:
+            return True
+        g.notification(
+            f"{g.ADDON_NAME}: {g.get_language_string(30286)}",
+            g.get_language_string(30287),
+        )
+        g.log(f"Failed to remove item from list\nTrakt Response: {response}")
         return False
 
     @staticmethod
@@ -678,10 +721,20 @@ class TraktContextMenu:
         else:
             target = lists[selection - 1]
             target_id, target_name = target["trakt_id"], get(target, "name")
-        self.trakt_api.post_json(
+        response = self.trakt_api.post_json(
             f"users/me/lists/{target_id}/items",
             self._info_to_trakt_object(item_information, True),
         )
+        if response is not None:
+            # Write-through freshness layer on top of _sync_list_items's periodic full
+            # sync (see that method's docstring) - without this, the gate in
+            # _handle_list_options would show a stale "not in this list" state until
+            # the next sync, on the single most common loop (add, reopen menu).
+            from resources.lib.database.trakt_sync import TraktSyncDatabase
+
+            mediatype = "movie" if item_information["mediatype"] == "movie" else "show"
+            lookup_id = item_information["trakt_id"] if mediatype == "movie" else self._get_show_id(item_information)
+            TraktSyncDatabase().add_list_membership(target_id, lookup_id, mediatype)
         g.notification(
             f"{g.ADDON_NAME}: {g.get_language_string(30286)}",
             g.get_language_string(30294).format(target_name),
@@ -692,7 +745,7 @@ class TraktContextMenu:
         from resources.lib.modules.metadataHandler import MetadataHandler
 
         get = MetadataHandler.get_trakt_info
-        lists = self.trakt_api.get_json("users/me/lists")
+        lists = self.trakt_api.get_json("users/me/lists") or []
         selection = xbmcgui.Dialog().select(
             f"{g.ADDON_NAME}: {g.get_language_string(30296)}",
             [get(i, "name") for i in lists],
@@ -700,9 +753,18 @@ class TraktContextMenu:
         if selection == -1:
             return
         selection = lists[selection]
-        self.trakt_api.post_json(
+        response = self.trakt_api.post_json(
             f'users/me/lists/{selection["trakt_id"]}/items/remove', self._info_to_trakt_object(item_information, True)
         )
+        content_type = "movies" if item_information["mediatype"] == "movie" else "shows"
+        if not self._confirm_removed_from_list(response, content_type):
+            return
+
+        from resources.lib.database.trakt_sync import TraktSyncDatabase
+
+        mediatype = "movie" if item_information["mediatype"] == "movie" else "show"
+        lookup_id = item_information["trakt_id"] if mediatype == "movie" else self._get_show_id(item_information)
+        TraktSyncDatabase().remove_list_membership(selection["trakt_id"], lookup_id, mediatype)
 
         g.container_refresh()
         g.notification(
@@ -1143,6 +1205,12 @@ class TraktContextMenu:
             )
             return
 
+        from resources.lib.database.mdblist_sync import MDBListSyncDatabase
+
+        # Write-through freshness layer on top of _sync_list_items's periodic full
+        # sync - see TraktContextMenu._add_to_list's identical write-through for why.
+        MDBListSyncDatabase().add_list_membership(target["id"], payload[key][0]["tmdb"], key[:-1])
+
         g.notification(
             f"{g.ADDON_NAME}: {self.header_text}",
             g.get_language_string(31049).format(target["name"]),
@@ -1187,6 +1255,10 @@ class TraktContextMenu:
                 g.get_language_string(31139),
             )
             return
+
+        from resources.lib.database.mdblist_sync import MDBListSyncDatabase
+
+        MDBListSyncDatabase().remove_list_membership(target["id"], payload[key][0]["tmdb"], key[:-1])
 
         g.container_refresh()
         g.notification(

@@ -280,14 +280,13 @@ class Menus:
             description=g.get_language_string(31125),
             menu_item=g.create_icon_dict("trakt_sync", g.ICONS_PATH),
         )
-        if g.get_setting('trakt.auth') and g.get_bool_setting('trakt.enabled', False):
-            g.add_directory_item(
-                g.get_language_string(31126),
-                action='rebuildTraktDatabase',
-                is_folder=False,
-                description=g.get_language_string(30390),
-                menu_item=g.create_icon_dict("trakt_rebuild", g.ICONS_PATH),
-            )
+        g.add_directory_item(
+            g.get_language_string(31497),
+            action='rebuildAllSync',
+            is_folder=False,
+            description=g.get_language_string(31498),
+            menu_item=g.create_icon_dict("trakt_rebuild", g.ICONS_PATH),
+        )
         g.close_directory(g.CONTENT_MENU)
 
     @staticmethod

@@ -796,7 +796,7 @@ class Menus:
         self.list_builder.show_list_builder(trakt_list, hide_watched=False, hide_unaired=False)
 
     def show_seasons(self, args):
-        self.list_builder.season_list_builder(args["trakt_id"], no_paging=True)
+        self.list_builder.season_list_builder(args["trakt_id"], no_paging=True, hide_watched=False)
 
     def season_episodes(self, args):
         self.list_builder.episode_list_builder(args["trakt_show_id"], args["trakt_id"], no_paging=True)
