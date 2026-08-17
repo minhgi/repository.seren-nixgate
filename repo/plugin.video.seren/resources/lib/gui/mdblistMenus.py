@@ -866,6 +866,22 @@ class Menus:
         lists = self.mdblist_api.get_json(f"lists/user/{quote(username, safe='')}") or []
         self._discover_results(lists, media_type)
 
+    def liked_lists(self, media_type):
+        """MDBList lists this account has liked (not owned) - grouped in this region and
+        implemented like top_lists()/list_search()/user_lists() above (other users' lists,
+        no rename/privacy context menu, unlike my_lists()'s own-list entries), reusing
+        _discover_results() directly rather than duplicating its list-comprehension.
+
+        /lists/liked isn't in mdblist.apib (unlike /lists/user, /sync/collection,
+        /sync/dropped, /watchlist/items, which all are) - confirmed working via a live call
+        and cross-referenced against two other addons' source (both independently call this
+        same undocumented path), but it's a softer guarantee than this file's other
+        endpoints. Response envelope is {"lists": [...], "pagination": {...}} - unwrapped
+        here since _discover_results() (like top_lists() etc.) expects a plain list.
+        """
+        response = self.mdblist_api.get_json("lists/liked") or {}
+        self._discover_results(response.get("lists") or [], media_type)
+
     # endregion
 
     # region Collection / Dropped - live status-style menus, mirroring simklMenus.py's
@@ -956,5 +972,47 @@ class Menus:
             g.cancel_directory()
             return
         self.list_builder.show_list_builder(trakt_list, hide_watched=False, force_next_page=has_more)
+
+    def _watchlist(self, media_type):
+        """Live MDBList watchlist/items fetch for Watchlist Movies/Shows. mdblist.apib's
+        Watchlist group documents limit/offset, but a live response carries one pagination
+        block for both movies and shows together (same shared-cursor shape as
+        sync/collection above) - so this uses _collection()'s fetch-5000-then-slice idiom,
+        for the same reason. Never written into mdblistSync.db, same as Collection/Dropped.
+
+        Unlike _collection()/dropped_shows(), each entry's ids sit flat on the entry itself
+        (entry["ids"]["tmdb"]) rather than nested under a "movie"/"show" sub-key - confirmed
+        against a live response, not assumed from the sibling endpoints' shape.
+
+        Seren already writes to this watchlist via cross_sync.py's mirror_watchlist_add_
+        from_trakt/from_simkl whenever a user watchlists something on Trakt or sets Simkl
+        to Plan to Watch - this is the first menu that lets a user actually see it.
+        """
+        response = self.mdblist_api.get_json("watchlist/items", limit=5000, offset=0) or {}
+
+        entry_key = "movies" if media_type == "movie" else "shows"
+        tmdb_ids = []
+        for entry in response.get(entry_key) or []:
+            tmdb_id = (entry.get("ids") or {}).get("tmdb")
+            if tmdb_id is not None:
+                tmdb_ids.append(tmdb_id)
+
+        page_start = (g.PAGE - 1) * self.page_limit
+        page_end = g.PAGE * self.page_limit
+        has_more = len(tmdb_ids) > page_end
+        trakt_list = self._resolve(tmdb_ids[page_start:page_end], media_type)
+        if not trakt_list:
+            g.cancel_directory()
+            return
+        if media_type == "movie":
+            self.list_builder.movie_menu_builder(trakt_list, force_next_page=has_more)
+        else:
+            self.list_builder.show_list_builder(trakt_list, hide_watched=False, force_next_page=has_more)
+
+    def watchlist_movies(self):
+        self._watchlist("movie")
+
+    def watchlist_shows(self):
+        self._watchlist("show")
 
     # endregion

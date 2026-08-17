@@ -222,7 +222,7 @@ class Menus:
         trakt_active = bool(g.get_setting('trakt.auth')) and g.get_bool_setting('trakt.enabled', False)
         mdblist_active = g.get_setting('mdblist.enabled') == "true" and bool(g.get_setting('mdblist.auth') or g.get_setting('mdblist.apikey'))
         simkl_active = bool(g.get_setting('simkl.auth')) and g.get_bool_setting('simkl.enabled')
-        if trakt_active or mdblist_active or simkl_active:
+        if (trakt_active or mdblist_active or simkl_active) and g.get_bool_setting('watchlistcalendar.enabled', False):
             g.add_directory_item(
                 g.get_language_string(31472),
                 action="calendarBrowse",
@@ -230,11 +230,17 @@ class Menus:
                 menu_item=g.create_icon_dict("shows_update", g.ICONS_PATH),
                 is_folder=False,
             )
-        if sum((trakt_active, mdblist_active, simkl_active)) >= 2:
+        if sum((trakt_active, mdblist_active, simkl_active)) >= 2 and g.get_bool_setting('mergeshows.enabled', False):
             g.add_directory_item(
                 g.get_language_string(30977),
                 action="mergeInProgressShows",
                 description=g.get_language_string(30978),
+                menu_item=g.create_icon_dict("shows_progress", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31516),
+                action="mergeInProgressTVShows",
+                description=g.get_language_string(31517),
                 menu_item=g.create_icon_dict("shows_progress", g.ICONS_PATH),
             )
             g.add_directory_item(
@@ -251,16 +257,22 @@ class Menus:
                 menu_item=g.create_icon_dict("shows_progress", g.ICONS_PATH),
             )
             g.add_directory_item(
-                g.get_language_string(30014),
-                action="showsMyCollection",
-                description=g.get_language_string(30434),
-                menu_item=g.create_icon_dict("shows_collected", g.ICONS_PATH),
+                g.get_language_string(30210),
+                action="showsNextUp",
+                description=g.get_language_string(30436),
+                menu_item=g.create_icon_dict("shows_nextup", g.ICONS_PATH),
             )
             g.add_directory_item(
                 g.get_language_string(30015),
                 action="showsMyWatchlist",
                 description=g.get_language_string(30435),
                 menu_item=g.create_icon_dict("shows_watched", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(30014),
+                action="showsMyCollection",
+                description=g.get_language_string(30434),
+                menu_item=g.create_icon_dict("shows_collected", g.ICONS_PATH),
             )
             g.add_directory_item(
                 g.get_language_string(30986),
@@ -281,10 +293,10 @@ class Menus:
                 menu_item=g.create_icon_dict("shows_recent", g.ICONS_PATH),
             )
             g.add_directory_item(
-                g.get_language_string(30210),
-                action="showsNextUp",
-                description=g.get_language_string(30436),
-                menu_item=g.create_icon_dict("shows_nextup", g.ICONS_PATH),
+                g.get_language_string(30213),
+                action="showsMyRecentEpisodes",
+                description=g.get_language_string(30439),
+                menu_item=g.create_icon_dict("shows_recent", g.ICONS_PATH),
             )
             g.add_directory_item(
                 g.get_language_string(30211),
@@ -297,12 +309,6 @@ class Menus:
                 action="showsMyProgress",
                 description=g.get_language_string(30438),
                 menu_item=g.create_icon_dict("shows_progress", g.ICONS_PATH),
-            )
-            g.add_directory_item(
-                g.get_language_string(30213),
-                action="showsMyRecentEpisodes",
-                description=g.get_language_string(30439),
-                menu_item=g.create_icon_dict("shows_recent", g.ICONS_PATH),
             )
             g.add_directory_item(
                 g.get_language_string(30214),
@@ -344,6 +350,12 @@ class Menus:
                 menu_item=g.create_icon_dict("shows_nextup", g.ICONS_PATH),
             )
             g.add_directory_item(
+                g.get_language_string(31503),
+                action="mdblistWatchlistShows",
+                description=g.get_language_string(31504),
+                menu_item=g.create_icon_dict("shows_watched", g.ICONS_PATH),
+            )
+            g.add_directory_item(
                 g.get_language_string(31159),
                 action="mdblistCollectionShows",
                 description=g.get_language_string(31160),
@@ -367,6 +379,13 @@ class Menus:
                 mediatype="shows",
                 description=g.get_language_string(30997),
                 menu_item=g.create_icon_dict("list_trakt", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31507),
+                action="mdblistLikedLists",
+                mediatype="shows",
+                description=g.get_language_string(31508),
+                menu_item=g.create_icon_dict("list_liked", g.ICONS_PATH),
             )
             g.add_directory_item(
                 g.get_language_string(31486),

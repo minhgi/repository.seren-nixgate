@@ -124,7 +124,7 @@
 			Rework for Seren 2.0
 		</news>
 	</extension>
-</addon><addon id="plugin.video.seren" version="3.5.18" name="Seren" provider-name="Nixgates">
+</addon><addon id="plugin.video.seren" version="3.5.20" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -191,6 +191,15 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.5.20
+            [FEATURE] Added "Menu Item Visibility" settings section under Watch Accounts, below Cross-Service Sync - On/Off toggles for "Movie Calendar" (placeholder, reserved for a future feature), "My Watch List Calendar", "Merge Movie", and "Merge TV Show". All off by default.
+            [FEATURE] Added "Merge - In Progress TV Shows" to My Shows, directly after "Merge - In Progress Episodes" - the same in-progress data merged from Trakt/MDBList/Simkl, shown as a show list instead of an episode list.
+            [CHANGE] "My Watch List Calendar", "Merge - In Progress Movies"/"Merge - Recently Watched Movies", and "Merge - In Progress Episodes"/"Merge - In Progress TV Shows"/"Merge - Recently Watched Shows" are now gated by the new toggles above and hidden by default - turn them on in Watch Accounts settings to restore them.
+
+            Changelog 3.5.19
+            [FEATURE] Added "MDBList - Watchlist Movies/Shows" and "MDBList - My Liked Movie/Show Lists" to My Movies and My Shows - MDBList's Watchlist already existed under the hood (Trakt Watchlist adds and Simkl "Plan to Watch" both silently mirror to it via the existing cross-service bridge), but there was no menu to see it until now. Liked Lists mirrors the existing "Trakt - My Liked Movie/Show Lists".
+            [CHANGE] Reordered My Movies/My Shows' Trakt and MDBList sections to put active/actionable items first (Watchlist, Next Up, resume-watching), then collection/status items, then historical views, then list-management - based on how POV, RedLight, and Umbrella order their own equivalent menus. Calendar and Merge stay pinned at the top, unchanged. Simkl's section was already ordered this way and is unchanged.
+
             Changelog 3.5.18
             [CHANGE] The Easynews "Disable Seeking" toggle (added in 3.5.17) now lives in Seren's own Settings - Providers - Easynews group, directly below the existing Easynews on/off toggle, instead of the separate a4kNewsgroups provider package's own configuration screen (Manage Provider Packages - a4kNewsgroups - Configure) - matching where a user would actually look for it, right next to the toggle that enables Easynews in the first place. No change to the underlying behavior: still off by default, still only appends seekable=0 to Easynews stream URLs when turned on. a4kNewsgroups' easynews.py (provider package, updated alongside this release) now reads Seren's own scraping.easynews.noseek setting directly instead of a package-local one.
 

@@ -1,3 +1,12 @@
+[B]3.5.20[/B]
+- [FEATURE] Added "Menu Item Visibility" settings section under Watch Accounts, below Cross-Service Sync - On/Off toggles for "Movie Calendar" (placeholder, reserved for a future feature), "My Watch List Calendar", "Merge Movie", and "Merge TV Show". All off by default.
+- [FEATURE] Added "Merge - In Progress TV Shows" to My Shows, directly after "Merge - In Progress Episodes" - the same in-progress data merged from Trakt/MDBList/Simkl, shown as a show list instead of an episode list.
+- [CHANGE] "My Watch List Calendar", "Merge - In Progress Movies"/"Merge - Recently Watched Movies", and "Merge - In Progress Episodes"/"Merge - In Progress TV Shows"/"Merge - Recently Watched Shows" are now gated by the new toggles above and hidden by default - turn them on in Watch Accounts settings to restore them.
+
+[B]3.5.19[/B]
+- [FEATURE] Added "MDBList - Watchlist Movies/Shows" and "MDBList - My Liked Movie/Show Lists" to My Movies and My Shows - MDBList's Watchlist already existed under the hood (Trakt Watchlist adds and Simkl "Plan to Watch" both silently mirror to it via the existing cross-service bridge), but there was no menu to see it until now. Liked Lists mirrors the existing "Trakt - My Liked Movie/Show Lists".
+- [CHANGE] Reordered My Movies/My Shows' Trakt and MDBList sections to put active/actionable items first (Watchlist, Next Up, resume-watching), then collection/status items, then historical views, then list-management - based on how POV, RedLight, and Umbrella order their own equivalent menus. Calendar and Merge stay pinned at the top, unchanged. Simkl's section was already ordered this way and is unchanged.
+
 [B]3.5.11[/B]
 - [FIX] Trakt's context menu "Add to List" and "Remove From List" entries are now labelled "Add to Custom List (Trakt)" and "Remove From Custom List (Trakt)" - previously "List" sat directly under "Add to Watchlist" and "Add to Favorites" in the same menu with nothing to say it wasn't just another one of those. These two are the only entries that open a picker over your own Trakt-created lists (with "create new list" as an option), so the label now says "Custom" to make that the visibly different thing it is. No behaviour change, label only.
 - [FIX] MDBList's equivalent "Add to List (MDBList)" and "Remove from List (MDBList)" context menu entries are now "Add to Custom List (MDBList)" and "Remove from Custom List (MDBList)" for the same reason and the same fix. No behaviour change, label only.

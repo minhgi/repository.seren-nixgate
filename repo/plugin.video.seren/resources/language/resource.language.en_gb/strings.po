@@ -6964,3 +6964,71 @@ msgstr "Disable Seeking"
 msgctxt "#31500"
 msgid "Marks Easynews streams as non-seekable, preventing Kodi from issuing HTTP range requests against Easynews's tokenised CDN links, which can otherwise cause playback failures on some setups. Off by default - scrubbing/seeking during playback is disabled only when this is turned on."
 msgstr "Marks Easynews streams as non-seekable, preventing Kodi from issuing HTTP range requests against Easynews's tokenised CDN links, which can otherwise cause playback failures on some setups. Off by default - scrubbing/seeking during playback is disabled only when this is turned on."
+
+msgctxt "#31501"
+msgid "MDBList - Watchlist Movies"
+msgstr "MDBList - Watchlist Movies"
+
+msgctxt "#31502"
+msgid "Movies on your MDBList watchlist"
+msgstr "Movies on your MDBList watchlist"
+
+msgctxt "#31503"
+msgid "MDBList - Watchlist Shows"
+msgstr "MDBList - Watchlist Shows"
+
+msgctxt "#31504"
+msgid "Shows on your MDBList watchlist"
+msgstr "Shows on your MDBList watchlist"
+
+msgctxt "#31505"
+msgid "MDBList - My Liked Movie Lists"
+msgstr "MDBList - My Liked Movie Lists"
+
+msgctxt "#31506"
+msgid "Movie lists you've liked on MDBList"
+msgstr "Movie lists you've liked on MDBList"
+
+msgctxt "#31507"
+msgid "MDBList - My Liked Show Lists"
+msgstr "MDBList - My Liked Show Lists"
+
+msgctxt "#31508"
+msgid "TV show lists you've liked on MDBList"
+msgstr "TV show lists you've liked on MDBList"
+
+msgctxt "#31509"
+msgid "Menu Item Visibility"
+msgstr "Menu Item Visibility"
+
+msgctxt "#31510"
+msgid "Movie Calendar"
+msgstr "Movie Calendar"
+
+msgctxt "#31511"
+msgid "Reserved for a future movie calendar menu entry. Currently has no effect."
+msgstr "Reserved for a future movie calendar menu entry. Currently has no effect."
+
+msgctxt "#31512"
+msgid "Merge Movie"
+msgstr "Merge Movie"
+
+msgctxt "#31513"
+msgid "Show the Merge - In Progress Movies and Merge - Recently Watched Movies entries in My Movies"
+msgstr "Show the Merge - In Progress Movies and Merge - Recently Watched Movies entries in My Movies"
+
+msgctxt "#31514"
+msgid "Merge TV Show"
+msgstr "Merge TV Show"
+
+msgctxt "#31515"
+msgid "Show the Merge - In Progress Episodes, Merge - In Progress TV Shows, and Merge - Recently Watched Shows entries in My Shows"
+msgstr "Show the Merge - In Progress Episodes, Merge - In Progress TV Shows, and Merge - Recently Watched Shows entries in My Shows"
+
+msgctxt "#31516"
+msgid "Merge - In Progress TV Shows"
+msgstr "Merge - In Progress TV Shows"
+
+msgctxt "#31517"
+msgid "Shows with an episode in progress on Trakt, MDBList, or Simkl, deduplicated"
+msgstr "Shows with an episode in progress on Trakt, MDBList, or Simkl, deduplicated"

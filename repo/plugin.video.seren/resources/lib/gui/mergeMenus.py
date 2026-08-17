@@ -207,8 +207,9 @@ class Menus:
             return
         self.list_builder.movie_menu_builder(trakt_list, no_paging=True)
 
-    def in_progress_episodes(self):
-        """One row per show (Trakt's own convention). When multiple sources have
+    def _in_progress_show_map(self):
+        """Shared merge computation for in_progress_episodes()/in_progress_shows() -
+        one row per show (Trakt's own convention). When multiple sources have
         an in-progress episode for the same show, keeps whichever has the most
         recent paused_at, discarding the others entirely (not just deduping
         identical episodes - genuinely different episodes of the same show
@@ -218,7 +219,10 @@ class Menus:
         from every source here too. Each source is folded in only when its own
         _trakt_active()/_mdblist_active()/_simkl_active() check passes - see class
         docstring. Hand-rolled per-source rather than routed through
-        _merge_by_key, matching this method's existing (pre-Simkl) style."""
+        _merge_by_key, matching this method's existing (pre-Simkl) style.
+
+        Returns {trakt_show_id: (paused_at, episode_row)} - in_progress_episodes()
+        renders episode_row directly; in_progress_shows() only needs the keys."""
         from resources.lib.database.trakt_sync.shows import TraktSyncDatabase as ShowsDatabase
 
         hidden_shows = self.hidden_database.get_hidden_items("progress_watched", "tvshow")
@@ -267,8 +271,31 @@ class Menus:
                     continue
                 merged[show_id] = (ts, episode)
 
+        return merged
+
+    def in_progress_episodes(self):
+        """Episode-level render of _in_progress_show_map() - one row per show,
+        displayed as that show's in-progress episode."""
+        merged = self._in_progress_show_map()
         episodes = [row for _, row in sorted(merged.values(), key=lambda pair: pair[0], reverse=True)]
         if not episodes:
             g.cancel_directory()
             return
         self.list_builder.mixed_episode_builder(episodes, no_paging=True)
+
+    def in_progress_shows(self):
+        """Show-level sibling of in_progress_episodes() - same merged/deduplicated-
+        by-show in-progress data (see _in_progress_show_map), rendered as show rows
+        instead of episode rows. Resolves each show_id to full show meta the same
+        way get_show() resolves a single id (get_show_list + _get_single_show_meta),
+        just batched over every show in the merge instead of one."""
+        from resources.lib.database.trakt_sync.shows import TraktSyncDatabase as ShowsDatabase
+
+        merged = self._in_progress_show_map()
+        show_ids = [show_id for show_id, _ in sorted(merged.items(), key=lambda pair: pair[1][0], reverse=True)]
+        if not show_ids:
+            g.cancel_directory()
+            return
+        shows_db = ShowsDatabase()
+        trakt_list = [shows_db._get_single_show_meta(show_id) for show_id in show_ids]
+        self.list_builder.show_list_builder(trakt_list, no_paging=True, hide_unaired=False, hide_watched=False)

@@ -1325,6 +1325,28 @@
 					</control>
 				</setting>
 			</group>
+			<group id="6" label="31509">
+				<setting id="moviecalendar.enabled" type="boolean" label="31510" help="31511">
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="watchlistcalendar.enabled" type="boolean" label="31472" help="31475">
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="mergemovies.enabled" type="boolean" label="31512" help="31513">
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="mergeshows.enabled" type="boolean" label="31514" help="31515">
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+				</setting>
+			</group>
 		</category>
 		<category id="accounts" label="30127" help="">
 			<group id="1" label="30084">

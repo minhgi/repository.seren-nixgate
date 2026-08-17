@@ -178,6 +178,9 @@ _ROUTE_TABLE = {
     "mdblistCollectionMovies":   _menu("resources.lib.gui.mdblistMenus", "collection_movies"),
     "mdblistCollectionShows":    _menu("resources.lib.gui.mdblistMenus", "collection_shows"),
     "mdblistDroppedShows":       _menu("resources.lib.gui.mdblistMenus", "dropped_shows"),
+    "mdblistWatchlistMovies":    _menu("resources.lib.gui.mdblistMenus", "watchlist_movies"),
+    "mdblistWatchlistShows":     _menu("resources.lib.gui.mdblistMenus", "watchlist_shows"),
+    "mdblistLikedLists":         _menu("resources.lib.gui.mdblistMenus", "liked_lists", "mediatype"),
 
     # --- Simkl menus ---
     "simklRecentMovies":         _menu("resources.lib.gui.simklMenus", "recent_movies"),
@@ -198,6 +201,7 @@ _ROUTE_TABLE = {
     "mergeWatchedShows":        _menu("resources.lib.gui.mergeMenus", "watched_shows"),
     "mergeInProgressMovies":    _menu("resources.lib.gui.mergeMenus", "in_progress_movies"),
     "mergeInProgressShows":     _menu("resources.lib.gui.mergeMenus", "in_progress_episodes"),
+    "mergeInProgressTVShows":   _menu("resources.lib.gui.mergeMenus", "in_progress_shows"),
 
     # --- Cache management ---
     "clearTorrentCache":    _call("resources.lib.database.torrentCache", "TorrentCache", "clear_all"),
