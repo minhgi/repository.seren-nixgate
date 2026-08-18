@@ -5,6 +5,8 @@ from resources.lib.gui.windows.manual_caching import ManualCacheWindow
 from resources.lib.gui.windows.source_window import SourceWindow
 from resources.lib.modules.download_manager import create_task as download_file
 from resources.lib.modules.exceptions import InvalidSourceType
+from resources.lib.modules.exceptions import NoFilesSelected
+from resources.lib.modules.exceptions import UnsupportedDebridProvider
 from resources.lib.modules.globals import g
 from resources.lib.modules.helpers import Resolverhelper
 
@@ -34,36 +36,46 @@ class SourceSelect(SourceWindow):
         self.position = self.display_list.getSelectedPosition()
 
         if action_id == 117:
-            menu_items = [
-                g.get_language_string(30320),
-                g.get_language_string(30473),
-                g.get_language_string(30483),
-            ]
+            menu_items = [("play", g.get_language_string(30320))]
+            if g.get_bool_setting("download.enabled"):
+                menu_items.append(("download", g.get_language_string(30473)))
+            menu_items.append(("file_selection", g.get_language_string(30483)))
             if self._filter_applied:
-                menu_items.append(g.get_language_string(30694))
+                menu_items.append(("toggle_filter", g.get_language_string(30694)))
             else:
-                menu_items.append(g.get_language_string(30693))
+                menu_items.append(("toggle_filter", g.get_language_string(30693)))
 
-            response = xbmcgui.Dialog().contextmenu(menu_items)
-            if response == 0:
+            response = xbmcgui.Dialog().contextmenu([label for _, label in menu_items])
+            if response == -1:
+                return
+            action = menu_items[response][0]
+
+            if action == "play":
                 self._resolve_item(False)
-            elif response == 1:
+            elif action == "download":
                 if not (download_location := g.get_setting("download.location")) or download_location == "userdata":
-                    g.open_addon_settings(0, 26)
+                    g.open_addon_settings(0, 25)
                     g.notification(g.ADDON_NAME, g.get_language_string(30446))
                 else:
                     try:
-                        download_file(self.sources[self.display_list.getSelectedPosition()])
+                        download_file(self.sources[self.display_list.getSelectedPosition()], self.item_information)
                         g.notification(g.ADDON_NAME, g.get_language_string(30634), sound=False)
                     except InvalidSourceType as ist:
                         xbmcgui.Dialog().ok(
                             g.ADDON_NAME,
                             g.get_language_string(30641).format(ist.source_type),
                         )
+                    except UnsupportedDebridProvider as udp:
+                        xbmcgui.Dialog().ok(
+                            g.ADDON_NAME,
+                            g.get_language_string(31197).format(udp.provider),
+                        )
+                    except NoFilesSelected:
+                        g.notification(g.ADDON_NAME, g.get_language_string(31198), sound=False)
 
-            elif response == 2:
+            elif action == "file_selection":
                 self._resolve_item(True)
-            elif response == 3:
+            elif action == "toggle_filter":
                 self.toggle_filter()
 
         if action_id == 7:

@@ -3,27 +3,27 @@
 	<section id="plugin.video.seren">
 		<category id="general" label="30084" help="">
 			<group id="1" label="30591">
-				<setting id="searchHistory" type="boolean" label="30161" help="">
+				<setting id="searchHistory" type="boolean" label="30161" help="31216">
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="general.hideSpecials" type="boolean" label="30172" help="">
+				<setting id="general.hideSpecials" type="boolean" label="30172" help="31217">
 					<level>0</level>
 					<default>true</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="general.hideUnAired" type="boolean" label="30170" help="">
+				<setting id="general.hideUnAired" type="boolean" label="30170" help="31218">
 					<level>0</level>
 					<default>true</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="general.hideWatched" type="boolean" label="30451" help="">
+				<setting id="general.hideWatched" type="boolean" label="30451" help="31219">
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="general.genres.endpoint.movies" type="integer" label="30447" help="">
+				<setting id="general.genres.endpoint.movies" type="integer" label="30447" help="31220">
 					<level>0</level>
 					<default>1</default>
 					<constraints>
@@ -34,7 +34,7 @@
 					</constraints>
 					<control type="spinner" format="string"/>
 				</setting>
-				<setting id="general.genres.endpoint.tv" type="integer" label="30609" help="">
+				<setting id="general.genres.endpoint.tv" type="integer" label="30609" help="31221">
 					<level>0</level>
 					<default>1</default>
 					<constraints>
@@ -45,24 +45,24 @@
 					</constraints>
 					<control type="spinner" format="string"/>
 				</setting>
-				<setting id="general.widget.hide_next" type="boolean" label="30452" help="">
+				<setting id="general.widget.hide_next" type="boolean" label="30452" help="31222">
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
 			</group>
 			<group id="2" label="30592">
-				<setting id="general.flatten.episodes" type="boolean" label="30208" help="">
+				<setting id="general.flatten.episodes" type="boolean" label="30208" help="31223">
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="general.showRemainingUnwatched" type="boolean" label="30445" help="">
+				<setting id="general.showRemainingUnwatched" type="boolean" label="30445" help="31224">
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="general.appendepisodegeneral" type="integer" label="30467" help="">
+				<setting id="general.appendepisodegeneral" type="integer" label="30467" help="31225">
 					<level>0</level>
 					<default>0</default>
 					<constraints>
@@ -75,7 +75,7 @@
 					</constraints>
 					<control type="spinner" format="string"/>
 				</setting>
-				<setting id="general.appendtitles" type="integer" label="30143" help="">
+				<setting id="general.appendtitles" type="integer" label="30143" help="31226">
 					<level>0</level>
 					<default>3</default>
 					<constraints>
@@ -90,7 +90,7 @@
 				</setting>
 			</group>
 			<group id="3" label="30593">
-				<setting id="nextup.sort" type="integer" label="30088" help="">
+				<setting id="nextup.sort" type="integer" label="30088" help="31227">
 					<level>0</level>
 					<default>0</default>
 					<constraints>
@@ -106,7 +106,7 @@
 					</dependencies>
 					<control type="spinner" format="string"/>
 				</setting>
-				<setting id="general.sortcollection" type="integer" label="30537" help="">
+				<setting id="general.sortcollection" type="integer" label="30537" help="31228">
 					<level>0</level>
 					<default>0</default>
 					<constraints>
@@ -117,17 +117,17 @@
 					</constraints>
 					<control type="spinner" format="string"/>
 				</setting>
-				<setting id="general.paginatetraktlists" type="boolean" label="30324" help="">
+				<setting id="general.paginatetraktlists" type="boolean" label="30324" help="31229">
 					<level>0</level>
 					<default>true</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="general.paginatecollection" type="boolean" label="30444" help="">
+				<setting id="general.paginatecollection" type="boolean" label="30444" help="31230">
 					<level>0</level>
 					<default>true</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="general.appendListTitles" type="integer" label="30361" help="">
+				<setting id="general.appendListTitles" type="integer" label="30361" help="31231">
 					<level>0</level>
 					<default>1</default>
 					<constraints>
@@ -140,12 +140,12 @@
 				</setting>
 			</group>
 			<group id="4" label="30608">
-				<setting id="general.datedelay" type="boolean" label="30165" help="">
+				<setting id="general.datedelay" type="boolean" label="30165" help="31232">
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="item.limit" type="integer" label="30092" help="">
+				<setting id="item.limit" type="integer" label="30092" help="31233">
 					<level>0</level>
 					<default>20</default>
 					<constraints>
@@ -156,12 +156,12 @@
 						<popup>false</popup>
 					</control>
 				</setting>
-				<setting id="general.disableNotificationSound" type="boolean" label="30360" help="">
+				<setting id="general.disableNotificationSound" type="boolean" label="30360" help="31234">
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="download.location" type="path" label="30594" help="">
+				<setting id="download.location" type="path" label="30594" help="31235">
 					<level>0</level>
 					<default/>
 					<constraints>
@@ -169,6 +169,11 @@
 						<writable>true</writable>
 					</constraints>
 					<control type="button" format="path"/>
+					<dependencies>
+						<dependency type="visible">
+							<condition operator="is" setting="download.enabled">true</condition>
+						</dependency>
+					</dependencies>
 				</setting>
 				<setting id="tvdb.jw" type="string" help="">
 					<level>4</level>
@@ -241,6 +246,30 @@
 					<control type="edit" format="string">
 						<heading/>
 					</control>
+				</setting>
+				<setting id="mdblist.auth" type="string" help="">
+					<level>4</level>
+					<default/>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="edit" format="string">
+						<heading/>
+					</control>
+				</setting>
+				<setting id="mdblist.refresh" type="string" help="">
+					<level>4</level>
+					<default/>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="edit" format="string">
+						<heading/>
+					</control>
+				</setting>
+				<setting id="mdblist.expires" type="integer" help="">
+					<level>4</level>
+					<default>0</default>
 				</setting>
 				<setting id="rd.auth" type="string" help="">
 					<level>4</level>
@@ -341,10 +370,111 @@
 					</control>
 				</setting>
 			</group>
+			<group id="5" label="31173">
+				<setting id="download.enabled" type="boolean" label="31186" help="31187">
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="download.concurrency.mode" type="integer" label="31174" help="31175">
+					<level>0</level>
+					<default>1</default>
+					<constraints>
+						<options>
+							<option label="31176">0</option>
+							<option label="31177">1</option>
+						</options>
+					</constraints>
+					<control type="spinner" format="string"/>
+					<dependencies>
+						<dependency type="visible">
+							<condition operator="is" setting="download.enabled">true</condition>
+						</dependency>
+					</dependencies>
+				</setting>
+				<setting id="download.concurrency.limit" type="integer" label="31178" help="31236">
+					<level>0</level>
+					<default>3</default>
+					<constraints>
+						<minimum>1</minimum>
+						<maximum>8</maximum>
+					</constraints>
+					<control type="slider" format="integer">
+						<popup>false</popup>
+					</control>
+					<dependencies>
+						<dependency type="visible">
+							<condition operator="is" setting="download.concurrency.mode">1</condition>
+						</dependency>
+						<dependency type="visible">
+							<condition operator="is" setting="download.enabled">true</condition>
+						</dependency>
+					</dependencies>
+				</setting>
+				<setting id="download.automoveToLocal" type="boolean" label="31179" help="31180">
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+					<dependencies>
+						<dependency type="visible">
+							<condition operator="is" setting="download.enabled">true</condition>
+						</dependency>
+					</dependencies>
+				</setting>
+				<setting id="download.organize.enabled" type="boolean" label="31181" help="31182">
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+					<dependencies>
+						<dependency type="visible">
+							<condition operator="is" setting="download.enabled">true</condition>
+						</dependency>
+					</dependencies>
+				</setting>
+				<setting id="download.organize.splitLibrary" type="boolean" label="31183" help="31237">
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+					<dependencies>
+						<dependency type="visible">
+							<condition operator="is" setting="download.organize.enabled">true</condition>
+						</dependency>
+						<dependency type="visible">
+							<condition operator="is" setting="download.enabled">true</condition>
+						</dependency>
+					</dependencies>
+				</setting>
+				<setting id="download.organize.tvSeasonFolders" type="boolean" label="31184" help="31238">
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+					<dependencies>
+						<dependency type="visible">
+							<condition operator="is" setting="download.organize.enabled">true</condition>
+						</dependency>
+						<dependency type="visible">
+							<condition operator="is" setting="download.enabled">true</condition>
+						</dependency>
+					</dependencies>
+				</setting>
+				<setting id="download.organize.movieYear" type="boolean" label="31185" help="31239">
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+					<dependencies>
+						<dependency type="visible">
+							<condition operator="is" setting="download.organize.enabled">true</condition>
+						</dependency>
+						<dependency type="visible">
+							<condition operator="is" setting="download.enabled">true</condition>
+						</dependency>
+					</dependencies>
+				</setting>
+			</group>
 		</category>
 		<category id="themes" label="30199" help="">
 			<group id="1" label="30595">
-				<setting id="general.displayColor" type="string" label="30103" help="">
+				<setting id="general.displayColor" type="string" label="30103" help="31240">
 					<level>0</level>
 					<default>None</default>
 					<enable>false</enable>
@@ -352,7 +482,7 @@
 						<heading>30103</heading>
 					</control>
 				</setting>
-				<setting id="general.textColorSelect" type="action" label="30102" help="">
+				<setting id="general.textColorSelect" type="action" label="30102" help="31241">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=colorPicker)</data>
 					<constraints>
@@ -364,12 +494,12 @@
 				</setting>
 			</group>
 			<group id="2" label="30199">
-				<setting id="skin.updateAutomatic" type="boolean" label="30338" help="">
+				<setting id="skin.updateAutomatic" type="boolean" label="30338" help="31242">
 					<level>0</level>
 					<default>True</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="skin.active" type="string" label="30200" help="">
+				<setting id="skin.active" type="string" label="30200" help="31243">
 					<level>0</level>
 					<default>Seren Default</default>
 					<enable>false</enable>
@@ -377,7 +507,7 @@
 						<heading>30200</heading>
 					</control>
 				</setting>
-				<setting id="skin.install" type="action" label="30203" help="">
+				<setting id="skin.install" type="action" label="30203" help="31244">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=installSkin)</data>
 					<constraints>
@@ -385,7 +515,7 @@
 					</constraints>
 					<control type="button" format="action"/>
 				</setting>
-				<setting id="skin.uninstall" type="action" label="30202" help="">
+				<setting id="skin.uninstall" type="action" label="30202" help="31245">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=uninstallSkin)</data>
 					<constraints>
@@ -393,7 +523,7 @@
 					</constraints>
 					<control type="button" format="action"/>
 				</setting>
-				<setting id="skin.switch" type="action" label="30201" help="">
+				<setting id="skin.switch" type="action" label="30201" help="31246">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=switchSkin)</data>
 					<constraints>
@@ -401,7 +531,7 @@
 					</constraints>
 					<control type="button" format="action"/>
 				</setting>
-				<setting id="skin.checkSkinUpdates" type="action" label="30139" help="">
+				<setting id="skin.checkSkinUpdates" type="action" label="30139" help="31247">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=checkSkinUpdates)</data>
 					<constraints>
@@ -413,7 +543,7 @@
 		</category>
 		<category id="metadata &amp; artwork" label="30596" help="">
 			<group id="1" label="30597">
-				<setting id="general.metalocation" type="integer" label="30091" help="">
+				<setting id="general.metalocation" type="integer" label="30091" help="31353">
 					<level>0</level>
 					<default>1</default>
 					<constraints>
@@ -425,22 +555,22 @@
 					</constraints>
 					<control type="spinner" format="string"/>
 				</setting>
-				<setting id="general.meta.showoriginaltitle" type="boolean" label="30453" help="">
+				<setting id="general.meta.showoriginaltitle" type="boolean" label="30453" help="31354">
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="general.meta.studiolimit" type="boolean" label="30640" help="">
+				<setting id="general.meta.studiolimit" type="boolean" label="30640" help="31355">
 					<level>0</level>
 					<default>true</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="movies.language_based_releases" type="boolean" label="30629" help="">
+				<setting id="movies.language_based_releases" type="boolean" label="30629" help="31356">
 					<level>0</level>
 					<default>true</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="omdb.apikey" type="string" label="30454" help="">
+				<setting id="omdb.apikey" type="string" label="30454" help="31357">
 					<level>0</level>
 					<default/>
 					<constraints>
@@ -452,12 +582,12 @@
 				</setting>
 			</group>
 			<group id="2" label="30259">
-				<setting id="general.fanart.fallback" type="boolean" label="30484" help="">
+				<setting id="general.fanart.fallback" type="boolean" label="30484" help="31358">
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="artwork.preferredsize" type="integer" label="30341" help="">
+				<setting id="artwork.preferredsize" type="integer" label="30341" help="31359">
 					<level>0</level>
 					<default>1</default>
 					<constraints>
@@ -469,7 +599,7 @@
 					</constraints>
 					<control type="spinner" format="string"/>
 				</setting>
-				<setting id="fanart.apikey" type="string" label="30163" help="">
+				<setting id="fanart.apikey" type="string" label="30163" help="31360">
 					<level>0</level>
 					<default/>
 					<constraints>
@@ -481,7 +611,7 @@
 				</setting>
 			</group>
 			<group id="3" label="30268">
-				<setting id="movies.preferedsource" type="integer" label="30254" help="">
+				<setting id="movies.preferedsource" type="integer" label="30254" help="31361">
 					<level>0</level>
 					<default>1</default>
 					<constraints>
@@ -497,12 +627,12 @@
 					</dependencies>
 					<control type="spinner" format="string"/>
 				</setting>
-				<setting id="movie.artwork.advanced" type="boolean" label="30265" help="">
+				<setting id="movie.artwork.advanced" type="boolean" label="30265" help="31362">
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="movies.poster_limit" type="integer" label="30224" help="" parent="movie.artwork.advanced">
+				<setting id="movies.poster_limit" type="integer" label="30224" help="31363" parent="movie.artwork.advanced">
 					<level>0</level>
 					<default>1</default>
 					<constraints>
@@ -519,7 +649,7 @@
 						<popup>false</popup>
 					</control>
 				</setting>
-				<setting id="movies.fanart_limit" type="integer" label="30231" help="" parent="movie.artwork.advanced">
+				<setting id="movies.fanart_limit" type="integer" label="30231" help="31364" parent="movie.artwork.advanced">
 					<level>0</level>
 					<default>1</default>
 					<constraints>
@@ -536,7 +666,7 @@
 						<popup>false</popup>
 					</control>
 				</setting>
-				<setting id="movies.banner" type="boolean" label="30230" help="" parent="movie.artwork.advanced">
+				<setting id="movies.banner" type="boolean" label="30230" help="31365" parent="movie.artwork.advanced">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -546,7 +676,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="movies.landscape" type="boolean" label="30314" help="" parent="movie.artwork.advanced">
+				<setting id="movies.landscape" type="boolean" label="30314" help="31366" parent="movie.artwork.advanced">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -556,7 +686,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="movies.keyart_limit" type="integer" label="30312" help="" parent="movie.artwork.advanced">
+				<setting id="movies.keyart_limit" type="integer" label="30312" help="31367" parent="movie.artwork.advanced">
 					<level>0</level>
 					<default>0</default>
 					<constraints>
@@ -576,7 +706,7 @@
 						<popup>false</popup>
 					</control>
 				</setting>
-				<setting id="movies.clearlogo" type="boolean" label="30313" help="" parent="movie.artwork.advanced">
+				<setting id="movies.clearlogo" type="boolean" label="30313" help="31368" parent="movie.artwork.advanced">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -589,7 +719,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="movies.clearart" type="boolean" label="30316" help="" parent="movie.artwork.advanced">
+				<setting id="movies.clearart" type="boolean" label="30316" help="31369" parent="movie.artwork.advanced">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -602,7 +732,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="movies.discart" type="boolean" label="30317" help="" parent="movie.artwork.advanced">
+				<setting id="movies.discart" type="boolean" label="30317" help="31370" parent="movie.artwork.advanced">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -615,7 +745,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="movies.characterart_limit" type="integer" label="30315" help="" parent="movie.artwork.advanced">
+				<setting id="movies.characterart_limit" type="integer" label="30315" help="31371" parent="movie.artwork.advanced">
 					<level>0</level>
 					<default>0</default>
 					<constraints>
@@ -637,7 +767,7 @@
 				</setting>
 			</group>
 			<group id="4" label="30269">
-				<setting id="tvshows.preferedsource" type="integer" label="30255" help="">
+				<setting id="tvshows.preferedsource" type="integer" label="30255" help="31372">
 					<level>0</level>
 					<default>1</default>
 					<constraints>
@@ -654,12 +784,12 @@
 					</dependencies>
 					<control type="spinner" format="string"/>
 				</setting>
-				<setting id="tv.artwork.advanced" type="boolean" label="30266" help="">
+				<setting id="tv.artwork.advanced" type="boolean" label="30266" help="31373">
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="tvshows.poster_limit" type="integer" label="30224" help="" parent="tv.artwork.advanced">
+				<setting id="tvshows.poster_limit" type="integer" label="30224" help="31374" parent="tv.artwork.advanced">
 					<level>0</level>
 					<default>1</default>
 					<constraints>
@@ -676,7 +806,7 @@
 						<popup>false</popup>
 					</control>
 				</setting>
-				<setting id="tvshows.fanart_limit" type="integer" label="30231" help="" parent="tv.artwork.advanced">
+				<setting id="tvshows.fanart_limit" type="integer" label="30231" help="31375" parent="tv.artwork.advanced">
 					<level>0</level>
 					<default>1</default>
 					<constraints>
@@ -693,7 +823,7 @@
 						<popup>false</popup>
 					</control>
 				</setting>
-				<setting id="tvshows.banner" type="boolean" label="30230" help="" parent="tv.artwork.advanced">
+				<setting id="tvshows.banner" type="boolean" label="30230" help="31376" parent="tv.artwork.advanced">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -703,7 +833,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="tvshows.landscape" type="boolean" label="30314" help="" parent="tv.artwork.advanced">
+				<setting id="tvshows.landscape" type="boolean" label="30314" help="31377" parent="tv.artwork.advanced">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -713,7 +843,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="tvshows.keyart_limit" type="integer" label="30312" help="" parent="tv.artwork.advanced">
+				<setting id="tvshows.keyart_limit" type="integer" label="30312" help="31378" parent="tv.artwork.advanced">
 					<level>0</level>
 					<default>0</default>
 					<constraints>
@@ -733,7 +863,7 @@
 						<popup>false</popup>
 					</control>
 				</setting>
-				<setting id="tvshows.clearlogo" type="boolean" label="30313" help="" parent="tv.artwork.advanced">
+				<setting id="tvshows.clearlogo" type="boolean" label="30313" help="31379" parent="tv.artwork.advanced">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -746,7 +876,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="tvshows.clearart" type="boolean" label="30316" help="" parent="tv.artwork.advanced">
+				<setting id="tvshows.clearart" type="boolean" label="30316" help="31380" parent="tv.artwork.advanced">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -759,7 +889,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="tvshows.characterart_limit" type="integer" label="30315" help="" parent="tv.artwork.advanced">
+				<setting id="tvshows.characterart_limit" type="integer" label="30315" help="31381" parent="tv.artwork.advanced">
 					<level>0</level>
 					<default>0</default>
 					<constraints>
@@ -779,7 +909,7 @@
 						<popup>false</popup>
 					</control>
 				</setting>
-				<setting id="season.poster" type="boolean" label="30638" help="" parent="tv.artwork.advanced">
+				<setting id="season.poster" type="boolean" label="30638" help="31382" parent="tv.artwork.advanced">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -789,7 +919,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="season.banner" type="boolean" label="30639" help="" parent="tv.artwork.advanced">
+				<setting id="season.banner" type="boolean" label="30639" help="31383" parent="tv.artwork.advanced">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -799,7 +929,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="season.landscape" type="boolean" label="30263" help="" parent="tv.artwork.advanced">
+				<setting id="season.landscape" type="boolean" label="30263" help="31384" parent="tv.artwork.advanced">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -809,7 +939,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="season.fanart" type="boolean" label="30262" help="" parent="tv.artwork.advanced">
+				<setting id="season.fanart" type="boolean" label="30262" help="31385" parent="tv.artwork.advanced">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -819,7 +949,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="episode.fanart" type="boolean" label="30261" help="" parent="tv.artwork.advanced">
+				<setting id="episode.fanart" type="boolean" label="30261" help="31386" parent="tv.artwork.advanced">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -835,19 +965,19 @@
 		</category>
 		<category id="watch_accounts" label="30941" help="">
 			<group id="1" label="30084">
-				<setting id="general.watchAccountNotifications" type="boolean" label="30942" help="">
+				<setting id="general.watchAccountNotifications" type="boolean" label="30942" help="31291">
 					<level>0</level>
 					<default>true</default>
 					<control type="toggle"/>
 				</setting>
 			</group>
 			<group id="2" label="30129">
-				<setting id="trakt.enabled" type="boolean" label="30982" help="">
+				<setting id="trakt.enabled" type="boolean" label="30982" help="31292">
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="trakt.username" type="string" label="30130" help="">
+				<setting id="trakt.username" type="string" label="30130" help="31293">
 					<level>0</level>
 					<default/>
 					<constraints>
@@ -863,7 +993,7 @@
 						<heading>30130</heading>
 					</control>
 				</setting>
-				<setting id="trakt.authTrakt" type="action" label="30131" help="">
+				<setting id="trakt.authTrakt" type="action" label="30131" help="31294">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=authTrakt)</data>
 					<constraints>
@@ -881,7 +1011,7 @@
 						<close>true</close>
 					</control>
 				</setting>
-				<setting id="trakt.scrobbling" type="boolean" label="30132" help="">
+				<setting id="trakt.scrobbling" type="boolean" label="30132" help="31295">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -894,7 +1024,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="trakt.ignoreSecondsAtStart" type="integer" label="30481" help="" parent="trakt.scrobbling">
+				<setting id="trakt.ignoreSecondsAtStart" type="integer" label="30481" help="31296" parent="trakt.scrobbling">
 					<level>0</level>
 					<default>180</default>
 					<constraints>
@@ -914,7 +1044,7 @@
 						<popup>false</popup>
 					</control>
 				</setting>
-				<setting id="trakt.playCountMinimumPercent" type="integer" label="30482" help="" parent="trakt.scrobbling">
+				<setting id="trakt.playCountMinimumPercent" type="integer" label="30482" help="31297" parent="trakt.scrobbling">
 					<level>0</level>
 					<default>80</default>
 					<constraints>
@@ -934,7 +1064,7 @@
 						<popup>false</popup>
 					</control>
 				</setting>
-				<setting id="trakt.revokeTrakt" type="action" label="30133" help="">
+				<setting id="trakt.revokeTrakt" type="action" label="30133" help="31298">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=revokeTrakt)</data>
 					<constraints>
@@ -954,12 +1084,12 @@
 				</setting>
 			</group>
 			<group id="3" label="30943">
-				<setting id="mdblist.enabled" type="boolean" label="30944" help="">
+				<setting id="mdblist.enabled" type="boolean" label="30944" help="31299">
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="mdblist.username" type="string" label="30947" help="">
+				<setting id="mdblist.username" type="string" label="30947" help="31300">
 					<level>0</level>
 					<default/>
 					<constraints>
@@ -975,7 +1105,7 @@
 						<heading>30947</heading>
 					</control>
 				</setting>
-				<setting id="mdblist.authMDBList" type="action" label="30948" help="">
+				<setting id="mdblist.authMDBList" type="action" label="30948" help="31301">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=authMDBList)</data>
 					<constraints>
@@ -993,7 +1123,7 @@
 						<close>true</close>
 					</control>
 				</setting>
-				<setting id="mdblist.scrobbling" type="boolean" label="30981" help="">
+				<setting id="mdblist.scrobbling" type="boolean" label="30981" help="31302">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -1003,7 +1133,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="mdblist.ignoreSecondsAtStart" type="integer" label="30481" help="">
+				<setting id="mdblist.ignoreSecondsAtStart" type="integer" label="30481" help="31303">
 					<level>0</level>
 					<default>180</default>
 					<constraints>
@@ -1022,7 +1152,7 @@
 						<popup>false</popup>
 					</control>
 				</setting>
-				<setting id="mdblist.playCountMinimumPercent" type="integer" label="30482" help="">
+				<setting id="mdblist.playCountMinimumPercent" type="integer" label="30482" help="31304">
 					<level>0</level>
 					<default>80</default>
 					<constraints>
@@ -1041,7 +1171,7 @@
 						<popup>false</popup>
 					</control>
 				</setting>
-				<setting id="mdblist.revokeMDBList" type="action" label="30949" help="">
+				<setting id="mdblist.revokeMDBList" type="action" label="30949" help="31305">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=revokeMDBList)</data>
 					<constraints>
@@ -1061,12 +1191,12 @@
 				</setting>
 			</group>
 			<group id="4" label="30945">
-				<setting id="simkl.enabled" type="boolean" label="30946" help="">
+				<setting id="simkl.enabled" type="boolean" label="30946" help="31306">
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="simkl.username" type="string" label="31068" help="">
+				<setting id="simkl.username" type="string" label="31068" help="31307">
 					<level>0</level>
 					<default/>
 					<constraints>
@@ -1082,7 +1212,7 @@
 						<heading>31068</heading>
 					</control>
 				</setting>
-				<setting id="simkl.authSimkl" type="action" label="31069" help="">
+				<setting id="simkl.authSimkl" type="action" label="31069" help="31308">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=authSimkl)</data>
 					<constraints>
@@ -1100,7 +1230,7 @@
 						<close>true</close>
 					</control>
 				</setting>
-				<setting id="simkl.scrobbling" type="boolean" label="31070" help="">
+				<setting id="simkl.scrobbling" type="boolean" label="31070" help="31309">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -1113,7 +1243,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="simkl.ignoreSecondsAtStart" type="integer" label="30481" help="" parent="simkl.scrobbling">
+				<setting id="simkl.ignoreSecondsAtStart" type="integer" label="30481" help="31310" parent="simkl.scrobbling">
 					<level>0</level>
 					<default>180</default>
 					<constraints>
@@ -1133,7 +1263,7 @@
 						<popup>false</popup>
 					</control>
 				</setting>
-				<setting id="simkl.playCountMinimumPercent" type="integer" label="30482" help="" parent="simkl.scrobbling">
+				<setting id="simkl.playCountMinimumPercent" type="integer" label="30482" help="31311" parent="simkl.scrobbling">
 					<level>0</level>
 					<default>80</default>
 					<constraints>
@@ -1153,7 +1283,7 @@
 						<popup>false</popup>
 					</control>
 				</setting>
-				<setting id="simkl.revokeSimkl" type="action" label="31071" help="">
+				<setting id="simkl.revokeSimkl" type="action" label="31071" help="31312">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=revokeSimkl)</data>
 					<constraints>
@@ -1173,12 +1303,12 @@
 				</setting>
 			</group>
 			<group id="5" label="31137">
-				<setting id="crosssync.enabled" type="boolean" label="31138" help="">
+				<setting id="crosssync.enabled" type="boolean" label="31138" help="31313">
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="crosssync.intervalMinutes" type="integer" label="31140" help="" parent="crosssync.enabled">
+				<setting id="crosssync.intervalMinutes" type="integer" label="31140" help="31314" parent="crosssync.enabled">
 					<level>0</level>
 					<default>180</default>
 					<constraints>
@@ -1195,22 +1325,44 @@
 					</control>
 				</setting>
 			</group>
+			<group id="6" label="31509">
+				<setting id="moviecalendar.enabled" type="boolean" label="31510" help="31511">
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="watchlistcalendar.enabled" type="boolean" label="31472" help="31475">
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="mergemovies.enabled" type="boolean" label="31512" help="31513">
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="mergeshows.enabled" type="boolean" label="31514" help="31515">
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+				</setting>
+			</group>
 		</category>
 		<category id="accounts" label="30127" help="">
 			<group id="1" label="30084">
-				<setting id="general.accountNotifications" type="boolean" label="30128" help="">
+				<setting id="general.accountNotifications" type="boolean" label="30128" help="31443">
 					<level>0</level>
 					<default>true</default>
 					<control type="toggle"/>
 				</setting>
 			</group>
 			<group id="4" label="30134">
-				<setting id="premiumize.enabled" type="boolean" label="30160" help="">
+				<setting id="premiumize.enabled" type="boolean" label="30160" help="31387">
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="premiumize.auth" type="action" label="30339" help="">
+				<setting id="premiumize.auth" type="action" label="30339" help="31388">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=smartAuthPremiumize)</data>
 					<constraints>
@@ -1225,7 +1377,7 @@
 						<close>false</close>
 					</control>
 				</setting>
-				<setting id="premiumize.username" type="string" label="30159" help="" parent="">
+				<setting id="premiumize.username" type="string" label="30159" help="31389" parent="">
 					<level>0</level>
 					<default/>
 					<constraints>
@@ -1241,7 +1393,7 @@
 						<heading>30159</heading>
 					</control>
 				</setting>
-				<setting id="premiumize.premiumstatus" type="string" label="30458" help="" parent="">
+				<setting id="premiumize.premiumstatus" type="string" label="30458" help="31390" parent="">
 					<level>0</level>
 					<default/>
 					<constraints>
@@ -1257,7 +1409,7 @@
 						<heading>30458</heading>
 					</control>
 				</setting>
-				<setting id="premiumize.accountInfo" type="action" label="30876" help="">
+				<setting id="premiumize.accountInfo" type="action" label="30876" help="31391">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=pmAccountInfo)</data>
 					<constraints>
@@ -1272,7 +1424,7 @@
 						<close>false</close>
 					</control>
 				</setting>
-				<setting id="premiumize.torrents" type="boolean" label="30153" help="" parent="">
+				<setting id="premiumize.torrents" type="boolean" label="30153" help="31392" parent="">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -1282,7 +1434,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="premiumize.hosters" type="boolean" label="30154" help="" parent="">
+				<setting id="premiumize.hosters" type="boolean" label="30154" help="31393" parent="">
 					<level>0</level>
 					<default>false</default>
 					<dependencies>
@@ -1292,7 +1444,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="premiumize.transcoded" type="boolean" label="30158" help="" parent="">
+				<setting id="premiumize.transcoded" type="boolean" label="30158" help="31394" parent="">
 					<level>0</level>
 					<default>false</default>
 					<dependencies>
@@ -1302,7 +1454,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="premiumize.addToCloud" type="boolean" label="30183" help="" parent="">
+				<setting id="premiumize.addToCloud" type="boolean" label="30183" help="31395" parent="">
 					<level>0</level>
 					<default>false</default>
 					<dependencies>
@@ -1312,7 +1464,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="premiumize.autodelete" type="boolean" label="30157" help="" parent="">
+				<setting id="premiumize.autodelete" type="boolean" label="30157" help="31396" parent="">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -1322,7 +1474,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="premiumize.threshold" type="integer" label="30156" help="" parent="">
+				<setting id="premiumize.threshold" type="integer" label="30156" help="31397" parent="">
 					<level>0</level>
 					<default>750</default>
 					<constraints>
@@ -1357,12 +1509,12 @@
 				</setting>
 			</group>
 			<group id="5" label="30135">
-				<setting id="realdebrid.enabled" type="boolean" label="30152" help="">
+				<setting id="realdebrid.enabled" type="boolean" label="30152" help="31398">
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="rd.authRealDebrid" type="action" label="30150" help="">
+				<setting id="rd.authRealDebrid" type="action" label="30150" help="31399">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=authRealDebrid)</data>
 					<constraints>
@@ -1380,7 +1532,7 @@
 						<close>true</close>
 					</control>
 				</setting>
-				<setting id="rd.revokeAuth" type="action" label="30878" help="">
+				<setting id="rd.revokeAuth" type="action" label="30878" help="31400">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=revokeRealDebrid)</data>
 					<constraints>
@@ -1398,7 +1550,7 @@
 						<close>false</close>
 					</control>
 				</setting>
-				<setting id="rd.username" type="string" label="30151" help="">
+				<setting id="rd.username" type="string" label="30151" help="31401">
 					<level>0</level>
 					<default/>
 					<constraints>
@@ -1414,7 +1566,7 @@
 						<heading>30151</heading>
 					</control>
 				</setting>
-				<setting id="rd.premiumstatus" type="string" label="30458" help="" parent="rd.username">
+				<setting id="rd.premiumstatus" type="string" label="30458" help="31402" parent="rd.username">
 					<level>0</level>
 					<default/>
 					<constraints>
@@ -1430,7 +1582,7 @@
 						<heading>30458</heading>
 					</control>
 				</setting>
-				<setting id="rd.accountInfo" type="action" label="30876" help="">
+				<setting id="rd.accountInfo" type="action" label="30876" help="31403">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=rdAccountInfo)</data>
 					<constraints>
@@ -1445,7 +1597,7 @@
 						<close>false</close>
 					</control>
 				</setting>
-				<setting id="rd.torrents" type="boolean" label="30153" help="" parent="">
+				<setting id="rd.torrents" type="boolean" label="30153" help="31404" parent="">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -1519,7 +1671,7 @@
 					</dependencies>
 					<control type="spinner" format="integer"/>
 				</setting>
-				<setting id="rd.hosters" type="boolean" label="30154" help="" parent="">
+				<setting id="rd.hosters" type="boolean" label="30154" help="31405" parent="">
 					<level>0</level>
 					<default>false</default>
 					<dependencies>
@@ -1539,7 +1691,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="rd.autodelete" type="boolean" label="30155" help="" parent="">
+				<setting id="rd.autodelete" type="boolean" label="30155" help="31406" parent="">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -1567,12 +1719,12 @@
 				</setting>
 			</group>
 			<group id="6" label="30333">
-				<setting id="alldebrid.enabled" type="boolean" label="30335" help="">
+				<setting id="alldebrid.enabled" type="boolean" label="30335" help="31407">
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="alldebrid.authAllDebrid" type="action" label="30337" help="">
+				<setting id="alldebrid.authAllDebrid" type="action" label="30337" help="31408">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=authAllDebrid)</data>
 					<constraints>
@@ -1590,7 +1742,7 @@
 						<close>true</close>
 					</control>
 				</setting>
-				<setting id="alldebrid.revokeAuth" type="action" label="30879" help="">
+				<setting id="alldebrid.revokeAuth" type="action" label="30879" help="31409">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=revokeAllDebrid)</data>
 					<constraints>
@@ -1608,7 +1760,7 @@
 						<close>false</close>
 					</control>
 				</setting>
-				<setting id="alldebrid.username" type="string" label="30336" help="">
+				<setting id="alldebrid.username" type="string" label="30336" help="31410">
 					<level>0</level>
 					<default/>
 					<constraints>
@@ -1624,7 +1776,7 @@
 						<heading>30336</heading>
 					</control>
 				</setting>
-				<setting id="alldebrid.premiumstatus" type="string" label="30458" help="" parent="alldebrid.username">
+				<setting id="alldebrid.premiumstatus" type="string" label="30458" help="31411" parent="alldebrid.username">
 					<level>0</level>
 					<default/>
 					<constraints>
@@ -1640,7 +1792,7 @@
 						<heading>30458</heading>
 					</control>
 				</setting>
-				<setting id="alldebrid.accountInfo" type="action" label="30876" help="">
+				<setting id="alldebrid.accountInfo" type="action" label="30876" help="31412">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=adAccountInfo)</data>
 					<constraints>
@@ -1655,7 +1807,7 @@
 						<close>false</close>
 					</control>
 				</setting>
-				<setting id="alldebrid.torrents" type="boolean" label="30153" help="" parent="">
+				<setting id="alldebrid.torrents" type="boolean" label="30153" help="31413" parent="">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -1742,7 +1894,7 @@
 					</dependencies>
 					<control type="spinner" format="integer"/>
 				</setting>
-				<setting id="alldebrid.hosters" type="boolean" label="30154" help="" parent="">
+				<setting id="alldebrid.hosters" type="boolean" label="30154" help="31414" parent="">
 					<level>0</level>
 					<default>false</default>
 					<dependencies>
@@ -1762,7 +1914,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="alldebrid.autodelete" type="boolean" label="30155" help="" parent="">
+				<setting id="alldebrid.autodelete" type="boolean" label="30155" help="31415" parent="">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -1790,7 +1942,7 @@
 				</setting>
 			</group>
 			<group id="7" label="30660">
-				<setting id="torbox.enabled" type="boolean" label="30661" help="">
+				<setting id="torbox.enabled" type="boolean" label="30661" help="31416">
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
@@ -1805,7 +1957,7 @@
 						<heading/>
 					</control>
 				</setting>
-				<setting id="torbox.authTorBox" type="action" label="30663" help="">
+				<setting id="torbox.authTorBox" type="action" label="30663" help="31417">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=authTorBox)</data>
 					<constraints>
@@ -1823,7 +1975,7 @@
 						<close>true</close>
 					</control>
 				</setting>
-				<setting id="torbox.revokeAuth" type="action" label="30880" help="">
+				<setting id="torbox.revokeAuth" type="action" label="30880" help="31418">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=revokeTorBox)</data>
 					<constraints>
@@ -1841,7 +1993,7 @@
 						<close>false</close>
 					</control>
 				</setting>
-				<setting id="torbox.username" type="string" label="30662" help="">
+				<setting id="torbox.username" type="string" label="30662" help="31419">
 					<level>0</level>
 					<default/>
 					<constraints>
@@ -1857,7 +2009,7 @@
 						<heading>30662</heading>
 					</control>
 				</setting>
-				<setting id="torbox.premiumstatus" type="string" label="30458" help="" parent="torbox.username">
+				<setting id="torbox.premiumstatus" type="string" label="30458" help="31420" parent="torbox.username">
 					<level>0</level>
 					<default/>
 					<constraints>
@@ -1873,7 +2025,7 @@
 						<heading>30458</heading>
 					</control>
 				</setting>
-				<setting id="torbox.accountInfo" type="action" label="30876" help="">
+				<setting id="torbox.accountInfo" type="action" label="30876" help="31421">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=tbAccountInfo)</data>
 					<constraints>
@@ -1888,7 +2040,7 @@
 						<close>false</close>
 					</control>
 				</setting>
-				<setting id="torbox.torrents" type="boolean" label="30153" help="" parent="">
+				<setting id="torbox.torrents" type="boolean" label="30153" help="31422" parent="">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -1898,35 +2050,12 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="torbox.hosters" type="boolean" label="30154" help="" parent="">
+				<setting id="torbox.hosters" type="boolean" label="30154" help="31423" parent="">
 					<level>0</level>
 					<default>false</default>
 					<dependencies>
 						<dependency type="visible">
 							<condition operator="is" setting="torbox.enabled">true</condition>
-						</dependency>
-					</dependencies>
-					<control type="toggle"/>
-				</setting>
-				<setting id="torbox.usenet" type="boolean" label="30830" help="30831" parent="">
-					<level>0</level>
-					<default>false</default>
-					<dependencies>
-						<dependency type="visible">
-							<condition operator="is" setting="torbox.enabled">true</condition>
-						</dependency>
-					</dependencies>
-					<control type="toggle"/>
-				</setting>
-				<setting id="torbox.usenetUserEnginesOnly" type="boolean" label="30832" help="30833" parent="">
-					<level>0</level>
-					<default>false</default>
-					<dependencies>
-						<dependency type="visible">
-							<and>
-								<condition operator="is" setting="torbox.enabled">true</condition>
-								<condition operator="is" setting="torbox.usenet">true</condition>
-							</and>
 						</dependency>
 					</dependencies>
 					<control type="toggle"/>
@@ -1941,7 +2070,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="torbox.autodelete" type="boolean" label="30155" help="" parent="">
+				<setting id="torbox.autodelete" type="boolean" label="30155" help="31424" parent="">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -1969,7 +2098,7 @@
 				</setting>
 			</group>
 			<group id="8" label="30680">
-				<setting id="debridlink.enabled" type="boolean" label="30681" help="">
+				<setting id="debridlink.enabled" type="boolean" label="30681" help="31425">
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
@@ -2000,7 +2129,7 @@
 					</constraints>
 					<control type="edit" format="string"/>
 				</setting>
-				<setting id="debridlink.authDebridLink" type="action" label="30682" help="">
+				<setting id="debridlink.authDebridLink" type="action" label="30682" help="31426">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=authDebridLink)</data>
 					<constraints>
@@ -2018,7 +2147,7 @@
 						<close>true</close>
 					</control>
 				</setting>
-				<setting id="debridlink.revokeAuth" type="action" label="30881" help="">
+				<setting id="debridlink.revokeAuth" type="action" label="30881" help="31427">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=revokeDebridLink)</data>
 					<constraints>
@@ -2036,7 +2165,7 @@
 						<close>false</close>
 					</control>
 				</setting>
-				<setting id="debridlink.username" type="string" label="30835" help="">
+				<setting id="debridlink.username" type="string" label="30835" help="31428">
 					<level>0</level>
 					<default/>
 					<constraints>
@@ -2052,7 +2181,7 @@
 						<heading>30835</heading>
 					</control>
 				</setting>
-				<setting id="debridlink.premiumstatus" type="string" label="30458" help="" parent="debridlink.username">
+				<setting id="debridlink.premiumstatus" type="string" label="30458" help="31429" parent="debridlink.username">
 					<level>0</level>
 					<default/>
 					<constraints>
@@ -2068,7 +2197,7 @@
 						<heading>30458</heading>
 					</control>
 				</setting>
-				<setting id="debridlink.accountInfo" type="action" label="30876" help="">
+				<setting id="debridlink.accountInfo" type="action" label="30876" help="31430">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=dlAccountInfo)</data>
 					<constraints>
@@ -2083,7 +2212,7 @@
 						<close>false</close>
 					</control>
 				</setting>
-				<setting id="debridlink.torrents" type="boolean" label="30153" help="" parent="">
+				<setting id="debridlink.torrents" type="boolean" label="30153" help="31431" parent="">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -2170,7 +2299,7 @@
 					</dependencies>
 					<control type="spinner" format="integer"/>
 				</setting>
-				<setting id="debridlink.hosters" type="boolean" label="30154" help="" parent="">
+				<setting id="debridlink.hosters" type="boolean" label="30154" help="31432" parent="">
 					<level>0</level>
 					<default>false</default>
 					<dependencies>
@@ -2190,7 +2319,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="debridlink.autodelete" type="boolean" label="30155" help="" parent="">
+				<setting id="debridlink.autodelete" type="boolean" label="30155" help="31433" parent="">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -2218,12 +2347,12 @@
 				</setting>
 			</group>
 			<group id="9" label="30940">
-			<setting id="offcloud.enabled" type="boolean" label="30933" help="">
+			<setting id="offcloud.enabled" type="boolean" label="30933" help="31434">
 				<level>0</level>
 				<default>false</default>
 				<control type="toggle"/>
 				</setting>
-			<setting id="offcloud.apikey" type="string" label="30936" help="">
+			<setting id="offcloud.apikey" type="string" label="30936" help="31442">
 				<level>0</level>
 				<default/>
 				<constraints>
@@ -2238,9 +2367,9 @@
 					<heading>30936</heading>
 				</control>
 				</setting>
-			<setting id="offcloud.connectOffCloud" type="action" label="30934" help="">
+			<setting id="offcloud.connectOffCloud" type="action" label="30934" help="31435">
 				<level>0</level>
-				<data>RunPlugin(plugin://plugin.video.seren/?action=connectOffCloud)</data>
+				<data>RunPlugin(plugin://plugin.video.seren/?action=authOffcloud)</data>
 				<constraints>
 					<allowempty>true</allowempty>
 				</constraints>
@@ -2248,12 +2377,15 @@
 					<dependency type="visible">
 						<condition operator="is" setting="offcloud.enabled">true</condition>
 					</dependency>
+					<dependency type="visible">
+						<condition operator="is" setting="offcloud.apikey"/>
+					</dependency>
 				</dependencies>
 				<control type="button" format="action">
 					<close>true</close>
 				</control>
 				</setting>
-			<setting id="offcloud.revokeAuth" type="action" label="30939" help="">
+			<setting id="offcloud.revokeAuth" type="action" label="30939" help="31436">
 				<level>0</level>
 				<data>RunPlugin(plugin://plugin.video.seren/?action=revokeOffCloud)</data>
 				<constraints>
@@ -2263,12 +2395,15 @@
 					<dependency type="visible">
 						<condition operator="is" setting="offcloud.enabled">true</condition>
 					</dependency>
+					<dependency type="visible">
+						<condition operator="!is" setting="offcloud.apikey"/>
+					</dependency>
 				</dependencies>
 				<control type="button" format="action">
 					<close>false</close>
 				</control>
 				</setting>
-			<setting id="offcloud.username" type="string" label="30935" help="">
+			<setting id="offcloud.username" type="string" label="30935" help="31437">
 				<level>0</level>
 				<default/>
 				<constraints>
@@ -2284,7 +2419,7 @@
 					<heading>30935</heading>
 				</control>
 				</setting>
-			<setting id="offcloud.premiumstatus" type="string" label="30458" help="" parent="offcloud.username">
+			<setting id="offcloud.premiumstatus" type="string" label="30458" help="31438" parent="offcloud.username">
 				<level>0</level>
 				<default/>
 				<constraints>
@@ -2300,7 +2435,7 @@
 					<heading>30458</heading>
 				</control>
 				</setting>
-			<setting id="offcloud.accountInfo" type="action" label="30876" help="">
+			<setting id="offcloud.accountInfo" type="action" label="30876" help="31439">
 				<level>0</level>
 				<data>RunPlugin(plugin://plugin.video.seren/?action=ocAccountInfo)</data>
 				<constraints>
@@ -2315,7 +2450,7 @@
 					<close>false</close>
 				</control>
 				</setting>
-			<setting id="offcloud.torrents" type="boolean" label="30153" help="" parent="">
+			<setting id="offcloud.torrents" type="boolean" label="30153" help="31440" parent="">
 				<level>0</level>
 				<default>true</default>
 				<dependencies>
@@ -2387,7 +2522,7 @@
 				</dependencies>
 				<control type="toggle"/>
 				</setting>
-			<setting id="offcloud.autodelete" type="boolean" label="30155" help="" parent="">
+			<setting id="offcloud.autodelete" type="boolean" label="30155" help="31441" parent="">
 				<level>0</level>
 				<default>true</default>
 				<dependencies>
@@ -2417,14 +2552,14 @@
 		</category>
 		<category id="providers" label="30136" help="">
 			<group id="1" label="30084">
-				<setting id="providers.autoupdates" type="boolean" label="30138" help="">
+				<setting id="providers.autoupdates" type="boolean" label="30138" help="31251">
 					<level>0</level>
 					<default>true</default>
 					<control type="toggle"/>
 				</setting>
 			</group>
 			<group id="2" label="30140">
-				<setting id="providers.manualProviderUpdate" type="action" label="30139" help="">
+				<setting id="providers.manualProviderUpdate" type="action" label="30139" help="31252">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=manualProviderUpdate)</data>
 					<constraints>
@@ -2432,7 +2567,7 @@
 					</constraints>
 					<control type="button" format="action"/>
 				</setting>
-				<setting id="providers.manageProviders" type="action" label="30140" help="">
+				<setting id="providers.manageProviders" type="action" label="30140" help="31253">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=manageProviders)</data>
 					<constraints>
@@ -2447,7 +2582,7 @@
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="scraping.orion.torrent" type="boolean" label="30817">
+				<setting id="scraping.orion.torrent" type="boolean" label="30817" help="31255">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -2457,7 +2592,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="scraping.orion.hoster" type="boolean" label="30818">
+				<setting id="scraping.orion.hoster" type="boolean" label="30818" help="31256">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -2473,6 +2608,37 @@
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
+				</setting>
+				<setting id="scraping.easynews.noseek" type="boolean" label="31499" help="31500">
+					<level>0</level>
+					<default>false</default>
+					<dependencies>
+						<dependency type="visible">
+							<condition operator="is" setting="scraping.easynews">true</condition>
+						</dependency>
+					</dependencies>
+					<control type="toggle"/>
+				</setting>
+			</group>
+			<group id="3b" label="31169">
+				<setting id="local.fileInspection" type="boolean" label="31170" help="31171">
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="local.location" type="path" label="31172" help="31254">
+					<level>0</level>
+					<default/>
+					<dependencies>
+						<dependency type="visible">
+							<condition operator="is" setting="local.fileInspection">true</condition>
+						</dependency>
+					</dependencies>
+					<constraints>
+						<allowempty>true</allowempty>
+						<writable>true</writable>
+					</constraints>
+					<control type="button" format="path"/>
 				</setting>
 			</group>
 			<group id="3" label="30794">
@@ -2520,7 +2686,7 @@
 		</category>
 		<category id="scraping" label="30110" help="">
 			<group id="1" label="30084">
-				<setting id="general.scrapedisplay" type="integer" label="30174" help="">
+				<setting id="general.scrapedisplay" type="integer" label="30174" help="31315">
 					<level>0</level>
 					<default>0</default>
 					<constraints>
@@ -2532,17 +2698,17 @@
 					</constraints>
 					<control type="spinner" format="string"/>
 				</setting>
-				<setting id="general.resolverHide"  type="boolean" label="30650" help="">
+				<setting id="general.resolverHide"  type="boolean" label="30650" help="31316">
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="general.torrentCache" type="boolean" label="30111" help="">
+				<setting id="general.torrentCache" type="boolean" label="30111" help="31317">
 					<level>0</level>
 					<default>true</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="general.timeout" type="integer" label="30112" help="">
+				<setting id="general.timeout" type="integer" label="30112" help="31318">
 					<level>0</level>
 					<default>30</default>
 					<constraints>
@@ -2603,7 +2769,7 @@
 				</setting>
 			</group>
 			<group id="2" label="30189">
-				<setting id="premiumize.cloudInspection" type="boolean" label="30635" help="">
+				<setting id="premiumize.cloudInspection" type="boolean" label="30635" help="31319">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -2613,7 +2779,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="rd.cloudInspection" type="boolean" label="30636" help="">
+				<setting id="rd.cloudInspection" type="boolean" label="30636" help="31320">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -2623,7 +2789,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="alldebrid.cloudInspection" type="boolean" label="30637" help="">
+				<setting id="alldebrid.cloudInspection" type="boolean" label="30637" help="31321">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -2633,7 +2799,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="torbox.cloudInspection" type="boolean" label="30664" help="">
+				<setting id="torbox.cloudInspection" type="boolean" label="30664" help="31322">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -2643,7 +2809,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="debridlink.cloudInspection" type="boolean" label="30834" help="">
+				<setting id="debridlink.cloudInspection" type="boolean" label="30834" help="31323">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -2653,7 +2819,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="offcloud.cloudInspection" type="boolean" label="30938" help="">
+				<setting id="offcloud.cloudInspection" type="boolean" label="30938" help="31324">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -2665,12 +2831,12 @@
 				</setting>
 			</group>
 			<group id="3" label="30113">
-				<setting id="general.autocache" type="boolean" label="30114" help="">
+				<setting id="general.autocache" type="boolean" label="30114" help="31325">
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="general.cacheAssistMode" type="integer" label="30115" help="" parent="general.autocache">
+				<setting id="general.cacheAssistMode" type="integer" label="30115" help="31326" parent="general.autocache">
 					<level>0</level>
 					<default>0</default>
 					<constraints>
@@ -2686,7 +2852,7 @@
 					</dependencies>
 					<control type="spinner" format="string"/>
 				</setting>
-				<setting id="general.cachelocation" type="integer" label="30116" help="" parent="general.autocache">
+				<setting id="general.cachelocation" type="integer" label="30116" help="31327" parent="general.autocache">
 					<level>0</level>
 					<default>0</default>
 					<constraints>
@@ -2708,12 +2874,12 @@
 				</setting>
 			</group>
 			<group id="4" label="30121">
-				<setting id="preem.enabled" type="boolean" label="30122" help="">
+				<setting id="preem.enabled" type="boolean" label="30122" help="31328">
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="preem.movieres" type="integer" label="30123" help="" parent="preem.enabled">
+				<setting id="preem.movieres" type="integer" label="30123" help="31329" parent="preem.enabled">
 					<level>0</level>
 					<default>0</default>
 					<constraints>
@@ -2731,7 +2897,7 @@
 					</dependencies>
 					<control type="spinner" format="string"/>
 				</setting>
-				<setting id="preem.tvres" type="integer" label="30124" help="" parent="preem.enabled">
+				<setting id="preem.tvres" type="integer" label="30124" help="31330" parent="preem.enabled">
 					<level>0</level>
 					<default>1</default>
 					<constraints>
@@ -2749,7 +2915,7 @@
 					</dependencies>
 					<control type="spinner" format="string"/>
 				</setting>
-				<setting id="preem.limit" type="integer" label="30125" help="" parent="preem.enabled">
+				<setting id="preem.limit" type="integer" label="30125" help="31331" parent="preem.enabled">
 					<level>0</level>
 					<default>5</default>
 					<constraints>
@@ -2765,7 +2931,7 @@
 						<popup>false</popup>
 					</control>
 				</setting>
-				<setting id="preem.type" type="integer" label="30126" help="" parent="preem.enabled">
+				<setting id="preem.type" type="integer" label="30126" help="31332" parent="preem.enabled">
 					<level>0</level>
 					<default>0</default>
 					<constraints>
@@ -2782,7 +2948,7 @@
 					</dependencies>
 					<control type="spinner" format="string"/>
 				</setting>
-				<setting id="preem.waitfor.cloudfiles" type="boolean" label="30616" help="" parent="preem.enabled">
+				<setting id="preem.waitfor.cloudfiles" type="boolean" label="30616" help="31333" parent="preem.enabled">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -2792,7 +2958,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="preem.cloudfiles" type="boolean" label="30188" help="" parent="preem.enabled">
+				<setting id="preem.cloudfiles" type="boolean" label="30188" help="31334" parent="preem.enabled">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -2802,7 +2968,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="preem.adaptiveSources" type="boolean" label="30478" help="" parent="preem.enabled">
+				<setting id="preem.adaptiveSources" type="boolean" label="30478" help="31335" parent="preem.enabled">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -2812,7 +2978,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="preem.directSources" type="boolean" label="30630" help="" parent="preem.enabled">
+				<setting id="preem.directSources" type="boolean" label="30630" help="31336" parent="preem.enabled">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -2826,7 +2992,7 @@
 		</category>
 		<category id="sort &amp; filter" label="30148" help="">
 			<group id="1" label="30117">
-				<setting id="general.chooseFilters" type="action" label="30617" help="">
+				<setting id="general.chooseFilters" type="action" label="30617" help="31337">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=chooseFilters)</data>
 					<constraints>
@@ -2846,7 +3012,7 @@
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="filter.undesirables.selectDefaults" type="action" label="30703" help="">
+				<setting id="filter.undesirables.selectDefaults" type="action" label="30703" help="31338">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=undesirablesSelectDefaults)</data>
 					<dependencies>
@@ -2859,7 +3025,7 @@
 						<close>true</close>
 					</control>
 				</setting>
-				<setting id="filter.undesirables.userInput" type="action" label="30704" help="">
+				<setting id="filter.undesirables.userInput" type="action" label="30704" help="31339">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=undesirablesUserInput)</data>
 					<dependencies>
@@ -2872,7 +3038,7 @@
 						<close>true</close>
 					</control>
 				</setting>
-				<setting id="filter.undesirables.userRemove" type="action" label="30705" help="">
+				<setting id="filter.undesirables.userRemove" type="action" label="30705" help="31340">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=undesirablesUserRemove)</data>
 					<dependencies>
@@ -2885,7 +3051,7 @@
 						<close>true</close>
 					</control>
 				</setting>
-				<setting id="filter.undesirables.reset" type="action" label="30706" help="">
+				<setting id="filter.undesirables.reset" type="action" label="30706" help="31341">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=undesirablesReset)</data>
 					<dependencies>
@@ -2915,7 +3081,7 @@
 				</setting>
 			</group>
 			<group id="3" label="30707">
-				<setting id="general.maxResolution" type="integer" label="30120" help="">
+				<setting id="general.maxResolution" type="integer" label="30120" help="31342">
 					<level>0</level>
 					<default>0</default>
 					<constraints>
@@ -2928,7 +3094,7 @@
 					</constraints>
 					<control type="spinner" format="string"/>
 				</setting>
-				<setting id="general.minResolution" type="integer" label="30612" help="">
+				<setting id="general.minResolution" type="integer" label="30612" help="31343">
 					<level>0</level>
 					<default>3</default>
 					<constraints>
@@ -2941,7 +3107,7 @@
 					</constraints>
 					<control type="spinner" format="string"/>
 				</setting>
-				<setting id="general.enablesizelimit" type="integer" label="30118" help="">
+				<setting id="general.enablesizelimit" type="integer" label="30118" help="31344">
 					<level>0</level>
 					<default>0</default>
 						<constraints>
@@ -2953,7 +3119,7 @@
 					</constraints>
 					<control type="spinner" format="string"/>
 				</setting>
-				<setting id="general.sizelimit.movie" type="integer" label="30192" help="" parent="general.enablesizelimit">
+				<setting id="general.sizelimit.movie" type="integer" label="30192" help="31345" parent="general.enablesizelimit">
 					<level>0</level>
 					<default>10</default>
 					<constraints>
@@ -2970,7 +3136,7 @@
 						<popup>false</popup>
 					</control>
 				</setting>
-				<setting id="general.sizelimit.episode" type="integer" label="30119" help="" parent="general.enablesizelimit">
+				<setting id="general.sizelimit.episode" type="integer" label="30119" help="31346" parent="general.enablesizelimit">
 					<level>0</level>
 					<default>10</default>
 					<constraints>
@@ -2987,7 +3153,7 @@
 						<popup>false</popup>
 					</control>
 				</setting>
-				<setting id="general.sizeminimum.movie" type="number" label="30534" help="" parent="general.enablesizelimit">
+				<setting id="general.sizeminimum.movie" type="number" label="30534" help="31347" parent="general.enablesizelimit">
 					<level>0</level>
 					<default>0</default>
 					<constraints>
@@ -3004,7 +3170,7 @@
 						<popup>false</popup>
 					</control>
 				</setting>
-				<setting id="general.sizeminimum.episode" type="number" label="30535" help="" parent="general.enablesizelimit">
+				<setting id="general.sizeminimum.episode" type="number" label="30535" help="31348" parent="general.enablesizelimit">
 					<level>0</level>
 					<default>0</default>
 					<constraints>
@@ -3021,7 +3187,7 @@
 						<popup>false</popup>
 					</control>
 				</setting>
-				<setting id="general.speedlimit" type="number" label="30646" help="" parent="general.enablesizelimit">
+				<setting id="general.speedlimit" type="number" label="30646" help="31349" parent="general.enablesizelimit">
 					<level>0</level>
 					<default>10</default>
 					<constraints>
@@ -3038,7 +3204,7 @@
 						</dependency>
 					</dependencies>
 				</setting>
-				<setting id="general.speedminimum" type="number" label="30649" help="" parent="general.enablesizelimit">
+				<setting id="general.speedminimum" type="number" label="30649" help="31350" parent="general.enablesizelimit">
 					<level>0</level>
 					<default>0</default>
 					<constraints>
@@ -3064,7 +3230,7 @@
 				</setting>
 			</group>
 			<group id="4" label="30149">
-				<setting id="general.chooseSorting" type="action" label="30633" help="">
+				<setting id="general.chooseSorting" type="action" label="30633" help="31351">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=chooseSorting)</data>
 					<constraints>
@@ -3074,7 +3240,7 @@
 						<close>true</close>
 					</control>X
 				</setting>
-				<setting id="general.lastreleasenamepriority" type="boolean" label="30569" help="">
+				<setting id="general.lastreleasenamepriority" type="boolean" label="30569" help="31352">
 					<level>0</level>
 					<default>true</default>
 					<control type="toggle"/>
@@ -3470,7 +3636,7 @@
 		</category>
 		<category id="playback" label="30258" help="">
 			<group id="1" label="30084">
-				<setting id="general.playstyleMovie" type="integer" label="30191" help="">
+				<setting id="general.playstyleMovie" type="integer" label="30191" help="31257">
 					<level>0</level>
 					<default>0</default>
 					<constraints>
@@ -3481,7 +3647,7 @@
 					</constraints>
 					<control type="spinner" format="string"/>
 				</setting>
-				<setting id="general.playstyleEpisodes" type="integer" label="30085" help="">
+				<setting id="general.playstyleEpisodes" type="integer" label="30085" help="31258">
 					<level>0</level>
 					<default>0</default>
 					<constraints>
@@ -3494,12 +3660,12 @@
 				</setting>
 			</group>
 			<group id="2" label="30602">
-				<setting id="smartplay.clickresume" type="boolean" label="30107" help="">
+				<setting id="smartplay.clickresume" type="boolean" label="30107" help="31259">
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="general.bookmarkstyle" type="integer" label="30109" help="">
+				<setting id="general.bookmarkstyle" type="integer" label="30109" help="31260">
 					<level>0</level>
 					<default>0</default>
 					<constraints>
@@ -3513,12 +3679,12 @@
 				</setting>
 			</group>
 			<group id="3" label="30603">
-				<setting id="general.autotrynext" type="boolean" label="30195" help="">
+				<setting id="general.autotrynext" type="boolean" label="30195" help="31261">
 					<level>0</level>
 					<default>true</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="general.resolvefailurehandling" type="integer" label="30487" help="">
+				<setting id="general.resolvefailurehandling" type="integer" label="30487" help="31262">
 					<level>0</level>
 					<default>1</default>
 					<constraints>
@@ -3556,12 +3722,12 @@
 				</setting>
 			</group>
 			<group id="4" label="30604">
-				<setting id="smartplay.playlistcreate" type="boolean" label="30106" help="">
+				<setting id="smartplay.playlistcreate" type="boolean" label="30106" help="31263">
 					<level>0</level>
 					<default>true</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="smartPlay.preScrape" type="boolean" label="30108" help="">
+				<setting id="smartPlay.preScrape" type="boolean" label="30108" help="31264">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -3571,7 +3737,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="smartplay.displaystyle" type="integer" label="30318" help="">
+				<setting id="smartplay.displaystyle" type="integer" label="30318" help="31265">
 					<level>0</level>
 					<default>0</default>
 					<constraints>
@@ -3587,7 +3753,7 @@
 					</dependencies>
 					<control type="spinner" format="string"/>
 				</setting>
-				<setting id="smartplay.playingnextdialog" type="boolean" label="30104" help="">
+				<setting id="smartplay.playingnextdialog" type="boolean" label="30104" help="31266">
 					<level>0</level>
 					<default>true</default>
 					<dependencies>
@@ -3600,7 +3766,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="playingnext.percent" type="integer" label="30651" help="" parent="smartplay.playingnextdialog">
+				<setting id="playingnext.percent" type="integer" label="30651" help="31267" parent="smartplay.playingnextdialog">
 					<level>0</level>
 					<default>95</default>
 					<constraints>
@@ -3621,7 +3787,7 @@
 						<popup>false</popup>
 					</control>
 				</setting>
-				<setting id="playingnext.time" type="integer" label="30105" help="" parent="smartplay.playingnextdialog">
+				<setting id="playingnext.time" type="integer" label="30105" help="31268" parent="smartplay.playingnextdialog">
 					<level>0</level>
 					<default>30</default>
 					<constraints>
@@ -3641,7 +3807,7 @@
 						<popup>false</popup>
 					</control>
 				</setting>
-				<setting id="playingnext.defaultaction" type="integer" label="30319" help="" parent="smartplay.playingnextdialog">
+				<setting id="playingnext.defaultaction" type="integer" label="30319" help="31269" parent="smartplay.playingnextdialog">
 					<level>0</level>
 					<default>0</default>
 					<constraints>
@@ -3661,7 +3827,7 @@
 					</dependencies>
 					<control type="spinner" format="string"/>
 				</setting>
-				<setting id="smartplay.stillwatching" type="boolean" label="30322" help="">
+				<setting id="smartplay.stillwatching" type="boolean" label="30322" help="31270">
 					<level>0</level>
 					<default>false</default>
 					<dependencies>
@@ -3674,7 +3840,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="stillwatching.numepisodes" type="integer" label="30323" help="" parent="smartplay.stillwatching">
+				<setting id="stillwatching.numepisodes" type="integer" label="30323" help="31271" parent="smartplay.stillwatching">
 					<level>0</level>
 					<default>3</default>
 					<constraints>
@@ -3701,7 +3867,7 @@
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="watchdog.stallTimeout" type="integer" label="30823" help="">
+				<setting id="watchdog.stallTimeout" type="integer" label="30823" help="31272">
 					<level>0</level>
 					<default>10</default>
 					<constraints>
@@ -3718,7 +3884,7 @@
 						<popup>false</popup>
 					</control>
 				</setting>
-				<setting id="watchdog.monitorWindow" type="integer" label="30824" help="">
+				<setting id="watchdog.monitorWindow" type="integer" label="30824" help="31273">
 					<level>0</level>
 					<default>30</default>
 					<constraints>
@@ -3735,7 +3901,7 @@
 						<popup>false</popup>
 					</control>
 				</setting>
-				<setting id="watchdog.maxRetries" type="integer" label="30825" help="">
+				<setting id="watchdog.maxRetries" type="integer" label="30825" help="31274">
 					<level>0</level>
 					<default>3</default>
 					<constraints>
@@ -3761,6 +3927,103 @@
 						</dependency>
 					</dependencies>
 					<control type="toggle"/>
+				</setting>
+			</group>
+			<group id="6" label="31201">
+				<setting id="playback.locale.usekodi.movie" type="boolean" help="">
+					<level>4</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="playback.audiolanguage.movie" type="string" help="">
+					<level>4</level>
+					<default>mediadefault</default>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="edit" format="string">
+						<heading/>
+					</control>
+				</setting>
+				<setting id="playback.subtitlelanguage.movie" type="string" help="">
+					<level>4</level>
+					<default>original</default>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="edit" format="string">
+						<heading/>
+					</control>
+				</setting>
+				<setting id="playback.locale.usekodi.tv" type="boolean" help="">
+					<level>4</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="playback.audiolanguage.tv" type="string" help="">
+					<level>4</level>
+					<default>mediadefault</default>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="edit" format="string">
+						<heading/>
+					</control>
+				</setting>
+				<setting id="playback.subtitlelanguage.tv" type="string" help="">
+					<level>4</level>
+					<default>original</default>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="edit" format="string">
+						<heading/>
+					</control>
+				</setting>
+				<setting id="playback.locale.usekodi.anime" type="boolean" help="">
+					<level>4</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="playback.audiolanguage.anime" type="string" help="">
+					<level>4</level>
+					<default>mediadefault</default>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="edit" format="string">
+						<heading/>
+					</control>
+				</setting>
+				<setting id="playback.subtitlelanguage.anime" type="string" help="">
+					<level>4</level>
+					<default>original</default>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="edit" format="string">
+						<heading/>
+					</control>
+				</setting>
+				<setting id="playback.locale.backup" type="string" help="">
+					<level>4</level>
+					<default/>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="edit" format="string">
+						<heading/>
+					</control>
+				</setting>
+				<setting id="general.localeSelect" type="action" label="31201" help="31275">
+					<level>0</level>
+					<data>RunPlugin(plugin://plugin.video.seren/?action=localeSelect)</data>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="button" format="action">
+						<close>true</close>
+					</control>
 				</setting>
 			</group>
 		</category>
@@ -3810,7 +4073,7 @@
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="general.titleSubs.add" type="action" label="30760" help="">
+				<setting id="general.titleSubs.add" type="action" label="30760" help="31248">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=titleSubsAdd)</data>
 					<dependencies>
@@ -3823,7 +4086,7 @@
 						<close>true</close>
 					</control>
 				</setting>
-				<setting id="general.titleSubs.viewRemove" type="action" label="30761" help="">
+				<setting id="general.titleSubs.viewRemove" type="action" label="30761" help="31249">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=titleSubsViewRemove)</data>
 					<dependencies>
@@ -3836,7 +4099,7 @@
 						<close>true</close>
 					</control>
 				</setting>
-				<setting id="general.titleSubs.clearAll" type="action" label="30762" help="">
+				<setting id="general.titleSubs.clearAll" type="action" label="30762" help="31250">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=titleSubsClearAll)</data>
 					<dependencies>
@@ -4002,7 +4265,7 @@
 		</category>
 		<category id="shortcuts" label="30142" help="">
 			<group id="1" label="30028">
-				<setting id="cache.clear" type="action" label="30028" help="">
+				<setting id="cache.clear" type="action" label="30028" help="31276">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=clearCache)</data>
 					<constraints>
@@ -4010,7 +4273,7 @@
 					</constraints>
 					<control type="button" format="action"/>
 				</setting>
-				<setting id="cache.cleartorrent" type="action" label="30039" help="">
+				<setting id="cache.cleartorrent" type="action" label="30039" help="31277">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=clearTorrentCache)</data>
 					<constraints>
@@ -4018,7 +4281,7 @@
 					</constraints>
 					<control type="button" format="action"/>
 				</setting>
-				<setting id="cache.cleardebrid" type="action" label="30676" help="">
+				<setting id="cache.cleardebrid" type="action" label="30676" help="31278">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=clearDebridCache)</data>
 					<constraints>
@@ -4026,7 +4289,7 @@
 					</constraints>
 					<control type="button" format="action"/>
 				</setting>
-				<setting id="cache.clearsearch" type="action" label="30180" help="">
+				<setting id="cache.clearsearch" type="action" label="30180" help="31279">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=clearSearchHistory)</data>
 					<constraints>
@@ -4034,7 +4297,7 @@
 					</constraints>
 					<control type="button" format="action"/>
 				</setting>
-				<setting id="cache.wipeaddon" type="action" label="30041" help="">
+				<setting id="cache.wipeaddon" type="action" label="30041" help="31280">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=cleanInstall)</data>
 					<constraints>
@@ -4046,7 +4309,7 @@
 				</setting>
 			</group>
 			<group id="2" label="30215">
-				<setting id="traktdb.flush" type="action" label="30216" help="">
+				<setting id="traktdb.flush" type="action" label="30216" help="31281">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=flushTraktActivities)</data>
 					<constraints>
@@ -4054,7 +4317,7 @@
 					</constraints>
 					<control type="button" format="action"/>
 				</setting>
-				<setting id="traktdb.force" type="action" label="30217" help="">
+				<setting id="traktdb.force" type="action" label="30217" help="31282">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=forceTraktSync)</data>
 					<constraints>
@@ -4062,7 +4325,7 @@
 					</constraints>
 					<control type="button" format="action"/>
 				</setting>
-				<setting id="traktdb.rebuild" type="action" label="30218" help="">
+				<setting id="traktdb.rebuild" type="action" label="30218" help="31283">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=rebuildTraktDatabase)</data>
 					<constraints>
@@ -4072,7 +4335,7 @@
 				</setting>
 			</group>
 			<group id="3" label="30546">
-				<setting id="windowtests.testPlayingNext" type="action" label="30462" help="">
+				<setting id="windowtests.testPlayingNext" type="action" label="30462" help="31284">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=testPlayingNext)</data>
 					<constraints>
@@ -4080,7 +4343,7 @@
 					</constraints>
 					<control type="button" format="action"/>
 				</setting>
-				<setting id="windowtests.testStillWatching" type="action" label="30463" help="">
+				<setting id="windowtests.testStillWatching" type="action" label="30463" help="31285">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=testStillWatching)</data>
 					<constraints>
@@ -4088,7 +4351,7 @@
 					</constraints>
 					<control type="button" format="action"/>
 				</setting>
-				<setting id="windowtests.testGetSourcesWindow" type="action" label="30613" help="">
+				<setting id="windowtests.testGetSourcesWindow" type="action" label="30613" help="31286">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=testGetSourcesWindow)</data>
 					<constraints>
@@ -4096,7 +4359,7 @@
 					</constraints>
 					<control type="button" format="action"/>
 				</setting>
-				<setting id="windowtests.testResolverWindow" type="action" label="30464" help="">
+				<setting id="windowtests.testResolverWindow" type="action" label="30464" help="31287">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=testResolverWindow)</data>
 					<constraints>
@@ -4104,7 +4367,7 @@
 					</constraints>
 					<control type="button" format="action"/>
 				</setting>
-				<setting id="windowtests.testSourceSelectWindow" type="action" label="30465" help="">
+				<setting id="windowtests.testSourceSelectWindow" type="action" label="30465" help="31288">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=testSourceSelectWindow)</data>
 					<constraints>
@@ -4112,7 +4375,7 @@
 					</constraints>
 					<control type="button" format="action"/>
 				</setting>
-				<setting id="windowtests.testManualCacheWindow" type="action" label="30466" help="">
+				<setting id="windowtests.testManualCacheWindow" type="action" label="30466" help="31289">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=testManualCacheWindow)</data>
 					<constraints>
@@ -4120,7 +4383,7 @@
 					</constraints>
 					<control type="button" format="action"/>
 				</setting>
-				<setting id="windowtests.testDownloadManagerWindow" type="action" label="30625" help="">
+				<setting id="windowtests.testDownloadManagerWindow" type="action" label="30625" help="31290">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=testDownloadManagerWindow)</data>
 					<constraints>
@@ -4132,27 +4395,27 @@
 		</category>
 		<category id="advanced" label="30260" help="">
 			<group id="1" label="30605">
-				<setting id="general.menucaching" type="boolean" label="30193" help="">
+				<setting id="general.menucaching" type="boolean" label="30193" help="31444">
 					<level>0</level>
 					<default>true</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="general.force.widget.refresh.playback" type="boolean" label="30477" help="">
+				<setting id="general.force.widget.refresh.playback" type="boolean" label="30477" help="31445">
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="skin.testmenu" type="boolean" label="30545" help="">
+				<setting id="skin.testmenu" type="boolean" label="30545" help="31446">
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="general.setViews" type="boolean" label="30141" help="">
+				<setting id="general.setViews" type="boolean" label="30141" help="31447">
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="general.viewidswitch" type="boolean" label="30093" help="" parent="general.setViews">
+				<setting id="general.viewidswitch" type="boolean" label="30093" help="31448" parent="general.setViews">
 					<level>0</level>
 					<default>false</default>
 					<dependencies>
@@ -4162,7 +4425,7 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="addon.view" type="integer" label="30184" help="" parent="general.setViews">
+				<setting id="addon.view" type="integer" label="30184" help="31449" parent="general.setViews">
 					<level>0</level>
 					<default>0</default>
 					<constraints>
@@ -4188,7 +4451,7 @@
 					</dependencies>
 					<control type="spinner" format="string"/>
 				</setting>
-				<setting id="addon.view.id" type="integer" label="30185" help="" parent="general.setViews">
+				<setting id="addon.view.id" type="integer" label="30185" help="31450" parent="general.setViews">
 					<level>0</level>
 					<default>0</default>
 					<dependencies>
@@ -4203,7 +4466,7 @@
 						<heading>30185</heading>
 					</control>
 				</setting>
-				<setting id="movie.view" type="integer" label="30094" help="" parent="general.setViews">
+				<setting id="movie.view" type="integer" label="30094" help="31451" parent="general.setViews">
 					<level>0</level>
 					<default>0</default>
 					<constraints>
@@ -4229,7 +4492,7 @@
 					</dependencies>
 					<control type="spinner" format="string"/>
 				</setting>
-				<setting id="movie.view.id" type="integer" label="30095" help="" parent="general.setViews">
+				<setting id="movie.view.id" type="integer" label="30095" help="31452" parent="general.setViews">
 					<level>0</level>
 					<default>0</default>
 					<dependencies>
@@ -4244,7 +4507,7 @@
 						<heading>30095</heading>
 					</control>
 				</setting>
-				<setting id="show.view" type="integer" label="30096" help="" parent="general.setViews">
+				<setting id="show.view" type="integer" label="30096" help="31453" parent="general.setViews">
 					<level>0</level>
 					<default>0</default>
 					<constraints>
@@ -4270,7 +4533,7 @@
 					</dependencies>
 					<control type="spinner" format="string"/>
 				</setting>
-				<setting id="show.view.id" type="integer" label="30097" help="" parent="general.setViews">
+				<setting id="show.view.id" type="integer" label="30097" help="31454" parent="general.setViews">
 					<level>0</level>
 					<default>0</default>
 					<dependencies>
@@ -4285,7 +4548,7 @@
 						<heading>30097</heading>
 					</control>
 				</setting>
-				<setting id="episode.view" type="integer" label="30098" help="" parent="general.setViews">
+				<setting id="episode.view" type="integer" label="30098" help="31455" parent="general.setViews">
 					<level>0</level>
 					<default>0</default>
 					<constraints>
@@ -4311,7 +4574,7 @@
 					</dependencies>
 					<control type="spinner" format="string"/>
 				</setting>
-				<setting id="episode.view.id" type="integer" label="30099" help="" parent="general.setViews">
+				<setting id="episode.view.id" type="integer" label="30099" help="31456" parent="general.setViews">
 					<level>0</level>
 					<default>0</default>
 					<dependencies>
@@ -4326,7 +4589,7 @@
 						<heading>30099</heading>
 					</control>
 				</setting>
-				<setting id="season.view" type="integer" label="30100" help="" parent="general.setViews">
+				<setting id="season.view" type="integer" label="30100" help="31457" parent="general.setViews">
 					<level>0</level>
 					<default>0</default>
 					<constraints>
@@ -4352,7 +4615,7 @@
 					</dependencies>
 					<control type="spinner" format="string"/>
 				</setting>
-				<setting id="season.view.id" type="integer" label="30101" help="" parent="general.setViews">
+				<setting id="season.view.id" type="integer" label="30101" help="31458" parent="general.setViews">
 					<level>0</level>
 					<default>0</default>
 					<dependencies>
@@ -4369,7 +4632,7 @@
 				</setting>
 			</group>
 			<group id="2" label="30137">
-				<setting id="tmdb.apikey" type="string" label="30144" help="">
+				<setting id="tmdb.apikey" type="string" label="30144" help="31459">
 					<level>0</level>
 					<default/>
 					<constraints>
@@ -4379,7 +4642,7 @@
 						<heading>30144</heading>
 					</control>
 				</setting>
-				<setting id="tvdb.apikey" type="string" label="30147" help="">
+				<setting id="tvdb.apikey" type="string" label="30147" help="31460">
 					<level>0</level>
 					<default/>
 					<constraints>
@@ -4389,7 +4652,7 @@
 						<heading>30147</heading>
 					</control>
 				</setting>
-				<setting id="tvdb.pin" type="string" label="30930" help="">
+				<setting id="tvdb.pin" type="string" label="30930" help="31461">
 					<level>0</level>
 					<default/>
 					<constraints>
@@ -4399,7 +4662,7 @@
 						<heading>30930</heading>
 					</control>
 				</setting>
-				<setting id="trakt.clientid" type="string" label="30145" help="">
+				<setting id="trakt.clientid" type="string" label="30145" help="31462">
 					<level>0</level>
 					<default/>
 					<constraints>
@@ -4409,7 +4672,7 @@
 						<heading>30145</heading>
 					</control>
 				</setting>
-				<setting id="trakt.secret" type="string" label="30146" help="">
+				<setting id="trakt.secret" type="string" label="30146" help="31463">
 					<level>0</level>
 					<default/>
 					<constraints>
@@ -4419,7 +4682,7 @@
 						<heading>30146</heading>
 					</control>
 				</setting>
-				<setting id="simkl.clientid" type="string" label="31082" help="">
+				<setting id="simkl.clientid" type="string" label="31082" help="31464">
 					<level>0</level>
 					<default/>
 					<constraints>
@@ -4429,7 +4692,7 @@
 						<heading>31082</heading>
 					</control>
 				</setting>
-				<setting id="simkl.secret" type="string" label="31083" help="">
+				<setting id="simkl.secret" type="string" label="31083" help="31465">
 					<level>0</level>
 					<default/>
 					<constraints>
@@ -4437,6 +4700,16 @@
 					</constraints>
 					<control type="edit" format="string">
 						<heading>31083</heading>
+					</control>
+				</setting>
+				<setting id="mdblist.clientid" type="string" label="31164" help="31466">
+					<level>0</level>
+					<default/>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="edit" format="string">
+						<heading>31164</heading>
 					</control>
 				</setting>
 				<setting id="anirena.apikey" type="string" label="30912" help="30913">
@@ -4486,7 +4759,7 @@
 				</setting>
 			</group>
 			<group id="3" label="30547">
-				<setting id="general.localtimezone" type="string" label="30606" help="">
+				<setting id="general.localtimezone" type="string" label="30606" help="31467">
 					<level>0</level>
 					<default/>
 					<constraints>
@@ -4502,7 +4775,7 @@
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="general.chooseTimeZone" type="action" label="30548" help="">
+				<setting id="general.chooseTimeZone" type="action" label="30548" help="31468">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=chooseTimeZone)</data>
 					<constraints>
@@ -4517,7 +4790,7 @@
 				</setting>
 			</group>
 			<group id="4" label="30607">
-				<setting id="general.threadpoolScale" type="integer" label="30540" help="">
+				<setting id="general.threadpoolScale" type="integer" label="30540" help="31469">
 					<level>0</level>
 					<default>1</default>
 					<constraints>
@@ -4530,7 +4803,7 @@
 					</constraints>
 					<control type="spinner" format="string"/>
 				</setting>
-				<setting id="reuselanguageinvoker.status" type="string" label="30532" help="">
+				<setting id="reuselanguageinvoker.status" type="string" label="30532" help="31470">
 					<level>0</level>
 					<default>Disabled</default>
 					<enable>false</enable>
@@ -4538,7 +4811,7 @@
 						<heading>30532</heading>
 					</control>
 				</setting>
-				<setting id="reuselanguageinvoker.toggle" type="action" label="30533" help="">
+				<setting id="reuselanguageinvoker.toggle" type="action" label="30533" help="31471">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=toggleLanguageInvoker)</data>
 					<constraints>

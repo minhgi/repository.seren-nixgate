@@ -14,7 +14,7 @@ class TorBoxResolver(TorrentResolverBase):
     _fetch_source_files() → base class file selection → resolve_stream_url()
 
     Handles both torrent (magnet) and usenet (NZB) sources.
-    NZB sources are identified by the 'nzb_url' field set by _torbox_usenet_search().
+    NZB sources are identified by the 'nzb_url' field on the source dict.
     """
 
     def __init__(self):

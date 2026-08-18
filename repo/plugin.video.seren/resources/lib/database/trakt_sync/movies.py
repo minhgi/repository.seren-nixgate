@@ -113,6 +113,22 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
     def mark_movie_uncollected(self, trakt_id):
         self._mark_movie_record("collected", 0, trakt_id)
 
+    def is_movie_watchlisted(self, trakt_id):
+        row = self.fetchone("SELECT watchlisted FROM movies WHERE trakt_id=?", (trakt_id,))
+        return bool(row and row["watchlisted"])
+
+    def is_movie_favorited(self, trakt_id):
+        row = self.fetchone("SELECT favorited FROM movies WHERE trakt_id=?", (trakt_id,))
+        return bool(row and row["favorited"])
+
+    @guard_against_none()
+    def mark_movie_watchlisted(self, trakt_id, watchlisted):
+        self.execute_sql("UPDATE movies SET watchlisted=? WHERE trakt_id=?", (1 if watchlisted else 0, trakt_id))
+
+    @guard_against_none()
+    def mark_movie_favorited(self, trakt_id, favorited):
+        self.execute_sql("UPDATE movies SET favorited=? WHERE trakt_id=?", (1 if favorited else 0, trakt_id))
+
     @guard_against_none()
     def _mark_movie_record(self, column, value, trakt_id):
         if column == "watched":

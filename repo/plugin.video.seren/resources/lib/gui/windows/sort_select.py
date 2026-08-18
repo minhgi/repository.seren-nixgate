@@ -173,4 +173,4 @@ class SortSelect(BaseWindow):
     def close(self):
         super().close()
         self._save_settings()
-        g.open_addon_settings(6, 11)  # Open settings back where we were launched from
+        g.open_addon_settings(7, 23)  # Open settings back where we were launched from

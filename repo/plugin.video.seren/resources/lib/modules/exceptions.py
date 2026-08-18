@@ -155,6 +155,16 @@ class InvalidSourceType(ValueError):
         super().__init__(f"{source_type} sources are not available for download")
 
 
+class UnsupportedDebridProvider(ValueError):
+    def __init__(self, provider):
+        self.provider = provider
+        super().__init__(f"{provider} does not support downloading")
+
+
+class NoFilesSelected(ValueError):
+    pass
+
+
 class ResolverFailure(StackTraceException):
     def __init__(self, source):
         super().__init__(f"Failure to resolve source:\n{source}")

@@ -78,6 +78,54 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
                 "movies_rated",
                 self._sync_rated_movies,
             ),
+            (
+                "Watchlist Movies",
+                ("movies", "watchlisted_at"),
+                "movies_watchlisted",
+                self._sync_watchlist_movies,
+            ),
+            (
+                "Watchlist Shows",
+                ("shows", "watchlisted_at"),
+                "shows_watchlisted",
+                self._sync_watchlist_shows,
+            ),
+            (
+                "Favorited Movies",
+                ("movies", "favorited_at"),
+                "movies_favorited",
+                self._sync_favorited_movies,
+            ),
+            (
+                "Favorited Shows",
+                ("shows", "favorited_at"),
+                "shows_favorited",
+                self._sync_favorited_shows,
+            ),
+            (
+                "List Items",
+                # No per-entry gate tuple - Trakt's lists.updated_at semantics for
+                # item-level add/remove (vs. only list create/delete/rename) are
+                # undocumented and a prior session found it doesn't reliably cover
+                # item-level changes. Gating on it risks silently missing changes made
+                # outside the addon (e.g. on trakt.tv directly), so no independent
+                # delta check is layered on top of it here.
+                # IMPORTANT: this is a partial mitigation, not "always runs". This
+                # entry only executes when sync_activities()'s OWN outer gate passes
+                # (requires_update(remote_activities["all"], ...) at line ~173) - that
+                # rollup is itself derived from Trakt's per-category timestamps, likely
+                # including lists.updated_at. If that timestamp genuinely never moves
+                # on item-level changes and nothing else in the account changed either,
+                # the outer gate stays closed and this sync is skipped entirely too.
+                # What actually keeps membership accurate day-to-day is the
+                # write-through in trakt_context_menu.py's _add_to_list/
+                # _remove_from_list; this periodic pass is best-effort catch-up for
+                # changes made outside the addon, not a guarantee. lists_sync is
+                # recorded afterward for visibility once this does run.
+                None,
+                "lists_sync",
+                self._sync_list_items,
+            ),
         ]
 
     def clear_last_sync(self):
@@ -237,6 +285,63 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
             items.extend(paged_items)
         return {section: items}
 
+    def _sync_list_items(self):
+        """Full per-list content sync backing the Add/Remove Custom List menu gate in
+        trakt_context_menu.py. No Trakt delta endpoint exists for list item changes, so
+        this is a full walk of every list's full contents each time it runs - cost
+        scales with list count x list size, an accepted tradeoff (see Project_Report_Full.md,
+        session ListMembershipGating). Movie/show only, matching _add_to_list/
+        _remove_from_list's existing content_type scope (season/episode already
+        force-resolve to their parent show before being written to a list).
+        Smart/dynamic Trakt lists don't need filtering here the way MDBList's do -
+        Trakt has no dynamic-list field on users/me/lists; Smart Lists live entirely on
+        a separate endpoint this addon never calls (confirmed prior session)."""
+        try:
+            my_lists = self.trakt_api.get_json("users/me/lists")
+            if my_lists is None:
+                # None means the fetch itself failed (connection error, non-ok
+                # status, unparseable body - see TraktAPI.get_json). Must not
+                # collapse this into "user has zero lists" via `or []`: that
+                # would fall through to the unconditional DELETE FROM
+                # list_items below with nothing to reinsert, wiping every
+                # list's membership data on a single transient hiccup. A
+                # genuinely-empty account (my_lists == []) is fine to proceed
+                # with - list_ids ends up [], rows stays [], and the delete
+                # correctly leaves the table empty.
+                raise ActivitySyncFailure("empty response from Trakt (users/me/lists)")
+            list_ids = [lst["trakt_id"] for lst in my_lists]
+
+            rows = []
+            for list_id in list_ids:
+                for media_type in ("movies", "shows"):
+                    for paged_items in self.trakt_api.get_all_pages_json(
+                        f"users/me/lists/{list_id}/items/{media_type}", ignore_cache=True
+                    ):
+                        # get_all_pages_json's normalization flattens the raw
+                        # {"type": "movie", "movie": {"ids": {"trakt": N}, ...}} shape
+                        # into a single dict with trakt_id at the top level - same
+                        # shape _sync_watched_movies already reads i.get('trakt_id')
+                        # from below, confirmed via live probe against a real list.
+                        # Stored singular ("movie"/"show") to match item_information's
+                        # own mediatype convention used at the menu-gating call site,
+                        # and MDBListSyncDatabase's identical list_items table.
+                        rows.extend(
+                            (list_id, item["trakt_id"], media_type[:-1])
+                            for item in paged_items
+                            if item.get("trakt_id")
+                        )
+
+            self.execute_sql("DELETE FROM list_items")
+            if rows:
+                self.execute_sql(
+                    "INSERT OR IGNORE INTO list_items(list_id, trakt_id, mediatype) VALUES(?,?,?)",
+                    rows,
+                )
+        except ActivitySyncFailure:
+            raise
+        except Exception as e:
+            raise ActivitySyncFailure(e) from e
+
     def _sync_watched_movies(self):
         try:
             trakt_watched = []
@@ -277,6 +382,86 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
                     WHERE trakt_id IN ({','.join(str(i.get('trakt_id')) for i in trakt_collection)})
                     """,
                 ]
+            )
+        except Exception as e:
+            raise ActivitySyncFailure(e) from e
+
+    def _sync_watchlist_movies(self):
+        try:
+            trakt_watchlist = []
+            for paged_items in self.trakt_api.get_all_pages_json(
+                "sync/watchlist/movies", extended="full", limit=100, ignore_cache=True
+            ):
+                trakt_watchlist.extend(paged_items)
+            self.execute_sql("UPDATE movies SET watchlisted=0")
+            if len(trakt_watchlist) == 0:
+                return
+            self.insert_trakt_movies(trakt_watchlist)
+            self.execute_sql(
+                f"""
+                UPDATE movies SET watchlisted=1
+                WHERE trakt_id IN ({','.join(str(i.get('trakt_id')) for i in trakt_watchlist)})
+                """
+            )
+        except Exception as e:
+            raise ActivitySyncFailure(e) from e
+
+    def _sync_watchlist_shows(self):
+        try:
+            trakt_watchlist = []
+            for paged_items in self.trakt_api.get_all_pages_json(
+                "sync/watchlist/shows", extended="full", limit=100, ignore_cache=True
+            ):
+                trakt_watchlist.extend(paged_items)
+            self.execute_sql("UPDATE shows SET watchlisted=0")
+            if len(trakt_watchlist) == 0:
+                return
+            self.insert_trakt_shows(trakt_watchlist)
+            self.execute_sql(
+                f"""
+                UPDATE shows SET watchlisted=1
+                WHERE trakt_id IN ({','.join(str(i.get('trakt_id')) for i in trakt_watchlist)})
+                """
+            )
+        except Exception as e:
+            raise ActivitySyncFailure(e) from e
+
+    def _sync_favorited_movies(self):
+        try:
+            trakt_favorites = []
+            for paged_items in self.trakt_api.get_all_pages_json(
+                "sync/favorites/movies", extended="full", limit=100, ignore_cache=True
+            ):
+                trakt_favorites.extend(paged_items)
+            self.execute_sql("UPDATE movies SET favorited=0")
+            if len(trakt_favorites) == 0:
+                return
+            self.insert_trakt_movies(trakt_favorites)
+            self.execute_sql(
+                f"""
+                UPDATE movies SET favorited=1
+                WHERE trakt_id IN ({','.join(str(i.get('trakt_id')) for i in trakt_favorites)})
+                """
+            )
+        except Exception as e:
+            raise ActivitySyncFailure(e) from e
+
+    def _sync_favorited_shows(self):
+        try:
+            trakt_favorites = []
+            for paged_items in self.trakt_api.get_all_pages_json(
+                "sync/favorites/shows", extended="full", limit=100, ignore_cache=True
+            ):
+                trakt_favorites.extend(paged_items)
+            self.execute_sql("UPDATE shows SET favorited=0")
+            if len(trakt_favorites) == 0:
+                return
+            self.insert_trakt_shows(trakt_favorites)
+            self.execute_sql(
+                f"""
+                UPDATE shows SET favorited=1
+                WHERE trakt_id IN ({','.join(str(i.get('trakt_id')) for i in trakt_favorites)})
+                """
             )
         except Exception as e:
             raise ActivitySyncFailure(e) from e

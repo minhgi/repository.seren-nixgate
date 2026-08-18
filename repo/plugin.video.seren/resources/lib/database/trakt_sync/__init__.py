@@ -25,6 +25,15 @@ from resources.lib.modules.sync_lock import SyncLock
 _LIST_CACHE = {}
 _LIST_CACHE_MAX = 50  # Max entries to prevent unbounded growth
 
+# Session-level set of db_file paths already migrated for the watchlisted/favorited
+# columns below - avoids a PRAGMA table_info() round trip on every TraktSyncDatabase()
+# construction (this happens on nearly every context-menu open).
+_WATCHLIST_FAVORITES_MIGRATED = set()
+
+# Session-level set of db_file paths already migrated for the list_items table
+# below - same rationale as _WATCHLIST_FAVORITES_MIGRATED above.
+_LIST_ITEMS_MIGRATED = set()
+
 
 def _list_cache_key(method_name, id_list, **params):
     """Generate a cache key from method name, trakt IDs, and relevant params."""
@@ -339,6 +348,8 @@ class TraktSyncDatabase(Database):
         self,
     ):
         super().__init__(g.TRAKT_SYNC_DB_PATH, schema)
+        self._migrate_watchlist_favorites_columns()
+        self._migrate_list_items_tables()
 
         self.activities = {}
         self.item_list = []
@@ -396,9 +407,84 @@ class TraktSyncDatabase(Database):
     def _insert_last_activities_column(self):
         self.execute_sql("ALTER TABLE activities ADD last_activities_call INTEGER NOT NULL DEFAULT 1")
 
+    def _migrate_watchlist_favorites_columns(self):
+        """ALTER TABLE, deliberately not a `schema` dict entry: the dict's contents
+        feed _integrity_check_db's md5 checksum, and any change there is treated as
+        a schema mismatch - rebuild_database() then drops every table in this db file
+        (DELETE FROM sqlite_master + VACUUM) before recreating them empty. Declaring
+        watchlisted/favorited in `schema` would wipe every existing user's local Trakt
+        cache (watched/collected/rated/hidden/bookmarks/lists) on their next launch.
+        Do not "clean up" the dict/live-schema divergence by moving these there."""
+        if self._db_file in _WATCHLIST_FAVORITES_MIGRATED:
+            return
+        for table in ("movies", "shows"):
+            existing = {row["name"] for row in self.fetchall(f"PRAGMA table_info({table})")}
+            for column in ("watchlisted", "favorited"):
+                if column not in existing:
+                    self.execute_sql(f"ALTER TABLE {table} ADD COLUMN {column} INTEGER NOT NULL DEFAULT 0")
+
+        existing_activity_columns = {row["name"] for row in self.fetchall("PRAGMA table_info(activities)")}
+        for column in ("movies_watchlisted", "shows_watchlisted", "movies_favorited", "shows_favorited"):
+            if column not in existing_activity_columns:
+                self.execute_sql(
+                    f"ALTER TABLE activities ADD COLUMN {column} TEXT NOT NULL DEFAULT '1970-01-01T00:00:00'"
+                )
+        _WATCHLIST_FAVORITES_MIGRATED.add(self._db_file)
+
+    def _migrate_list_items_tables(self):
+        """CREATE TABLE IF NOT EXISTS, deliberately not a `schema` dict entry - same
+        rebuild_database()-wipes-everything risk described in
+        _migrate_watchlist_favorites_columns above applies to adding a table, not just
+        columns. The pre-existing `lists` table in `schema` is not used as a source of
+        truth here: it has no confirmed write path anywhere in this codebase (grepped -
+        listsHelper.py's browse-menu flow fetches list content live and never persists
+        it), so it's either dead scaffolding or reflects other users' public lists
+        (its own `username` column implies the latter).
+        """
+        if self._db_file in _LIST_ITEMS_MIGRATED:
+            return
+        self.execute_sql(
+            "CREATE TABLE IF NOT EXISTS list_items ("
+            "list_id INTEGER NOT NULL, trakt_id INTEGER NOT NULL, mediatype TEXT NOT NULL, "
+            "PRIMARY KEY(list_id, trakt_id, mediatype))"
+        )
+        self.execute_sql(
+            "CREATE INDEX IF NOT EXISTS idx_list_items_lookup ON list_items(trakt_id, mediatype)"
+        )
+        _LIST_ITEMS_MIGRATED.add(self._db_file)
+
+    def get_list_membership_count(self, trakt_id, mediatype):
+        """Returns how many synced lists this item is currently in, for the Remove
+        From Custom List menu gate (hidden when 0 - see trakt_context_menu.py's
+        _handle_list_options for why Add to Custom List stays unconditional instead
+        of being gated the same way)."""
+        in_count = self.fetchone(
+            "SELECT COUNT(*) as c FROM list_items WHERE trakt_id=? AND mediatype=?",
+            (trakt_id, mediatype),
+        )
+        return in_count["c"]
+
+    def add_list_membership(self, list_id, trakt_id, mediatype):
+        self.execute_sql(
+            "INSERT OR IGNORE INTO list_items(list_id, trakt_id, mediatype) VALUES(?,?,?)",
+            (list_id, trakt_id, mediatype),
+        )
+
+    def remove_list_membership(self, list_id, trakt_id, mediatype):
+        self.execute_sql(
+            "DELETE FROM list_items WHERE list_id=? AND trakt_id=? AND mediatype=?",
+            (list_id, trakt_id, mediatype),
+        )
+
     @staticmethod
     def _get_datetime_now():
         return g.datetime_to_string(datetime.datetime.utcnow())
+
+    def _get_aired_cutoff(self):
+        now = datetime.datetime.utcnow()
+        if self.date_delay:
+            now -= datetime.timedelta(days=1)
+        return g.datetime_to_string(now)
 
     def refresh_activities(self):
         self.activities = self.fetchone("SELECT * FROM activities WHERE sync_id=1")
@@ -509,6 +595,15 @@ class TraktSyncDatabase(Database):
                 return
 
         self.rebuild_database()
+        # rebuild_database() drops list_items/watchlisted/favorited too - they live outside
+        # the schema dict (see _migrate_watchlist_favorites_columns/_migrate_list_items_tables
+        # docstrings) specifically so editing them doesn't trigger a schema-checksum rebuild.
+        # Their own migration guards are process-lifetime caches keyed on this same db_file,
+        # so without discarding here, the fresh TraktSyncDatabase() below would see itself as
+        # "already migrated" and skip recreating them, permanently stranding both features for
+        # the rest of this Kodi session.
+        _WATCHLIST_FAVORITES_MIGRATED.discard(self._db_file)
+        _LIST_ITEMS_MIGRATED.discard(self._db_file)
         self.set_base_activities()
         self.refresh_activities()
         clear_list_cache()
@@ -1531,10 +1626,8 @@ class TraktSyncDatabase(Database):
                                                     CASE
                                                         WHEN old.needs_update
                                                             THEN CASE
-                                                                     WHEN new.info <> old.info
-                                                                         OR new.art <> old.art
-                                                                         OR new.cast <> old.cast
-                                                                         THEN TRUE
+                                                                     WHEN new.info IS NOT NULL
+                                                                         THEN FALSE
                                                                      ELSE old.needs_update END
                                                         ELSE CASE
                                                                  WHEN Datetime(coalesce(old.last_updated, 0))

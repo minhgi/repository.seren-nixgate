@@ -61,6 +61,7 @@ _ROUTE_TABLE = {
     "movieGenres":          _menu("resources.lib.gui.movieMenus", "movies_genres"),
     "movieGenresGet":       _menu("resources.lib.gui.movieMenus", "movies_genre_list", "action_args"),
     "movieYears":           _menu("resources.lib.gui.movieMenus", "movies_years"),
+    "movieCalendarBrowse":  _func("resources.lib.gui.windows.movie_calendar_window", "open_movie_calendar"),
     "movieYearsMovies":     _menu("resources.lib.gui.movieMenus", "movie_years_results", "action_args"),
     "movieByActor":         _menu("resources.lib.gui.movieMenus", "movies_by_actor", "action_args"),
     "myWatchedMovies":      _menu("resources.lib.gui.movieMenus", "my_watched_movies"),
@@ -95,7 +96,10 @@ _ROUTE_TABLE = {
     "flatEpisodes":         _menu("resources.lib.gui.tvshowMenus", "flat_episode_list", "action_args"),
     "myUpcomingEpisodes":   _menu("resources.lib.gui.tvshowMenus", "my_upcoming_episodes"),
     "myWatchedEpisodes":    _menu("resources.lib.gui.tvshowMenus", "my_watched_episode"),
+    "traktDroppedShows":    _menu("resources.lib.gui.tvshowMenus", "dropped_shows"),
+    "traktDroppedShowsRestore": _menu("resources.lib.gui.tvshowMenus", "dropped_shows_bulk_restore"),
     "showsByActor":         _menu("resources.lib.gui.tvshowMenus", "shows_by_actor", "action_args"),
+    "castBrowse":           _func("resources.lib.gui.castMenus", "browse_cast", "action_args"),
     "showsPopularRecent":   _menu("resources.lib.gui.tvshowMenus", "shows_popular_recent"),
     "showsTrendingRecent":  _menu("resources.lib.gui.tvshowMenus", "shows_trending_recent"),
     "showsRecentlyWatched": _menu("resources.lib.gui.tvshowMenus", "shows_recently_watched"),
@@ -106,6 +110,8 @@ _ROUTE_TABLE = {
     "providerTools":        _menu("resources.lib.gui.homeMenu", "provider_menu"),
     "syncTools":            _menu("resources.lib.gui.homeMenu", "sync_tools"),
     "clearCacheTool":       _menu("resources.lib.gui.homeMenu", "clear_cache_tool"),
+    "settingsTools":        _menu("resources.lib.gui.homeMenu", "settings_tools"),
+    "showChangelog":        _func("resources.lib.modules.changelog", "show_changelog"),
     "testWindows":          _menu("resources.lib.gui.homeMenu", "test_windows"),
 
     # --- Debrid services menus ---
@@ -132,6 +138,8 @@ _ROUTE_TABLE = {
     "TrendingLists":        _call("resources.lib.modules.listsHelper", "ListsHelper", "trending_lists", "mediatype"),
     "PopularLists":         _call("resources.lib.modules.listsHelper", "ListsHelper", "popular_lists", "mediatype"),
     "traktList":            _call("resources.lib.modules.listsHelper", "ListsHelper", "get_list_items"),
+    "searchTraktMovieLists": _menu("resources.lib.gui.movieMenus", "search_trakt_movie_lists", "action_args"),
+    "searchTraktShowLists": _menu("resources.lib.gui.tvshowMenus", "search_trakt_show_lists", "action_args"),
 
     # --- Trakt sync ---
     "syncTraktActivities":  _call("resources.lib.database.trakt_sync.activities", "TraktSyncDatabase", "sync_activities"),
@@ -148,6 +156,7 @@ _ROUTE_TABLE = {
     # --- Combined sync gateway (fans out to whichever of Trakt/MDBList/Simkl are configured) ---
     "clearAllSync": _func("resources.lib.modules.syncGateway", "clear_all_sync"),
     "forceAllSync": _func("resources.lib.modules.syncGateway", "force_all_sync"),
+    "rebuildAllSync": _func("resources.lib.modules.syncGateway", "rebuild_all_sync"),
 
     # --- Cross-service bridge sync (Phase 7) ---
     "bridgeSync": _func("resources.lib.modules.bridgeSync", "run"),
@@ -155,6 +164,7 @@ _ROUTE_TABLE = {
     # --- MDBList menus ---
     "mdblistRecentMovies":       _menu("resources.lib.gui.mdblistMenus", "recent_movies"),
     "mdblistRecentShows":        _menu("resources.lib.gui.mdblistMenus", "recent_shows"),
+    "mdblistNextUp":             _menu("resources.lib.gui.mdblistMenus", "next_up"),
     "mdblistInProgressMovies":   _menu("resources.lib.gui.mdblistMenus", "in_progress_movies"),
     "mdblistInProgressEpisodes": _menu("resources.lib.gui.mdblistMenus", "in_progress_episodes"),
     "mdblistMyLists":            _menu("resources.lib.gui.mdblistMenus", "my_lists", "mediatype"),
@@ -169,6 +179,9 @@ _ROUTE_TABLE = {
     "mdblistCollectionMovies":   _menu("resources.lib.gui.mdblistMenus", "collection_movies"),
     "mdblistCollectionShows":    _menu("resources.lib.gui.mdblistMenus", "collection_shows"),
     "mdblistDroppedShows":       _menu("resources.lib.gui.mdblistMenus", "dropped_shows"),
+    "mdblistWatchlistMovies":    _menu("resources.lib.gui.mdblistMenus", "watchlist_movies"),
+    "mdblistWatchlistShows":     _menu("resources.lib.gui.mdblistMenus", "watchlist_shows"),
+    "mdblistLikedLists":         _menu("resources.lib.gui.mdblistMenus", "liked_lists", "mediatype"),
 
     # --- Simkl menus ---
     "simklRecentMovies":         _menu("resources.lib.gui.simklMenus", "recent_movies"),
@@ -189,6 +202,7 @@ _ROUTE_TABLE = {
     "mergeWatchedShows":        _menu("resources.lib.gui.mergeMenus", "watched_shows"),
     "mergeInProgressMovies":    _menu("resources.lib.gui.mergeMenus", "in_progress_movies"),
     "mergeInProgressShows":     _menu("resources.lib.gui.mergeMenus", "in_progress_episodes"),
+    "mergeInProgressTVShows":   _menu("resources.lib.gui.mergeMenus", "in_progress_shows"),
 
     # --- Cache management ---
     "clearTorrentCache":    _call("resources.lib.database.torrentCache", "TorrentCache", "clear_all"),
@@ -367,37 +381,37 @@ def dispatch(params):
         from resources.lib.indexers import trakt
 
         trakt.TraktAPI().auth()
-        g.open_addon_settings(3, 6)
+        g.open_addon_settings(3, 5)
 
     elif action == "revokeTrakt":
         from resources.lib.indexers import trakt
 
         trakt.TraktAPI().revoke_auth()
-        g.open_addon_settings(3, 5)
+        g.open_addon_settings(3, 9)
 
     elif action == "authMDBList":
         from resources.lib.indexers import mdblist
 
         mdblist.MDBListAPI().authorize()
-        g.open_addon_settings(3, 10)
+        g.open_addon_settings(3, 14)
 
     elif action == "revokeMDBList":
         from resources.lib.indexers import mdblist
 
         mdblist.MDBListAPI().revoke_auth()
-        g.open_addon_settings(3, 9)
+        g.open_addon_settings(3, 18)
 
     elif action == "authSimkl":
         from resources.lib.indexers import simkl
 
         simkl.SimklAPI().auth()
-        g.open_addon_settings(3, 14)
+        g.open_addon_settings(3, 23)
 
     elif action == "revokeSimkl":
         from resources.lib.indexers import simkl
 
         simkl.SimklAPI().revoke_auth()
-        g.open_addon_settings(3, 13)
+        g.open_addon_settings(3, 27)
 
     elif action == "getSources":
         from resources.lib.modules.smartPlay import SmartPlay
@@ -797,7 +811,7 @@ def dispatch(params):
         from resources.lib.debrid import real_debrid
 
         real_debrid.RealDebrid().auth()
-        g.open_addon_settings(3, 27)
+        g.open_addon_settings(4, 18)
 
     elif action == "rdAccountInfo":
         from resources.lib.debrid.real_debrid import RealDebrid
@@ -1387,7 +1401,7 @@ def dispatch(params):
         from resources.lib.debrid.all_debrid import AllDebrid
 
         AllDebrid().auth()
-        g.open_addon_settings(3, 36)
+        g.open_addon_settings(4, 35)
 
     elif action == "adAccountInfo":
         from resources.lib.debrid.all_debrid import AllDebrid
@@ -1398,7 +1412,7 @@ def dispatch(params):
         from resources.lib.debrid.torbox import TorBox
 
         TorBox().auth()
-        g.open_addon_settings(3, 37)
+        g.open_addon_settings(4, 53)
 
     elif action == "tbAccountInfo":
         from resources.lib.debrid.torbox import TorBox
@@ -1409,18 +1423,18 @@ def dispatch(params):
         from resources.lib.debrid.debrid_link import DebridLink
 
         DebridLink().auth()
-        g.open_addon_settings(3, 38)
+        g.open_addon_settings(4, 66)
 
     elif action == "dlAccountInfo":
         from resources.lib.debrid.debrid_link import DebridLink
 
         DebridLink().account_info_to_dialog()
 
-    elif action == "connectOffCloud":
+    elif action == "authOffcloud":
         from resources.lib.debrid.offcloud import OffCloud
 
-        OffCloud().store_user_info()
-        g.open_addon_settings(3, 39)
+        OffCloud().authorize()
+        g.open_addon_settings(4, 85)
 
     elif action == "ocAccountInfo":
         from resources.lib.debrid.offcloud import OffCloud
@@ -1441,7 +1455,7 @@ def dispatch(params):
         from resources.lib.debrid.premiumize import Premiumize
 
         Premiumize().auth()
-        g.open_addon_settings(3, 13)
+        g.open_addon_settings(4, 4)
 
     elif action == "smartAuthPremiumize":
         from resources.lib.debrid.premiumize import Premiumize
@@ -1450,7 +1464,7 @@ def dispatch(params):
             pm.revoke_auth()
         else:
             pm.auth()
-            g.open_addon_settings(3, 13)
+            g.open_addon_settings(4, 4)
 
     elif action == "smartAuthRealDebrid":
         from resources.lib.debrid.real_debrid import RealDebrid
@@ -1459,7 +1473,7 @@ def dispatch(params):
             rd.revoke_auth()
         else:
             rd.auth()
-            g.open_addon_settings(3, 27)
+            g.open_addon_settings(4, 18)
 
     elif action == "smartAuthAllDebrid":
         from resources.lib.debrid.all_debrid import AllDebrid
@@ -1468,7 +1482,7 @@ def dispatch(params):
             ad.revoke_auth()
         else:
             ad.auth()
-            g.open_addon_settings(3, 36)
+            g.open_addon_settings(4, 35)
 
     elif action == "smartAuthTorBox":
         from resources.lib.debrid.torbox import TorBox
@@ -1477,7 +1491,7 @@ def dispatch(params):
             tb.revoke_auth()
         else:
             tb.auth()
-            g.open_addon_settings(3, 37)
+            g.open_addon_settings(4, 53)
 
     elif action == "smartAuthDebridLink":
         from resources.lib.debrid.debrid_link import DebridLink
@@ -1486,7 +1500,7 @@ def dispatch(params):
             dl.revoke_auth()
         else:
             dl.auth()
-            g.open_addon_settings(3, 38)
+            g.open_addon_settings(4, 66)
 
     elif action == "pmAccountInfo":
         from resources.lib.debrid.premiumize import Premiumize
@@ -1579,6 +1593,16 @@ def dispatch(params):
 
         try:
             window = DownloadManager(*SkinManager().confirm_skin_path("download_manager.xml"))
+            window.doModal()
+        finally:
+            del window
+
+    elif action == "calendarBrowse":
+        from resources.lib.gui.windows.calendar_window import CalendarWindow
+        from resources.lib.database.skinManager import SkinManager
+
+        try:
+            window = CalendarWindow(*SkinManager().confirm_skin_path("calendar.xml"))
             window.doModal()
         finally:
             del window
@@ -1676,6 +1700,15 @@ def dispatch(params):
 
         try:
             window = sort_select.SortSelect("sort_select.xml", g.ADDON_PATH)
+            window.doModal()
+        finally:
+            del window
+
+    elif action == "localeSelect":
+        import resources.lib.gui.windows.locale_select as locale_select
+
+        try:
+            window = locale_select.LocaleSelect("locale_select.xml", g.ADDON_PATH)
             window.doModal()
         finally:
             del window

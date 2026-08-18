@@ -277,15 +277,12 @@ class Sources:
             # Add the users cloud inspection to the threads to be run
             self.torrent_threads.put(self._user_cloud_inspection)
 
-            # Add TorBox Usenet search (runs alongside cloud inspection)
-            if g.torbox_enabled() and g.get_bool_setting('torbox.usenet', False):
-                self.torrent_threads.put(self._torbox_usenet_search)
-
             # Load threads for all sources
             self._create_torrent_threads()
             self._create_hoster_threads()
             self._create_adaptive_threads()
             self._create_direct_threads()
+            self._create_local_threads()
 
             start_time = time.time()
             while (
@@ -295,6 +292,7 @@ class Sources:
                 + len(self.direct_providers)
                 + len(self.cloud_scrapers)
                 <= 0
+                and not g.local_scraping_configured()
             ):
                 self.runtime = time.time() - start_time
                 if self.runtime > 5:
@@ -330,6 +328,7 @@ class Sources:
                             + len(self.adaptive_providers)
                             + len(self.direct_providers)
                             + (1 if self.cloud_scrapers else 0)
+                            + (1 if g.local_scraping_configured() else 0)
                         )
                         * 100
                     )
@@ -485,16 +484,7 @@ class Sources:
         tier_min_cached = g.get_int_setting('general.tierThreshold', TIER_MIN_CACHED_DEFAULT)
 
         # Detect anime content from genre metadata
-        genres = self.item_information.get('info', {}).get('genre', [])
-        if not isinstance(genres, list):
-            genres = [genres] if genres else []
-        genres_lower = [g.lower() for g in genres]
-        is_anime = any('anime' in g for g in genres_lower)
-        if not is_anime and any('animation' in g for g in genres_lower):
-            # "Animation" genre appears for both anime and western animation.
-            # Use country of origin to distinguish: anime scrapers index Japanese content.
-            _country = (self.item_information.get('info', {}).get('country_origin', '') or '').upper()
-            is_anime = _country in ('JP', 'JPN', 'JAPAN', 'CN', 'CHN', 'CHINA')
+        is_anime = tools.is_anime_by_genre(self.item_information)
 
         # Load provider performance data if feature is enabled
         pp = self._get_provider_perf_db()
@@ -821,13 +811,35 @@ class Sources:
 
     def _create_direct_threads(self):
         if not g.get_bool_setting("scraping.easynews", False):
-            g.log("Easynews provider disabled in settings, skipping direct providers", "info")
-            self.direct_providers = []
-            return
+            g.log("Easynews provider disabled in settings, skipping Easynews direct providers", "info")
+            self.direct_providers = [p for p in self.direct_providers if p[2] != "a4kNewsgroups"]
         for i in self.direct_providers:
             self.direct_threads.put(
                 self._get_provider_sources, self.item_information, i, 'direct', self._process_direct_source
             )
+
+    def _create_local_threads(self):
+        if not g.local_scraping_configured():
+            return
+        self.direct_threads.put(self._get_local_sources, self.item_information)
+
+    def _get_local_sources(self, info):
+        provider_name = 'LOCAL'
+        try:
+            self.sources_information['statistics']['remainingProviders'].append(provider_name)
+            if self.media_type == g.MEDIA_EPISODE:
+                simple_info = self._build_simple_show_info(info)
+            else:
+                simple_info = self._build_simple_movie_info(info)
+            from resources.lib.modules.local_scraper import LocalFileScraper
+            results = LocalFileScraper(self._prem_terminate).get_sources(info, simple_info)
+            if results:
+                self.sources_information['directSources'] += results
+        except Exception as e:
+            g.log(f"Local scraper failed: {e}", "warning")
+        finally:
+            with contextlib.suppress(ValueError):
+                self.sources_information['statistics']['remainingProviders'].remove(provider_name)
 
     def _check_local_torrent_database(self):
         if g.get_bool_setting('general.torrentCache'):
@@ -1687,164 +1699,6 @@ class Sources:
         finally:
             self.sources_information['statistics']['remainingProviders'].remove("Cloud Inspection")
 
-    def _torbox_usenet_search(self):
-        """Search TorBox's usenet index for the current item.
-
-        Calls TorBox's search-api.torbox.app/usenet/imdb:{id} endpoint.
-        Pre-cached results are added directly to torrentCacheSources (bypassing
-        normal torrent cache check since NZB hashes aren't torrent info_hashes).
-        Uncached results are added to allTorrents for display / uncached resolution.
-
-        Reference: POV torboxnews.py — Seren equivalent built into the pipeline
-        rather than as an external scraper package."""
-        self.sources_information['statistics']['remainingProviders'].append("TorBox Usenet")
-        try:
-            import hashlib
-            tb = torbox.TorBox()
-
-            # Build search params from item_information
-            info = self.item_information.get('info', {})
-            imdb_id = info.get('imdb_id')
-            if not imdb_id:
-                g.log("TorBox Usenet: No IMDB ID available, skipping", "info")
-                return
-
-            season = info.get('season') if self.media_type == g.MEDIA_EPISODE else None
-            episode = info.get('episode') if self.media_type == g.MEDIA_EPISODE else None
-
-            g.log(
-                f"TorBox Usenet: Searching imdb:{imdb_id}"
-                + (f" S{season}E{episode}" if season else ""),
-                "info",
-            )
-
-            results = tb.search_usenet(imdb_id, season, episode)
-            if not results:
-                g.log("TorBox Usenet: No results", "info")
-                return
-
-            # Build title matching data (same approach as cloud scrapers)
-            show_title = ""
-            aliases = set()
-            if self.media_type == g.MEDIA_EPISODE:
-                show_title = source_utils.clean_title(
-                    info.get('tvshowtitle', '') or info.get('title', '')
-                )
-                if self.media_type == g.MEDIA_EPISODE:
-                    simple_info = self._build_simple_show_info(self.item_information)
-                    alias_list = simple_info.get('show_aliases', [])
-                    aliases = {source_utils.clean_title(a) for a in alias_list if a}
-                    aliases.add(show_title)
-                    aliases.discard("")
-                    ep_filter = source_utils.get_filter_single_episode_fn(simple_info)
-                    season_filter = source_utils.get_filter_season_pack_fn(simple_info)
-                    show_filter = source_utils.get_filter_show_pack_fn(simple_info)
-            else:
-                simple_info = {
-                    'year': info.get('year'),
-                    'title': info.get('title'),
-                }
-
-            cached_count = 0
-            uncached_count = 0
-            skipped_count = 0
-            user_engines_only = g.get_bool_setting('torbox.usenetUserEnginesOnly', False)
-
-            for item in results:
-                try:
-                    if user_engines_only and not item.get('user_search'):
-                        continue
-
-                    raw_title = item.get('raw_title', '')
-                    if not raw_title:
-                        continue
-
-                    nzb_url = item.get('nzb', '')
-                    if not nzb_url:
-                        continue
-
-                    # Hash: use API hash or fall back to MD5 of NZB URL
-                    hash_value = item.get('hash') or hashlib.md5(
-                        nzb_url.encode('utf-8')
-                    ).hexdigest()
-                    hash_value = hash_value.lower()
-
-                    # Title filter — match show/movie title
-                    clean = source_utils.clean_title(raw_title)
-                    if self.media_type == g.MEDIA_EPISODE:
-                        if aliases and not any(a in clean for a in aliases if a):
-                            skipped_count += 1
-                            continue
-                        if not (ep_filter(clean) or season_filter(clean) or show_filter(clean)):
-                            skipped_count += 1
-                            continue
-                    else:
-                        if not source_utils.filter_movie_title(
-                            None, clean, info.get('title', ''), simple_info
-                        ):
-                            skipped_count += 1
-                            continue
-
-                    # Extract metadata
-                    try:
-                        size_bytes = int(item.get('size', 0))
-                    except (ValueError, TypeError):
-                        size_bytes = 0
-                    size_mb = round(size_bytes / (1024 * 1024), 2)
-
-                    try:
-                        seeds = int(item.get('last_known_seeders', 0))
-                    except (ValueError, TypeError):
-                        seeds = 0
-
-                    quality = source_utils.get_quality(raw_title)
-                    info_tags = source_utils.get_info(raw_title)
-                    is_cached = bool(item.get('cached', False))
-
-                    source_dict = {
-                        'type': 'torrent',
-                        'release_title': raw_title,
-                        'hash': hash_value,
-                        'size': size_mb,
-                        'seeds': seeds,
-                        'source': 'TORBOXNEWS',
-                        'provider': 'TORBOXNEWS',
-                        'quality': quality,
-                        'info': info_tags if isinstance(info_tags, list) else list(info_tags),
-                        'language': 'en',
-                        'debrid_provider': 'torbox',
-                        'nzb_url': nzb_url,
-                        # No magnet for NZB sources — resolver detects nzb_url
-                    }
-
-                    if is_cached:
-                        # Add directly to cached sources (bypasses torrent cache check)
-                        tor_key = hash_value + 'torbox'
-                        self.sources_information['cached_hashes'].add(hash_value)
-                        if tor_key not in self.sources_information['torrentCacheSources']:
-                            self.sources_information['torrentCacheSources'][tor_key] = source_dict
-                        cached_count += 1
-                    else:
-                        # Add to allTorrents for uncached display / fallback
-                        if hash_value not in self.sources_information['allTorrents']:
-                            self.sources_information['allTorrents'][hash_value] = source_dict
-                        uncached_count += 1
-
-                except Exception:
-                    continue
-
-            g.log(
-                f"TorBox Usenet: {len(results)} results → "
-                f"{cached_count} cached, {uncached_count} uncached, "
-                f"{skipped_count} filtered out",
-                "info",
-            )
-
-        except Exception as e:
-            g.log(f"TorBox Usenet search failed: {e}", "warning")
-        finally:
-            self.sources_information['statistics']['remainingProviders'].remove("TorBox Usenet")
-
     @staticmethod
     def _color_number(number):
 
@@ -1974,15 +1828,7 @@ class Sources:
             if cleaned and cleaned not in simple_info['show_aliases']:
                 simple_info['show_aliases'].append(cleaned)
 
-        _genre_list = info['info'].get('genre', [])
-        if not isinstance(_genre_list, list):
-            _genre_list = [_genre_list] if _genre_list else []
-        _genre_lower = [g.lower() for g in _genre_list]
-        if any('anime' in g for g in _genre_lower):
-            simple_info['isanime'] = True
-        elif any('animation' in g for g in _genre_lower):
-            _c = (simple_info.get('country', '') or '').upper()
-            simple_info['isanime'] = _c in ('JP', 'JPN', 'JAPAN', 'CN', 'CHN', 'CHINA')
+        simple_info['isanime'] = tools.is_anime_by_genre(info)
 
         # Title substitution: replace show_title with user-defined alternative
         if g.get_bool_setting('general.titleSubs'):
@@ -3102,7 +2948,8 @@ class TorrentCacheCheck:
 
     def _torbox_worker(self, torrent_list):
         try:
-            # Skip NZB sources — they're pre-checked by _torbox_usenet_search()
+            # Skip NZB sources — 'nzb_url' entries aren't torrent info_hashes
+            # and bypass the normal cache-check pass (resolved directly)
             torrent_list = [t for t in torrent_list if not t.get('nzb_url')]
 
             # Restore DB-cached results and filter unchecked

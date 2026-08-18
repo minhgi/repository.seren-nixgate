@@ -202,9 +202,17 @@ class Menus:
     @staticmethod
     def my_movies():
         trakt_active = bool(g.get_setting('trakt.auth')) and g.get_bool_setting('trakt.enabled', False)
-        mdblist_active = g.get_setting('mdblist.enabled') == "true" and bool(g.get_setting('mdblist.apikey'))
+        mdblist_active = g.get_setting('mdblist.enabled') == "true" and bool(g.get_setting('mdblist.auth') or g.get_setting('mdblist.apikey'))
         simkl_active = bool(g.get_setting('simkl.auth')) and g.get_bool_setting('simkl.enabled')
-        if sum((trakt_active, mdblist_active, simkl_active)) >= 2:
+        if trakt_active and g.get_bool_setting('moviecalendar.enabled', False):
+            g.add_directory_item(
+                g.get_language_string(31510),
+                action="movieCalendarBrowse",
+                description=g.get_language_string(31511),
+                menu_item=g.create_icon_dict("movies_recent", g.ICONS_PATH),
+                is_folder=False,
+            )
+        if sum((trakt_active, mdblist_active, simkl_active)) >= 2 and g.get_bool_setting('mergemovies.enabled', False):
             g.add_directory_item(
                 g.get_language_string(30973),
                 action="mergeInProgressMovies",
@@ -225,22 +233,28 @@ class Menus:
                 menu_item=g.create_icon_dict("movies_progress", g.ICONS_PATH),
             )
             g.add_directory_item(
-                g.get_language_string(30014),
-                action="moviesMyCollection",
-                description=g.get_language_string(30411),
-                menu_item=g.create_icon_dict("movies_collected", g.ICONS_PATH),
-            )
-            g.add_directory_item(
                 g.get_language_string(30015),
                 action="moviesMyWatchlist",
                 description=g.get_language_string(30412),
                 menu_item=g.create_icon_dict("movies_watched", g.ICONS_PATH),
             )
             g.add_directory_item(
+                g.get_language_string(30014),
+                action="moviesMyCollection",
+                description=g.get_language_string(30411),
+                menu_item=g.create_icon_dict("movies_collected", g.ICONS_PATH),
+            )
+            g.add_directory_item(
                 g.get_language_string(30986),
                 action="moviesMyFavorites",
                 description=g.get_language_string(30987),
                 menu_item=g.create_icon_dict("list_liked", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(30326),
+                action="myWatchedMovies",
+                description=g.get_language_string(30415),
+                menu_item=g.create_icon_dict("movies_watched", g.ICONS_PATH),
             )
             g.add_directory_item(
                 g.get_language_string(30044),
@@ -257,17 +271,23 @@ class Menus:
                 menu_item=g.create_icon_dict("list_liked", g.ICONS_PATH),
             )
             g.add_directory_item(
-                g.get_language_string(30326),
-                action="myWatchedMovies",
-                description=g.get_language_string(30415),
-                menu_item=g.create_icon_dict("movies_watched", g.ICONS_PATH),
+                g.get_language_string(31487),
+                action="searchTraktMovieLists",
+                description=g.get_language_string(31488),
+                menu_item=g.create_icon_dict("list_trakt", g.ICONS_PATH),
             )
-        if g.get_setting('mdblist.enabled') == "true" and g.get_setting('mdblist.apikey'):
+        if g.get_setting('mdblist.enabled') == "true" and (g.get_setting('mdblist.auth') or g.get_setting('mdblist.apikey')):
             g.add_directory_item(
                 g.get_language_string(30968),
                 action="mdblistInProgressMovies",
                 description=g.get_language_string(30969),
                 menu_item=g.create_icon_dict("movies_progress", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31501),
+                action="mdblistWatchlistMovies",
+                description=g.get_language_string(31502),
+                menu_item=g.create_icon_dict("movies_watched", g.ICONS_PATH),
             )
             g.add_directory_item(
                 g.get_language_string(31157),
@@ -287,6 +307,13 @@ class Menus:
                 mediatype="movies",
                 description=g.get_language_string(30995),
                 menu_item=g.create_icon_dict("list_trakt", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31505),
+                action="mdblistLikedLists",
+                mediatype="movies",
+                description=g.get_language_string(31506),
+                menu_item=g.create_icon_dict("list_liked", g.ICONS_PATH),
             )
             g.add_directory_item(
                 g.get_language_string(31063),
@@ -441,6 +468,17 @@ class Menus:
                 cm=[(g.get_language_string(30565), f"RunPlugin({remove_path})")],
             )
         g.close_directory(g.CONTENT_MENU)
+
+    def search_trakt_movie_lists(self, query=None):
+        if query is None:
+            query = g.get_keyboard_input(heading=g.get_language_string(30013))
+            if not query:
+                g.cancel_directory(silent=True)
+                return
+
+        from resources.lib.modules.listsHelper import ListsHelper
+
+        ListsHelper().search_lists("movies", query)
 
     def movies_search(self, query=None):
         if query is None:

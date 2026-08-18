@@ -1,6 +1,8 @@
 import collections
 import datetime
 
+import xbmcgui
+
 from resources.lib.database import Database
 from resources.lib.modules.globals import g
 
@@ -127,6 +129,25 @@ class SimklSyncDatabase(Database):
         g.set_setting("simkl.anime_watching_at", self.base_date)
         g.set_setting("simkl.anime_removed_at", self.base_date)
 
+    def re_build_database(self, silent=False):
+        """Mirrors TraktSyncDatabase.re_build_database's shape (trakt_sync/__init__.py) -
+        physical drop+recreate via the inherited rebuild_database(), then a full resync via
+        force_sync(). No process-lifetime migration guard to discard here (unlike Trakt/
+        MDBList's list_items) - SimklSyncDatabase has no tables/columns added outside the
+        schema dict, so rebuild_database()'s recreate-from-schema step is already complete
+        on its own; set_base_activities() (called inside force_sync()) also resets the
+        removal-reconciliation cursors it always writes to settings."""
+        if not silent:
+            confirm = xbmcgui.Dialog().yesno(g.ADDON_NAME, g.get_language_string(30179))
+            if confirm == 0:
+                return
+
+        self.rebuild_database()
+
+        from resources.lib.database.simkl_sync import activities
+
+        activities.SimklSyncDatabase().force_sync()
+
     def flush_activities(self):
         """Wipes local watch-state and resets sync cursors to base_date - called on a
         Simkl account switch (mirrors Trakt's flush_activities/clear_user_information,
@@ -218,4 +239,109 @@ class SimklSyncDatabase(Database):
             self.execute_sql(
                 "DELETE FROM bookmarks WHERE tmdb_id=? AND season=? AND number=? AND media_type='episode'",
                 (tmdb_id, season, number),
+            )
+
+    def is_movie_watched(self, tmdb_id):
+        """Single-item watched lookup for the context-menu toggle."""
+        if not tmdb_id:
+            return False
+        row = self.fetchone("SELECT watched FROM movies WHERE tmdb_id=?", (tmdb_id,))
+        return bool(row and row["watched"])
+
+    def is_show_fully_watched(self, tmdb_id):
+        """last_watched_at alone can't gate this - activities.py populates it from both
+        the completed AND watching status buckets, so a show with 3 of 40 episodes
+        watched already has a non-null last_watched_at. Compare against
+        total_episodes_count instead (mirrors Trakt's own unwatched_episodes > 0
+        polarity in _handle_watched_options) so a partly-watched show still offers
+        "Mark Watched" rather than hiding it."""
+        if not tmdb_id:
+            return False
+        row = self.fetchone(
+            "SELECT watched_episodes_count, total_episodes_count FROM shows WHERE tmdb_id=?", (tmdb_id,)
+        )
+        if not row:
+            return False
+        total = row["total_episodes_count"] or 0
+        return bool(total) and row["watched_episodes_count"] >= total
+
+    def mark_movie_watched_locally(self, tmdb_id):
+        """Write-through so the toggle flips immediately instead of waiting on the next
+        periodic activities sync. UPDATE-only, keyed by the tmdb_id index rather than
+        the table's own simkl_id PK - mirrors remove_bookmark's rationale above:
+        context-menu callers only have a tmdb_id. No-ops if the row doesn't exist yet
+        (item never seen by a periodic sync) - the next sync populates it normally."""
+        if not tmdb_id:
+            return
+        self.execute_sql(
+            "UPDATE movies SET watched=1, last_watched_at=? WHERE tmdb_id=?",
+            (self._get_datetime_now(), tmdb_id),
+        )
+
+    def mark_movie_unwatched_locally(self, tmdb_id):
+        if not tmdb_id:
+            return
+        self.execute_sql("UPDATE movies SET watched=0, last_watched_at=NULL WHERE tmdb_id=?", (tmdb_id,))
+
+    def mark_show_watched_locally(self, tmdb_id):
+        """Sets watched_episodes_count to the row's own total_episodes_count (from the
+        last periodic sync) rather than a sentinel - Seren already stores a real total,
+        unlike TMDb Helper's cache schema which fakes one. No-op when total is unknown
+        (0) - can't claim "fully watched" without a real denominator, and the next sync
+        fills it in."""
+        if not tmdb_id:
+            return
+        self.execute_sql(
+            "UPDATE shows SET watched_episodes_count=total_episodes_count, last_watched_at=? "
+            "WHERE tmdb_id=? AND total_episodes_count > 0",
+            (self._get_datetime_now(), tmdb_id),
+        )
+
+    def mark_show_unwatched_locally(self, tmdb_id):
+        if not tmdb_id:
+            return
+        self.execute_sql(
+            "UPDATE shows SET watched_episodes_count=0, last_watched_at=NULL WHERE tmdb_id=?", (tmdb_id,)
+        )
+
+    def upsert_movie_watched_locally(self, simkl_id, tmdb_id, imdb_id):
+        """Write-through for the scrobbler (player.py), which - unlike the context-menu
+        toggle's mark_movie_watched_locally - may be marking an item with no existing
+        local row (first-ever watch, never seen by a periodic sync). REPLACE is safe
+        here because movies' entire column set (simkl_id, tmdb_id, imdb_id, watched,
+        last_watched_at) is known at scrobble time, unlike shows below."""
+        if not simkl_id:
+            return
+        self.execute_sql(
+            "REPLACE INTO movies (simkl_id, tmdb_id, imdb_id, watched, last_watched_at) VALUES (?, ?, ?, 1, ?)",
+            (simkl_id, tmdb_id, imdb_id, self._get_datetime_now()),
+        )
+
+    def upsert_show_episode_watched_locally(self, tmdb_id, simkl_id, imdb_id=None, tvdb_id=None):
+        """Write-through for the scrobbler when a single episode finishes. Unlike
+        movies, REPLACE is unsafe here - shows also carries status/next_to_watch/
+        total_episodes_count columns a REPLACE with only scrobble-known fields would
+        silently reset on an existing row. UPDATE preserves them and clamps the
+        increment to total_episodes_count so a real denominator can't be exceeded.
+        INSERT (row not seen by any periodic sync yet) leaves total_episodes_count at
+        the schema default of 0 - is_show_fully_watched() correctly stays False until
+        a sync learns the real denominator; that's the honest state given what a
+        single scrobble event can know, not a gap. Requires simkl_id on the insert
+        branch only (the table's NOT NULL PK) - callers without one should skip
+        calling this rather than guess."""
+        if not tmdb_id:
+            return
+        now = self._get_datetime_now()
+        if self.fetchone("SELECT tmdb_id FROM shows WHERE tmdb_id=?", (tmdb_id,)):
+            self.execute_sql(
+                "UPDATE shows SET watched_episodes_count = MIN(watched_episodes_count + 1, "
+                "CASE WHEN total_episodes_count > 0 THEN total_episodes_count ELSE watched_episodes_count + 1 END), "
+                "last_watched_at=? WHERE tmdb_id=?",
+                (now, tmdb_id),
+            )
+        elif simkl_id:
+            self.execute_sql(
+                "INSERT INTO shows (simkl_id, tmdb_id, tvdb_id, imdb_id, watched_episodes_count, "
+                "total_episodes_count, last_watched_at) VALUES (?, ?, ?, ?, 1, 0, ?)",
+                (simkl_id, tmdb_id, tvdb_id, imdb_id, now),
             )

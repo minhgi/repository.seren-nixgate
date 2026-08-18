@@ -1,3 +1,4 @@
+import threading
 import time
 from functools import cached_property
 from functools import wraps
@@ -143,31 +144,34 @@ class AllDebrid:
         if not resp or "expires_in" not in resp:
             xbmcgui.Dialog().ok(g.ADDON_NAME, g.get_language_string(30024).format("AllDebrid"))
             return
-        expiry = pin_ttl = int(resp["expires_in"])
+        expiry = int(resp["expires_in"])
         auth_complete = False
         auth_check = None
         tools.copy2clip(resp["pin"])
-        try:
-            progress_dialog = xbmcgui.DialogProgress()
-            progress_dialog.create(
-                f"{g.ADDON_NAME}: {g.get_language_string(30334)}",
-                tools.create_multiline_message(
-                    line1=g.get_language_string(30018).format(g.color_string(resp["base_url"])),
-                    line2=g.get_language_string(30019).format(g.color_string(resp["pin"])),
-                    line3=g.get_language_string(30047),
-                ),
-            )
 
+        qr_image = tools.make_qr(resp["base_url"], "all_debrid_qr.png")
+
+        from resources.lib.gui.windows.qr_auth_window import QRAuthWindow
+
+        window = QRAuthWindow("qr_auth_window.xml", g.ADDON_PATH)
+        window.set_title(g.get_language_string(30334))
+        window.set_qr_image(qr_image)
+        window.set_details(
+            g.get_language_string(30018).format(resp["base_url"]),
+            g.get_language_string(30019).format(resp["pin"]),
+        )
+        window_thread = threading.Thread(target=window.doModal)
+        window_thread.start()
+
+        try:
             # Seems the All Debrid servers need some time do something with the pin before polling
             # Polling to early will cause an invalid pin error
             xbmc.sleep(5 * 1000)
-            progress_dialog.update(100)
 
             if "check" not in resp or "pin" not in resp:
-                progress_dialog.close()
                 return
 
-            while not auth_complete and expiry > 0 and not progress_dialog.iscanceled():
+            while not auth_complete and expiry > 0 and not window.canceled_by_user:
                 auth_check = self.get_json("pin/check", check=resp["check"], pin=resp["pin"])
                 if not auth_check or "activated" not in auth_check:
                     expiry -= 1
@@ -178,18 +182,19 @@ class AllDebrid:
                     break
                 else:
                     expiry = int(auth_check["expires_in"])
-                    progress_percent = 100 - int((float(pin_ttl - expiry) / pin_ttl) * 100)
-                    progress_dialog.update(progress_percent)
+                    minutes, seconds = divmod(max(expiry, 0), 60)
+                    window.set_status(f"{minutes:02d}:{seconds:02d}")
                     xbmc.sleep(1 * 1000)
-
-            progress_dialog.close()
-
-            if auth_complete and not progress_dialog.iscanceled() and auth_check is not None:
-                g.set_setting(AD_AUTH_KEY, auth_check["apikey"])
-                self.apikey = auth_check["apikey"]
-                self.store_user_info()
         finally:
-            del progress_dialog
+            canceled = window.canceled_by_user
+            window.close()
+            window_thread.join(5)
+            del window
+
+        if auth_complete and not canceled and auth_check is not None:
+            g.set_setting(AD_AUTH_KEY, auth_check["apikey"])
+            self.apikey = auth_check["apikey"]
+            self.store_user_info()
 
         if auth_complete:
             xbmcgui.Dialog().ok(g.ADDON_NAME, f"AllDebrid {g.get_language_string(30020)}")

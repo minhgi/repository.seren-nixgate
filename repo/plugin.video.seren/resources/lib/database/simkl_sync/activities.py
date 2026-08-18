@@ -226,9 +226,7 @@ class SimklSyncDatabase(simkl_sync.SimklSyncDatabase):
         )
         try:
             params = {"date_from": date_from} if date_from else {}
-            page = self.simkl_api.get_json("sync/all-items/movies/completed", **params)
-            if page is None:
-                raise ActivitySyncFailure("empty response from Simkl (sync/all-items/movies/completed)")
+            page = self.simkl_api.get_json_or_raise("sync/all-items/movies/completed", **params) or {}
 
             rows = []
             for entry in page.get("movies") or []:
@@ -253,10 +251,16 @@ class SimklSyncDatabase(simkl_sync.SimklSyncDatabase):
     def _sync_shows(self):
         """Pulls GET /sync/all-items/shows/{completed,watching}. Stores Simkl's own
         watched_episodes_count/total_episodes_count/next_to_watch summary per show -
-        deliberately no per-episode mill (the default response doesn't carry
-        seasons[].episodes[] at all without extended=full, and even then only for
-        watching/plantowatch/hold - milling to per-episode granularity would mean a
-        second, much heavier API contract). Per-episode watched checkmarks are
+        deliberately no per-episode mill. Two remote paths for real per-episode data
+        were evaluated and rejected, not just the default response's omission:
+        extended=full alone excludes seasons[].episodes[] for completed/dropped
+        (simkl.apib:9582); include_all_episodes=yes extends coverage to those buckets
+        (simkl.apib:9589, :3628) but may synthesize virtual episode rows for shows
+        without real per-episode history, so the data itself isn't trustworthy. The
+        on-demand POST /sync/watched?extended=episodes (simkl.apib:84, 4586-4645)
+        returns real per-episode watched booleans, but simkl.apib:4594 documents
+        calling it alongside the bulk /sync/all-items pull this method already does
+        as a client_id-suspension pattern. Per-episode watched checkmarks are
         therefore not available from Simkl-sourced rows; this is a deliberate
         deferral, documented in Simkl_Implementation_Plan.md, not an oversight."""
         total = 0
@@ -281,9 +285,7 @@ class SimklSyncDatabase(simkl_sync.SimklSyncDatabase):
 
     def _sync_shows_status(self, status, date_from):
         params = {"date_from": date_from} if date_from else {}
-        page = self.simkl_api.get_json(f"sync/all-items/shows/{status}", **params)
-        if page is None:
-            raise ActivitySyncFailure(f"empty response from Simkl (sync/all-items/shows/{status})")
+        page = self.simkl_api.get_json_or_raise(f"sync/all-items/shows/{status}", **params) or {}
 
         rows = []
         for entry in page.get("shows") or []:
@@ -349,9 +351,7 @@ class SimklSyncDatabase(simkl_sync.SimklSyncDatabase):
 
     def _sync_anime_status(self, status, date_from):
         params = {"date_from": date_from} if date_from else {}
-        page = self.simkl_api.get_json(f"sync/all-items/anime/{status}", **params)
-        if page is None:
-            raise ActivitySyncFailure(f"empty response from Simkl (sync/all-items/anime/{status})")
+        page = self.simkl_api.get_json_or_raise(f"sync/all-items/anime/{status}", **params) or {}
 
         movie_rows = []
         show_rows = []
@@ -407,10 +407,11 @@ class SimklSyncDatabase(simkl_sync.SimklSyncDatabase):
         entirely (some other unexpected shape) would slip past an is-None-only
         check and be misread as "zero movies", deleting every locally-cached
         row. The unlike-_sync_movies() distinction is what makes this
-        dangerous specifically here: _sync_movies() makes the same is-None-only
-        check safe because it's additive-only (REPLACE, no DELETE), so an
-        empty/malformed page there just means "nothing new this cycle." This
-        method deletes on the same empty result, so it also requires the
+        dangerous specifically here: _sync_movies() can safely treat a
+        confirmed-empty or malformed page as "zero movies" because it's
+        additive-only (REPLACE, no DELETE), so nothing new this cycle is the
+        only consequence. This method deletes on the same empty result, so it
+        also requires the
         "movies" key to genuinely be present - true even for a legitimately
         empty list ({"movies": []}) - before treating the fetch as trustworthy
         enough to diff against for deletion.

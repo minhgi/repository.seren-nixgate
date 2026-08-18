@@ -1,3 +1,4 @@
+import threading
 from functools import cached_property
 from functools import wraps
 from urllib import parse
@@ -5,6 +6,7 @@ from urllib import parse
 import xbmc
 import xbmcgui
 
+from resources.lib.common import tools
 from resources.lib.modules.globals import g
 
 TB_TOKEN_KEY = "torbox.token"
@@ -129,68 +131,133 @@ class TorBox:
             return None
         return self._extract_data(resp.json(), url)
 
-    # ─── Auth (Direct API Token Entry) ────────────────────────────────
+    # ─── Auth (Device Code / QR) ───────────────────────────────────────
 
     def auth(self):
-        """Authenticate by entering TorBox API token directly.
-        User gets their token from https://torbox.app/settings → API section.
-        Avoids device code flow which can be blocked by antivirus software."""
+        """
+        Performs TorBox's device-code authorization: shows a scannable QR
+        code alongside the verification URL + code (also copied to
+        clipboard), polls until the user approves on another device, then
+        stores the resulting access token.
 
-
-        # Prompt user to enter API token
-        keyboard = xbmc.Keyboard(
-            "", "Enter TorBox API Token (from torbox.app/settings)"
-        )
-        keyboard.doModal()
-
-        if not keyboard.isConfirmed():
-            return
-
-        token = keyboard.getText().strip()
-        if not token:
-            xbmcgui.Dialog().ok(g.ADDON_NAME, "No token entered.")
-            return
-
-        # Validate the token by calling /user/me
+        Previously used direct API-token entry; a comment here claimed the
+        device-code flow "can be blocked by antivirus software" but cited
+        no reproduced incident. POV/Umbrella/Otaku all use TorBox's real
+        device-code API successfully — see
+        TorBox_Offcloud_QR_Auth_Implementation_Plan.md for the verification
+        trail. Kept as context, not as a reason to avoid this path.
+        """
+        self.token = None
         try:
             resp = self.session.get(
-                parse.urljoin(self.base_url, "user/me"),
-                headers={
-                    "Authorization": f"Bearer {token}",
-                    "User-Agent": f"Seren/{g.VERSION}",
-                },
+                parse.urljoin(self.base_url, "user/auth/device/start"),
+                params={"app": f"Seren/{g.VERSION}"},
                 timeout=20,
             )
-            if not resp.ok:
-                xbmcgui.Dialog().ok(
-                    g.ADDON_NAME,
-                    f"TorBox rejected the token (HTTP {resp.status_code}). "
-                    "Check your token and try again.",
-                )
-                return
-
-            data = resp.json()
-            if not data.get("success"):
-                xbmcgui.Dialog().ok(
-                    g.ADDON_NAME, "TorBox API returned an error. Check your token."
-                )
-                return
-
+            data = self._extract_data(resp.json(), "user/auth/device/start")
         except Exception as e:
-            g.log(f"TorBox auth validation failed: {e}", "error")
-            xbmcgui.Dialog().ok(
-                g.ADDON_NAME,
-                f"Could not connect to TorBox:[CR][CR]{e}",
-            )
+            g.log(f"TorBox device-code start failed: {e}", "error")
+            data = None
+
+        if not isinstance(data, dict):
+            xbmcgui.Dialog().ok(g.ADDON_NAME, g.get_language_string(30024).format("TorBox"))
             return
 
-        # Token is valid — save it
-        self.token = token
-        g.set_setting(TB_TOKEN_KEY, token)
-        self.store_user_info()
-        xbmcgui.Dialog().ok(
-            g.ADDON_NAME, f"TorBox {g.get_language_string(30020)}"
+        try:
+            device_code = data["device_code"]
+            user_code = data["code"]
+            verification_url = data.get("friendly_verification_url") or data.get(
+                "verification_url", "https://torbox.app/oauth/device"
+            )
+            interval = int(data.get("interval", 5))
+        except (KeyError, ValueError):
+            xbmcgui.Dialog().ok(g.ADDON_NAME, g.get_language_string(30024).format("TorBox"))
+            return
+
+        from datetime import datetime, timezone
+
+        try:
+            expires_at = datetime.fromisoformat(data["expires_at"].replace("Z", "+00:00"))
+            token_ttl = int((expires_at - datetime.now(timezone.utc)).total_seconds())
+        except (KeyError, ValueError, TypeError, AttributeError):
+            token_ttl = 600
+        token_ttl = max(token_ttl, 0)
+
+        tools.copy2clip(user_code)
+        qr_image = tools.make_qr(verification_url, "torbox_qr.png")
+
+        from resources.lib.gui.windows.qr_auth_window import QRAuthWindow
+
+        window = QRAuthWindow("qr_auth_window.xml", g.ADDON_PATH)
+        window.set_title(g.get_language_string(30663))
+        window.set_qr_image(qr_image)
+        window.set_details(
+            g.get_language_string(30018).format(verification_url),
+            g.get_language_string(30019).format(user_code),
         )
+        window_thread = threading.Thread(target=window.doModal)
+        window_thread.start()
+
+        failed = False
+        try:
+            while (
+                not failed
+                and self.token is None
+                and token_ttl > 0
+                and not window.canceled_by_user
+            ):
+                xbmc.sleep(1000)
+                if token_ttl % interval == 0:
+                    failed = self._auth_poll(device_code)
+                minutes, seconds = divmod(max(token_ttl, 0), 60)
+                window.set_status(f"{minutes:02d}:{seconds:02d}")
+                token_ttl -= 1
+        finally:
+            canceled = window.canceled_by_user
+            window.close()
+            window_thread.join(5)
+            del window
+
+        if self.token:
+            g.set_setting(TB_TOKEN_KEY, self.token)
+            self.store_user_info()
+            xbmcgui.Dialog().ok(g.ADDON_NAME, f"TorBox {g.get_language_string(30020)}")
+        elif not canceled:
+            xbmcgui.Dialog().ok(g.ADDON_NAME, g.get_language_string(30024).format("TorBox"))
+
+    def _auth_poll(self, device_code):
+        """
+        Polls the token endpoint once. Returns True if polling should stop
+        (success or unrecoverable failure), False to keep waiting.
+        """
+        try:
+            resp = self.session.post(
+                parse.urljoin(self.base_url, "user/auth/device/token"),
+                json={"device_code": device_code},
+                timeout=20,
+            )
+        except Exception:
+            return False
+
+        if resp.status_code == 200:
+            data = self._extract_data(resp.json(), "user/auth/device/token")
+            access_token = data.get("access_token") if isinstance(data, dict) else None
+            if not access_token:
+                return True
+            self.token = access_token
+            return True
+
+        if resp.status_code == 429:
+            xbmc.sleep(1000)
+            return False
+
+        try:
+            error = (resp.json().get("error") or "").lower()
+        except ValueError:
+            error = ""
+        if resp.status_code == 404 or "expired" in error or "denied" in error:
+            return True
+        return False
 
     # ─── Account ────────────────────────────────────────────────────────
 
@@ -522,34 +589,6 @@ class TorBox:
             "usenet/createusenetdownload",
             post_data=post_data,
         )
-
-    def search_usenet(self, imdb_id, season=None, episode=None):
-        """Search TorBox's usenet index by IMDB ID.
-        Uses the separate search-api.torbox.app endpoint.
-        Returns list of NZB result dicts with 'cached' status pre-checked.
-
-        Reference: POV torboxnews.py search() method."""
-        url = f"https://search-api.torbox.app/usenet/imdb:{imdb_id}"
-        params = {
-            "check_cache": "true",
-            "check_owned": "true",
-            "search_user_engines": "true",
-        }
-        if season is not None and episode is not None:
-            params["season"] = int(season)
-            params["episode"] = int(episode)
-
-        resp = self.get(url, **params)
-        if resp is None:
-            return []
-        try:
-            data = resp.json()
-            if isinstance(data, dict) and "data" in data:
-                data = data["data"]
-            return data.get("nzbs", []) if isinstance(data, dict) else []
-        except Exception as e:
-            g.log(f"TorBox usenet search error: {e}", "warning")
-            return []
 
     def resolve_usenet(self, link):
         """Resolve a 'usenet_id,file_id' composite string into a download URL."""

@@ -8,6 +8,7 @@ import xbmcplugin
 from resources.lib.common import tools
 from resources.lib.indexers import trakt_auth_guard
 from resources.lib.modules.globals import g
+from resources.lib.modules.metadataHandler import MetadataHandler
 
 _PERIOD_ENDPOINTS = frozenset({"played", "watched", "collected", "favorited"})
 
@@ -219,13 +220,27 @@ class Menus:
     @staticmethod
     def my_shows():
         trakt_active = bool(g.get_setting('trakt.auth')) and g.get_bool_setting('trakt.enabled', False)
-        mdblist_active = g.get_setting('mdblist.enabled') == "true" and bool(g.get_setting('mdblist.apikey'))
+        mdblist_active = g.get_setting('mdblist.enabled') == "true" and bool(g.get_setting('mdblist.auth') or g.get_setting('mdblist.apikey'))
         simkl_active = bool(g.get_setting('simkl.auth')) and g.get_bool_setting('simkl.enabled')
-        if sum((trakt_active, mdblist_active, simkl_active)) >= 2:
+        if (trakt_active or mdblist_active or simkl_active) and g.get_bool_setting('watchlistcalendar.enabled', False):
+            g.add_directory_item(
+                g.get_language_string(31472),
+                action="calendarBrowse",
+                description=g.get_language_string(31475),
+                menu_item=g.create_icon_dict("shows_update", g.ICONS_PATH),
+                is_folder=False,
+            )
+        if sum((trakt_active, mdblist_active, simkl_active)) >= 2 and g.get_bool_setting('mergeshows.enabled', False):
             g.add_directory_item(
                 g.get_language_string(30977),
                 action="mergeInProgressShows",
                 description=g.get_language_string(30978),
+                menu_item=g.create_icon_dict("shows_progress", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31516),
+                action="mergeInProgressTVShows",
+                description=g.get_language_string(31517),
                 menu_item=g.create_icon_dict("shows_progress", g.ICONS_PATH),
             )
             g.add_directory_item(
@@ -242,10 +257,10 @@ class Menus:
                 menu_item=g.create_icon_dict("shows_progress", g.ICONS_PATH),
             )
             g.add_directory_item(
-                g.get_language_string(30014),
-                action="showsMyCollection",
-                description=g.get_language_string(30434),
-                menu_item=g.create_icon_dict("shows_collected", g.ICONS_PATH),
+                g.get_language_string(30210),
+                action="showsNextUp",
+                description=g.get_language_string(30436),
+                menu_item=g.create_icon_dict("shows_nextup", g.ICONS_PATH),
             )
             g.add_directory_item(
                 g.get_language_string(30015),
@@ -254,10 +269,22 @@ class Menus:
                 menu_item=g.create_icon_dict("shows_watched", g.ICONS_PATH),
             )
             g.add_directory_item(
+                g.get_language_string(30014),
+                action="showsMyCollection",
+                description=g.get_language_string(30434),
+                menu_item=g.create_icon_dict("shows_collected", g.ICONS_PATH),
+            )
+            g.add_directory_item(
                 g.get_language_string(30986),
                 action="showsMyFavorites",
                 description=g.get_language_string(30988),
                 menu_item=g.create_icon_dict("list_liked", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31478),
+                action="traktDroppedShows",
+                description=g.get_language_string(31479),
+                menu_item=g.create_icon_dict("shows_watched", g.ICONS_PATH),
             )
             g.add_directory_item(
                 g.get_language_string(30972),
@@ -266,10 +293,10 @@ class Menus:
                 menu_item=g.create_icon_dict("shows_recent", g.ICONS_PATH),
             )
             g.add_directory_item(
-                g.get_language_string(30210),
-                action="showsNextUp",
-                description=g.get_language_string(30436),
-                menu_item=g.create_icon_dict("shows_nextup", g.ICONS_PATH),
+                g.get_language_string(30213),
+                action="showsMyRecentEpisodes",
+                description=g.get_language_string(30439),
+                menu_item=g.create_icon_dict("shows_recent", g.ICONS_PATH),
             )
             g.add_directory_item(
                 g.get_language_string(30211),
@@ -282,12 +309,6 @@ class Menus:
                 action="showsMyProgress",
                 description=g.get_language_string(30438),
                 menu_item=g.create_icon_dict("shows_progress", g.ICONS_PATH),
-            )
-            g.add_directory_item(
-                g.get_language_string(30213),
-                action="showsMyRecentEpisodes",
-                description=g.get_language_string(30439),
-                menu_item=g.create_icon_dict("shows_recent", g.ICONS_PATH),
             )
             g.add_directory_item(
                 g.get_language_string(30214),
@@ -304,17 +325,35 @@ class Menus:
                 menu_item=g.create_icon_dict("list_liked", g.ICONS_PATH),
             )
             g.add_directory_item(
+                g.get_language_string(31489),
+                action="searchTraktShowLists",
+                description=g.get_language_string(31490),
+                menu_item=g.create_icon_dict("list_trakt", g.ICONS_PATH),
+            )
+            g.add_directory_item(
                 g.get_language_string(30325),
                 action="myWatchedEpisodes",
                 description=g.get_language_string(30442),
                 menu_item=g.create_icon_dict("shows_watched", g.ICONS_PATH),
             )
-        if g.get_setting('mdblist.enabled') == "true" and g.get_setting('mdblist.apikey'):
+        if g.get_setting('mdblist.enabled') == "true" and (g.get_setting('mdblist.auth') or g.get_setting('mdblist.apikey')):
             g.add_directory_item(
                 g.get_language_string(30970),
                 action="mdblistInProgressEpisodes",
                 description=g.get_language_string(30971),
                 menu_item=g.create_icon_dict("shows_progress", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31476),
+                action="mdblistNextUp",
+                description=g.get_language_string(31477),
+                menu_item=g.create_icon_dict("shows_nextup", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31503),
+                action="mdblistWatchlistShows",
+                description=g.get_language_string(31504),
+                menu_item=g.create_icon_dict("shows_watched", g.ICONS_PATH),
             )
             g.add_directory_item(
                 g.get_language_string(31159),
@@ -342,7 +381,14 @@ class Menus:
                 menu_item=g.create_icon_dict("list_trakt", g.ICONS_PATH),
             )
             g.add_directory_item(
-                g.get_language_string(31063),
+                g.get_language_string(31507),
+                action="mdblistLikedLists",
+                mediatype="shows",
+                description=g.get_language_string(31508),
+                menu_item=g.create_icon_dict("list_liked", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31486),
                 action="mdblistDiscover",
                 mediatype="shows",
                 description=g.get_language_string(31064),
@@ -454,6 +500,81 @@ class Menus:
         )
 
     @trakt_auth_guard
+    def dropped_shows(self):
+        paginate = not g.get_bool_setting("general.paginatetraktlists")
+        trakt_list = self.shows_database.extract_trakt_page(
+            "users/hidden/dropped",
+            type="show",
+            extended="full",
+            page=g.PAGE,
+            ignore_cache=True,
+            no_paging=paginate,
+            hide_unaired=False,
+            hide_watched=False,
+        )
+        if not trakt_list:
+            g.cancel_directory()
+            return
+        if g.PAGE == 1:
+            g.add_directory_item(
+                g.get_language_string(31480),
+                action="traktDroppedShowsRestore",
+                description=g.get_language_string(31481),
+                menu_item=g.create_icon_dict("shows_watched", g.ICONS_PATH),
+            )
+        self.list_builder.show_list_builder(
+            trakt_list,
+            no_paging=paginate,
+            hide_unaired=False,
+            hide_watched=False,
+        )
+
+    @trakt_auth_guard
+    def dropped_shows_bulk_restore(self):
+        # Live-fetch only, same as dropped_shows() above - the hidden DB table is a local
+        # filter cache for other screens (calendar/recommendations), not a mirror of Trakt's
+        # dropped state, so it is never read here. It is still cleared per-show on restore to
+        # keep it consistent with _hide_item()'s own write when a show is dropped.
+        trakt_list = self.shows_database.extract_trakt_page(
+            "users/hidden/dropped",
+            type="show",
+            extended="full",
+            ignore_cache=True,
+            no_paging=True,
+            hide_unaired=False,
+            hide_watched=False,
+        )
+        if not trakt_list:
+            g.notification(g.ADDON_NAME, g.get_language_string(31485))
+            self.dropped_shows()
+            return
+
+        list_items = [
+            xbmcgui.ListItem(label=item.get("title") or MetadataHandler.get_trakt_info(item, "title") or "")
+            for item in trakt_list
+        ]
+        selected = xbmcgui.Dialog().multiselect(
+            f"{g.ADDON_NAME}: {g.get_language_string(31482)}", list_items, useDetails=True
+        )
+
+        if not selected:
+            self.dropped_shows()
+            return
+
+        show_ids = [trakt_list[i].get("trakt_id") for i in selected]
+        show_ids = [i for i in show_ids if i is not None]
+
+        self.trakt_api.post_json(
+            "users/hidden/dropped/remove", {"shows": [{"ids": {"trakt": i}} for i in show_ids]}
+        )
+        for trakt_id in show_ids:
+            self.hidden_database.remove_item("dropped", trakt_id)
+
+        g.notification(g.ADDON_NAME, g.get_language_string(31484).format(len(show_ids)))
+        g.trigger_widget_refresh()
+        self.dropped_shows()
+
+    @trakt_auth_guard
     def my_shows_favorites(self):
         paginate = not g.get_bool_setting("general.paginatetraktlists")
         trakt_list = self.shows_database.extract_trakt_page(
@@ -545,9 +666,13 @@ class Menus:
         )
         if upcoming_episodes is None:
             upcoming_episodes = []
-        upcoming_episodes = upcoming_episodes[: self.page_limit]
+        start = (g.PAGE - 1) * self.page_limit
+        page_slice = upcoming_episodes[start : start + self.page_limit]
         self.list_builder.mixed_episode_builder(
-            upcoming_episodes, prepend_date=True, no_paging=True, hide_unaired=False
+            page_slice,
+            prepend_date=True,
+            hide_unaired=False,
+            force_next_page=len(upcoming_episodes) > start + self.page_limit,
         )
 
     def shows_networks(self):
@@ -606,6 +731,17 @@ class Menus:
                 cm=[(g.get_language_string(30565), f"RunPlugin({remove_path})")],
             )
         g.close_directory(g.CONTENT_MENU)
+
+    def search_trakt_show_lists(self, query=None):
+        if not query:
+            query = g.get_keyboard_input(g.get_language_string(30013))
+        if not query:
+            g.cancel_directory(silent=True)
+            return
+
+        from resources.lib.modules.listsHelper import ListsHelper
+
+        ListsHelper().search_lists("shows", query)
 
     def shows_search(self, query=None):
         if not query:
@@ -679,7 +815,7 @@ class Menus:
         self.list_builder.show_list_builder(trakt_list, hide_watched=False, hide_unaired=False)
 
     def show_seasons(self, args):
-        self.list_builder.season_list_builder(args["trakt_id"], no_paging=True)
+        self.list_builder.season_list_builder(args["trakt_id"], no_paging=True, hide_watched=False)
 
     def season_episodes(self, args):
         self.list_builder.episode_list_builder(args["trakt_show_id"], args["trakt_id"], no_paging=True)

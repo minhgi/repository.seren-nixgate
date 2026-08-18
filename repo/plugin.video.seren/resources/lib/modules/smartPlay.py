@@ -54,7 +54,7 @@ class SmartPlay:
 
         return {
             (info := MetadataHandler.info(item)).get("season"): info
-            for item in TraktSyncDatabase().get_season_list(self.show_trakt_id)
+            for item in TraktSyncDatabase().get_season_list(self.show_trakt_id, hide_watched=False)
         }
 
     def resume_show(self):

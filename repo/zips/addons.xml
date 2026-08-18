@@ -124,7 +124,7 @@
 			Rework for Seren 2.0
 		</news>
 	</extension>
-</addon><addon id="plugin.video.seren" version="3.3.260" name="Seren" provider-name="Nixgates">
+</addon><addon id="plugin.video.seren" version="3.5.24" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -191,6 +191,198 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.5.24
+            [CHANGE] Movie Calendar tile redesign for a more streamlined look: the release badge (countdown/star) moved from the bottom-center of the poster to the top-right corner; the release date no longer shows the year (redundant with the month/year header already shown at the top of the calendar); that month/year header is now centered and bold instead of dim and left-aligned. The movie title now overlays the bottom of the poster, but only on movies with no real watch progress yet - once you've started watching, the existing watch-progress wash takes over that same space instead of competing with the title text for the same pixels.
+            Changelog 3.5.23
+            [CHANGE] Movie Calendar's poster badge no longer shows the day-of-month - it was redundant with the release-date label already shown at the bottom-left of every tile. Upcoming movies now show a countdown of days until release; once a movie is released, the badge switches to a star icon instead of a number. The badge's background chip keeps its existing green/orange/grey colour-coding (released+complete metadata / released+thin metadata / upcoming).
+            [NEW] Movie Calendar posters now show a watch-progress wash: a translucent dark overlay that grows upward from the bottom of the poster as more of the movie has been watched, fully covering the poster past 80% watched. Uses the percent_played data Seren's bookmarks table already tracks - no new sync required. Built as five mutually-exclusive height buckets rather than a true radial/clockwise wipe: Kodi's progress control has no vertical-fill mode (confirmed against the official control spec) and a real pie-wipe would need ~12 generated mask images per layout for a result that's still visibly stepped, not smooth - the bucket approach reuses the same white.png+colordiffuse tinting already used elsewhere on this tile and needed zero new image assets.
+            Changelog 3.5.22
+            [FIX] Movie Calendar - three rendering defects found during live testing, all in movie_calendar.xml only, no data/logic changes: (1) the rating label used a 6-digit textcolor (FFD700) instead of 8-digit ARGB - Kodi parsed the missing alpha channel as 00 (fully transparent), so the rating number was computed correctly but invisible on every tile; now FFFFD700. (2) the Prev/Next/Close button row used a group-level &lt;right&gt; position with no &lt;width&gt; on the group, which Kodi can't resolve, so the row silently fell back to left=0 and rendered at the top-left overlapping the title instead of the top-right; now given an explicit &lt;left&gt; instead. (3) the day-badge circle overlapped the release-date label's bottom strip, hiding the year (e.g. "08/13/" instead of "08/13/2026"); the badge now sits flush with the poster's bottom edge and the date/rating strips moved below it, so nothing overlaps. Confirmed live post-fix: full dates, correct ratings (including "0.0" for an unreleased title with TMDb metadata already seeded but no votes yet), and a properly top-right button row.
+            Changelog 3.5.21
+            [NEW] Movie Calendar (My Movies, gated by the "Movie Calendar" toggle in Watch Accounts - Menu Item Visibility, off by default) - a dense poster grid of every movie releasing in a given month, sourced from Trakt's calendars/all/movies endpoint (previously unused anywhere in this addon), one tile per movie ordered by release date, with previous/next month navigation. Each poster shows its release date and rating, plus a colour-coded release-day badge: green (released, metadata populated), orange (released, metadata still incomplete), grey (not yet released). MDBList and Simkl don't feed into it - neither service exposes a comparable movie-calendar endpoint, unlike the existing TV calendar which blends in both as enrichment. The "Movie Calendar" toggle added in 3.5.20 as a placeholder now has real effect; its help text has been updated to match. TMDb Helper / Extended Info integration on calendar tiles is intentionally not part of this release.
+
+            Changelog 3.5.20
+            [FEATURE] Added "Menu Item Visibility" settings section under Watch Accounts, below Cross-Service Sync - On/Off toggles for "Movie Calendar" (placeholder, reserved for a future feature), "My Watch List Calendar", "Merge Movie", and "Merge TV Show". All off by default.
+            [FEATURE] Added "Merge - In Progress TV Shows" to My Shows, directly after "Merge - In Progress Episodes" - the same in-progress data merged from Trakt/MDBList/Simkl, shown as a show list instead of an episode list.
+            [CHANGE] "My Watch List Calendar", "Merge - In Progress Movies"/"Merge - Recently Watched Movies", and "Merge - In Progress Episodes"/"Merge - In Progress TV Shows"/"Merge - Recently Watched Shows" are now gated by the new toggles above and hidden by default - turn them on in Watch Accounts settings to restore them.
+
+            Changelog 3.5.19
+            [FEATURE] Added "MDBList - Watchlist Movies/Shows" and "MDBList - My Liked Movie/Show Lists" to My Movies and My Shows - MDBList's Watchlist already existed under the hood (Trakt Watchlist adds and Simkl "Plan to Watch" both silently mirror to it via the existing cross-service bridge), but there was no menu to see it until now. Liked Lists mirrors the existing "Trakt - My Liked Movie/Show Lists".
+            [CHANGE] Reordered My Movies/My Shows' Trakt and MDBList sections to put active/actionable items first (Watchlist, Next Up, resume-watching), then collection/status items, then historical views, then list-management - based on how POV, RedLight, and Umbrella order their own equivalent menus. Calendar and Merge stay pinned at the top, unchanged. Simkl's section was already ordered this way and is unchanged.
+
+            Changelog 3.5.18
+            [CHANGE] The Easynews "Disable Seeking" toggle (added in 3.5.17) now lives in Seren's own Settings - Providers - Easynews group, directly below the existing Easynews on/off toggle, instead of the separate a4kNewsgroups provider package's own configuration screen (Manage Provider Packages - a4kNewsgroups - Configure) - matching where a user would actually look for it, right next to the toggle that enables Easynews in the first place. No change to the underlying behavior: still off by default, still only appends seekable=0 to Easynews stream URLs when turned on. a4kNewsgroups' easynews.py (provider package, updated alongside this release) now reads Seren's own scraping.easynews.noseek setting directly instead of a package-local one.
+
+            Changelog 3.5.17
+            [FIX] Turning off the Easynews provider (Providers settings) also silently disabled any Orion-sourced "direct" category sources for the rest of the session. getSources.py's _create_direct_threads() unconditionally emptied the shared direct_providers list whenever the Easynews toggle was off, instead of removing only Easynews's own entries. Orion contributes to all four provider categories (torrent/hoster/adaptive/direct) and already has its own independent toggle that filters Orion out of each of the other three lists when Orion itself is off - Easynews's toggle wasn't following that same targeted-filter pattern for the fourth. Fixed by filtering direct_providers down to non-a4kNewsgroups entries instead of clearing the list outright, so Orion's direct sources (and any future direct-category provider pack) keep running independently of the Easynews setting. Confirmed via the live provider-package folder names (a4kNewsgroups, Orion) that the filter targets the correct package identifier.
+            [FIX] Easynews streams had no protection against Kodi issuing seek/range requests against tokenised CDN URLs mid-playback. Two other Kodi addons that integrate Easynews (plugin.video.easynewsx, plugin.video.pov) both independently work around this by marking the stream non-seekable, and Seren's own playback watchdog only actively monitors the first ~30 seconds after a source starts - a seek failure later in playback wasn't covered by anything. a4kNewsgroups' easynews.py (provider package, updated alongside this release) can now append seekable=0 to the resolved stream URL, gated behind a new "Disable Seeking (Improves Reliability)" toggle in the a4kNewsgroups package's own settings (Manage Provider Packages - a4kNewsgroups - Configure). Off by default so normal scrubbing/seeking is unaffected unless explicitly enabled - turning it on trades seek/scrub ability for playback reliability on setups that hit range-request failures against Easynews's tokenised links.
+
+            Changelog 3.5.16
+            [FEATURE] "Rebuild Database" (Tools -&gt; Sync Tools) is now unified across all connected services instead of Trakt-only - one click drops and recreates the local sync database for every configured service (Trakt, MDBList, Simkl) and forces a full re-sync of each, behind a single confirmation. MDBList and Simkl previously had no rebuild action anywhere. Mirrors how "Clear the last sync timestamp" and "Force a sync" already work across all three services; the Trakt-only action is unchanged and still reachable from Trakt's own settings page.
+            [FIX] Rebuilding Trakt's database (and now MDBList's) could silently and permanently break "Add/Remove Custom List" and, for Trakt, Watchlist/Favorites menu gating for the rest of the Kodi session. Both features store their data in tables/columns added outside the normal schema specifically to avoid an unrelated auto-rebuild trigger, guarded by a one-time migration check that isn't aware a manual rebuild just dropped them - so after a rebuild, the guard skipped recreating them, and every subsequent read/write against that missing table or column failed quietly in the background. Fixed by clearing that guard as part of the rebuild, so the very next database use recreates them correctly. Simkl is unaffected - it has no such tables.
+
+            Changelog 3.5.15
+            [FIX] "Browse Show" (context menu) returned "No results found" for any fully-watched show, and resuming a fully-watched show with "Click Resume" enabled crashed with a KeyError instead of playing - both traced to the same cause. get_season_list()'s "Hide Watched Items" filter is meant for discovery listings (so finished shows don't clutter a browse-for-something-to-watch list), but it was also being applied when fetching a specific, already-selected show's season list for Browse Show and for SmartPlay's resume logic - so a show whose only or last season was fully watched had that season filtered out of its own season list, leaving nothing to browse or resume. Live-reproduced and confirmed via kodi.log (Star City, trakt_id 235622, 8/8 episodes watched: Browse Show returned an empty directory, and clicking to resume raised KeyError: 1 at smartPlay.py's get_resume_episode). Fixed by passing hide_watched=False at both call sites - the same hide_watched=False override get_season()/get_show() already apply when fetching one specific record directly (those two also override hide_unaired=False, which wasn't needed here since unaired episodes weren't part of the repro).
+
+            Changelog 3.5.14
+            [FEATURE] "Add to Custom List" and "Remove From Custom List" (Trakt and MDBList context menus) now reflect an item's real list membership instead of always showing both options unconditionally. "Remove From Custom List" is hidden whenever local sync data shows the item isn't in any of your lists - "Add to Custom List" always stays visible since its picker can also create a brand-new list. Membership is kept fresh two ways: immediately after you add/remove an item through Seren's own menu, and via a new periodic full sync of every list's contents (both Trakt and MDBList have no lighter-weight "what changed" signal for list items, so this walks each list in full - cost scales with list count x list size). Season/episode entries resolve to their parent show, matching how they're already added/removed today.
+
+            Changelog 3.5.13
+            [FIX] Simkl movie/show/anime sync could get stuck reporting an error every cycle for any account with a structurally empty bucket (e.g. no completed movies yet, or no anime at all) - Simkl returns a literal null body (HTTP 200) for an empty bucket rather than {}, which the sync code's failure check couldn't tell apart from a genuine request failure, so it aborted and retried indefinitely instead of recording "nothing new this cycle." Fixed for the three additive sync passes (movies, shows, anime) by adding a stricter request helper that raises on a real failure and lets a confirmed-empty response through as valid, empty data. The four removal-reconciliation passes (which use these same buckets to diff local vs remote state and delete stale rows) are deliberately left on the old conservative behaviour - trusting a null sub-fetch there risks wrongly deleting real locally-cached data once it's unioned with other buckets, so they still abort-and-retry rather than risk an incorrect deletion.
+            [FIX] Trakt's "Remove From Custom List (Trakt)" context menu entry always showed "Item removed from {list}" even when Trakt's API silently did nothing, e.g. removing an item already absent from that list. Now checks the API's actual response before showing success, matching the existing pattern used by the Mark Watched/Unwatched entries.
+
+            Changelog 3.5.12
+            [FIX] MDBList "Next Up" could take upwards of a minute or more to load and could show a long-since-watched early-season episode as "next" for an actively-watched show. Two separate causes: (1) the feature capped itself at the general item.limit browse-page setting (default 20), and every one of those shows can trigger a one-time-per-show cold TMDb bootstrap of its entire episode catalog if never browsed elsewhere in Seren - now capped at 10 shows regardless of item.limit, bounding worst-case synchronous load time. (2) the "next unwatched episode" match compared MDBList's real season/episode numbers against get_episode_list()'s cached info blob, which can hold TMDb absolute numbering (e.g. season=1/number=48) instead of the show's real numbering for some shows - every real watched episode then silently failed to match, and the first episode in air order (usually season 1) won every time. Now matches against the same DB-authoritative season/number columns the episode list is already sorted by.
+            [FIX] MDBList's watched-history sync now also reads the server's bulk-marked whole-show and whole-season watched entries, not just individually-tracked episodes - live-confirmed a second, often larger contributor to the "wrong next episode" symptom above: marking a whole show or season watched via MDBList's own site/app produces no per-episode record at all, so Next Up had nothing locally to treat as watched for that content and fell back to season 1 episode 1. A whole-season mark now credits every episode in that season; a whole-show mark credits every episode aired on or before the mark's own timestamp. One side effect worth knowing: a show that's entirely covered by a whole-show mark (fully aired and fully bulk-marked) now correctly disappears from Next Up instead of showing a stale wrong episode - there's no real gap left to report for it.
+
+            Changelog 3.5.11
+            [FIX] Trakt's context menu "Add to List" and "Remove From List" entries are now labelled "Add to Custom List (Trakt)" and "Remove From Custom List (Trakt)" - previously "List" sat directly under "Add to Watchlist" and "Add to Favorites" in the same menu with nothing to say it wasn't just another one of those. These two are the only entries that open a picker over your own Trakt-created lists (with "create new list" as an option), so the label now says "Custom" to make that the visibly different thing it is. No behaviour change, label only.
+            [FIX] MDBList's equivalent "Add to List (MDBList)" and "Remove from List (MDBList)" context menu entries are now "Add to Custom List (MDBList)" and "Remove from Custom List (MDBList)" for the same reason and the same fix. No behaviour change, label only.
+
+            Changelog 3.5.10
+            [NEW] Trakt Watchlist and Favorites context menu options (movie/show only) now show only "Add" or "Remove", matching the existing Collection/Watched/Progress gates - previously both always appeared regardless of state. Backed by two new local boolean columns per item, kept current by a new periodic sync pass (mirroring Collection's) and by an immediate local write on every add/remove action, so the gate never waits on the next sync cycle.
+
+            Changelog 3.5.9
+            [NEW] MDBList "Clear Progress" and Simkl "Remove Playback History" context menu options now only show when a local playback bookmark actually exists for that item, instead of always appearing and dead-ending in a "nothing to clear" notification when there was nothing to clear - matching Trakt's existing Remove Playback History gate. Both read local bookmark tables already populated by each service's periodic sync (MDBList) or by the existing playback-clear handler (Simkl); no new API calls, no schema changes.
+
+            Changelog 3.5.8
+            [NEW] MDBList show/season context menu now shows only "Mark Watched" or "Mark Unwatched", closing the gap left open in 3.5.6 - compares MDBList's own local per-episode watched count against the episode count already loaded from Trakt's local data (used identically across all three scopes' menus), so no extra API calls are needed. For a currently-airing show/season this counts episodes aired so far, the same way Trakt's own gate does. Local reflection isn't immediate here the way it is for movie/episode: marking a show/season watched updates MDBList's server right away, but the local count driving this gate only catches up on the next periodic MDBList sync, since that sync unconditionally resets and repopulates the whole table - reopening the menu in that window can still show the pre-toggle option. Simkl season/episode remains ungated - Simkl has no local per-episode data at all, and the two remote alternatives (a heavier bulk-sync payload that can return placeholder episodes not backed by real history, or an on-demand lookup Simkl's own docs warn against combining with the existing sync) were both evaluated and rejected; see Project_Report_Full.md for details.
+
+            Changelog 3.5.7
+            [FIX] Simkl's scrobbler (auto mark-watched at the end of playback) now writes the local sync database immediately, matching Trakt/MDBList's existing behavior - previously it only posted to Simkl's API, so the 3.5.6 context-menu toggle could keep showing "Mark Watched" for an item Simkl already had marked watched, until the next periodic sync. Movies upsert using the id in the scrobble response when the response includes one, so even a first-ever watch can be captured immediately; otherwise falls back to the existing update-only write (same as before this fix, waits for the next sync). Shows increment the existing local episode count (clamped to the known total), since Simkl's local schema has no per-episode table - a rewatched episode can be double-counted until the next full sync reconciles it; accepted, since nothing currently reads per-episode Simkl state.
+
+            Changelog 3.5.6
+            [NEW] MDBList and Simkl context menus now show only "Mark Watched" or "Mark Unwatched" for a movie/episode (MDBList) or movie/show (Simkl), never both - matching Trakt's existing behavior and TMDb Helper's equivalent toggle. Show/season (MDBList) and season/episode (Simkl) have no local per-item watched data to gate on, so both options still show there.
+            [FIX] MDBList mark-unwatched and Simkl mark-watched/unwatched now write the local sync database immediately instead of only the remote API - previously only MDBList's mark-watched did this, so the local watched flag could go stale until the next periodic sync.
+
+            Changelog 3.5.5
+            [FIX] Manage Lists (Trakt) context menu option moved to sit directly after Remove From List (My Movies / My Shows, Trakt section), matching where MDBList already places its own Manage Lists entry relative to Add/Remove From List. Previously it was near the end of the Trakt section, after Hide and Refresh Item Metadata.
+
+            Changelog 3.5.4
+            [NEW] Manage Lists (Trakt) context menu option (My Movies / My Shows, Trakt section) - Edit List (rename and/or change privacy in one step) and Delete List for any Trakt list you own, matching the existing MDBList Manage Lists flow.
+            [CHANGE] MDBList Manage Lists consolidated from three actions (Rename List / Make Private-Public / Delete List) to two (Edit List / Delete List) - Edit List combines rename and privacy into a single prompt and a single save, for consistency with the new Trakt flow above.
+
+            Changelog 3.5.3
+            [NEW] Trakt - Search Movie Lists / Trakt - Search Show Lists (My Movies / My Shows, Trakt section) - search Trakt's public lists by name, filtered to lists containing at least one item of that media type.
+            [NEW] Create new list... option added to the Trakt "Add to list" context menu, matching the existing MDBList create-list flow - prompts for a name and private/public, then adds the item to the newly created list.
+
+            Changelog 3.5.2
+            [FIX] Trakt - Dropped Shows moved to sit directly before Trakt - Recent Episodes (My Shows, Trakt section), matching where MDBList and Simkl already place their own Dropped Shows entry relative to their Recent/Recently Watched item. Previously it was the last item in the Trakt section.
+
+            Changelog 3.5.1
+            [FIX] MDBList Discover renamed to "MDBList - Discover Movie List" (Movies section) and "MDBList - Discover TV Show List" (TV Shows section), split into separate labels to match the section's naming convention. Previously both sections shared one label, "Discover MDBList Lists".
+
+            Changelog 3.5.0
+            [NEW] Trakt - Dropped Shows (My Shows, Trakt section) - browse every show you've marked Dropped on Trakt, live from users/hidden/dropped, matching the existing MDBList/Simkl Dropped Shows menus. Includes a Restore Dropped Shows control item that opens a multi-select picker to un-drop one or more shows in a single batched request.
+            [NEW] Hide/Unhide context menu (Trakt) - shows now offer a third "Dropped" option alongside Watched Progress and Calendar, posting to Trakt's real users/hidden/dropped endpoint. Movies and season/episode-level items are unaffected; Dropped is a whole-show action only.
+
+            Changelog 3.4.25
+            [FIX] MDBList Next Up renamed to "MDBList - Next Up" to match the section's naming convention, and moved to directly below MDBList - In Progress Episodes.
+
+            Changelog 3.4.24
+            [NEW] MDBList Next Up (My Shows, MDBList section) - a row per show you're actively watching on MDBList, each showing its next unwatched episode, most recently watched show first. A show drops off the list once every episode is watched, and returns once a new season airs. Works entirely off MDBList's own watched history, independent of Trakt.
+
+            Changelog 3.4.23
+            [FIX] My Watch List Calendar only showed up in My Shows when Trakt was enabled, even though it also works with just Simkl or just MDBList on their own. Now shows whenever any one of the three is configured.
+
+            Changelog 3.4.22
+            [FIX] The unified Calendar fetched Trakt's calendar data even when Trakt wasn't configured, instead of skipping it the way Simkl and MDBList already were when unconfigured. Now skipped the same way.
+            [FIX] Offcloud was missing from the periodic background check that refreshes the other five debrid services' premium status, so its status stayed stuck at whatever it showed right after connecting. Now included in that check.
+
+            Changelog 3.4.21
+            [FIX] MDBList menus, Home tiles, Merge entries, and Cross-Service Sync could all stay invisible or inactive after authorizing MDBList via the Authorize/QR flow, even though Settings showed it connected. Every place that checked "is MDBList usable" was still looking only for a legacy typed API key, which the current login flow never sets. They now also recognize the OAuth login the Authorize button actually produces.
+
+            Changelog 3.4.20
+            [CHANGE] Renamed the "Calendar" entry in My Shows to "My Watch List Calendar" and moved it to the top of the My Shows menu, above Merge - In Progress Episodes. Label and position only, no behavior changed.
+
+            Changelog 3.4.19
+            [FEATURE] Added a Calendar window (My Shows), styled to match Seren's own theme rather than a plain list: one browsable window showing recently aired and upcoming episodes together, replacing the need to check two separate flat menus. If Simkl and/or MDBList are configured, shows that are only on those services' watchlists (not your Trakt list) are now included too - each resolved to its own next/most recent episode individually, capped at 25 such shows per open to keep the window responsive. Rating shown is TMDB's - it's the only rating available in the same shape across all three services.
+
+            Changelog 3.4.18
+            [FIX] "Enable Cross-Service Sync" could stay switched on in Settings even after you dropped below the 2 connected services it needs to do anything (disabling a service, revoking one, etc.) - the toggle just kept showing on while sync silently did nothing. It's now automatically switched back off whenever fewer than 2 services are configured, checked on Seren's regular background sync cycle (usually within about a minute of Kodi starting, and roughly every 15 minutes after) and immediately if you use Sync Tools -&gt; Force a sync. This only ever turns the toggle off, never back on - once you've reconnected a second service, re-enabling it is still a manual step.
+
+            Changelog 3.4.17
+            [CHANGE] Added description text to every remaining settings-box entry that didn't have any, across all 11 other tabs (Themes, Metadata &amp; Artwork, Watch Accounts, Accounts, Providers, Scraping, Sort &amp; Filter, Playback, Anime Titles, Shortcuts, Advanced) - 232 settings in total. Same approach as the 3.4.16 General pilot: every description is grounded in what the setting actually does in the code, not just its label. This surfaced a few real quirks worth knowing about: Clear Logo artwork always shows for movies/shows regardless of that toggle (dead setting, described as such); AllDebrid's and Offcloud's Auto-Delete Torrents toggles currently do nothing (cleanup for those two is controlled entirely by Add Resolved Torrents to Cloud / Smart Delete instead); Premiumize's Authorize button doubles as Revoke once you're linked, since it has no separate Revoke button like the other debrid services. No behavior changed, settings-only.
+
+            Changelog 3.4.16
+            [CHANGE] Added description text to the 24 General tab settings that didn't have any (they showed no explanation at the bottom of the settings box when highlighted). Descriptions are grounded in what each setting actually does in the code, e.g. Page Item Limit, Hide Watched Items, Next Up Sort Style, the Download Location/organization settings, etc. Pilot for the General tab only - other tabs (Sort &amp; Filter, Playback, Accounts, etc.) still have the same gap and weren't touched in this pass. No behavior changed, settings-only.
+
+            Changelog 3.4.15
+            [CHANGE] Download Manager is now off by default on new installs (previously on by default). If you're already using it, your setting is untouched - this only changes what a fresh install starts with. Turn it on any time in Settings -&gt; General -&gt; Downloads. NAS/local file scraping was checked as part of this and was already off by default - no change needed there.
+
+            Changelog 3.4.14
+            [FIX] Movie list loads (Trending, Most Favorited, etc.) re-fetched full metadata from TMDB/Fanart/OMDB on every single visit, even for movies whose data hadn't changed since the last visit. Root cause was in the movie upsert's needs_update flag: once set, a nested SQL CASE expression had no path back to false, so every movie was permanently flagged as needing a re-fetch after its first save. Fixed the flag to clear correctly once a real metadata fetch completes, so repeat visits to an already-seen list only re-fetch items that actually changed. Measured effect on a test list: forced-refetch count on a 20-item repeat visit dropped from 20/20 to 0/20, cutting that list's load time from ~0.5-2.3s to ~0.18s. Movies only; shows/seasons/episodes were not touched (same-shaped code exists there but wasn't verified).
+
+            Changelog 3.4.13
+            [FIX] Settings navigation: closing "Playback Locale" always returned to the top of the settings dialog (General tab) instead of back to Playback where it was opened from. Root cause was a stale control-ID formula shared by every settings-return call in the addon - the underlying constants were wrong for every one of the addon's 12 settings categories, most of which happened to still land close enough to look right, masking the bug everywhere except Playback Locale. Corrected the shared formula and re-verified all 22 call sites against it (Playback Locale, Choose Sorting/Choose Filters, Download Location prompt, Theme color picker, and every Trakt/MDBList/Simkl/Real-Debrid/AllDebrid/TorBox/Debrid-Link/Offcloud/Premiumize authorize-and-revoke action) so each now returns focus to the correct row it was opened from.
+
+            Changelog 3.4.12
+            [NEW] Settings -&gt; Playback -&gt; "Playback Locale": set a preferred audio and subtitle language independently for Movies, TV, and Anime. Applies automatically during playback and restores your normal Kodi settings afterward. Anime also gets one-click "Sub" (Japanese audio / English subtitles) and "Dub" (English audio / English subtitles) presets.
+
+            Changelog 3.4.11
+            [FIX] "Browse Cast" (added in 3.4.10) could navigate to the wrong person when their name is shared by someone else in TMDB (e.g. selecting Tom Holland the actor could land on Tom Holland the horror-film director's filmography instead). Now resolves the selected cast member by TMDB/Trakt ID instead of matching by name.
+
+            Changelog 3.4.10
+            [NEW] Right-click a movie, show, season, or episode that has cast data and choose "Browse Cast" to jump straight to another title from that actor.
+            [FIX] "My Upcoming Episodes" (calendar) only ever showed the first page of results and never offered a Next Page. Now paginates through the full 30-day window correctly.
+            [FIX] The "Hide un-aired" and "Date delay" settings could disagree with each other - an episode within the delay window could still slip past the show/season/episode/mixed-episode/next-up list filters even though it was still marked as not-yet-aired everywhere else. All five list-building queries now respect the date delay consistently.
+
+            Changelog 3.4.9
+            [FIX] Download Manager: selecting Download on a source from an unsupported debrid provider (e.g. Offcloud) crashed silently with no error shown. Now shows a clear message instead.
+            [FIX] Download Manager: confirming the multi-file picker with nothing selected (or canceling it) showed a false "Download task started" message instead of doing nothing. Now shows an accurate message, or nothing on cancel.
+            [FIX] Download Manager: clicking "Clear Completed" while a freshly-started download shared the list with a finished one could crash with a TypeError. Fixed a type-comparison bug in the progress check.
+
+            Changelog 3.4.8
+            [FIX] Download Manager: download.concurrency.limit was tracked in a plain in-memory counter, which only applied within a single Kodi Python session and did not actually limit simultaneous downloads across separate download actions. The slot count is now shared correctly, so the concurrency limit is enforced as intended.
+
+            Changelog 3.4.7
+            [NEW] Download Manager: pause and resume individual downloads, plus Pause All / Resume All / Cancel All buttons. Right-click (or context-menu key) a download in the list for per-item Pause/Resume/Cancel/Remove.
+            [FIX] Download Manager: the window's busy-dialog cleanup never ran while the window was open due to an initialization ordering bug; fixed.
+
+            Changelog 3.4.6
+            [FIX] Downloads: on a fresh install or upgrade, the "Enable Downloads" toggle could render on while its dependent settings (Download Location, Concurrent Downloads, etc.) stayed hidden until the toggle was touched once. The default is now written explicitly on first launch so all settings display correctly immediately.
+
+            Changelog 3.4.5
+            [NEW] Downloads: added an "Enable Downloads" master toggle (Settings &gt; General &gt; Downloads) that hides Download Location and all other download settings when off, and removes the "Download" option from the source selection menu.
+
+            Changelog 3.4.4
+            [FIX] Downloads: "auto-move completed downloads to Local Scraper folder" was copying files instead of moving them, leaving the original behind in the download folder and doubling disk usage. The download's file handle is now closed before the move is attempted.
+
+            Changelog 3.4.3
+            [NEW] Downloads: added a concurrent-download limit (Settings &gt; General &gt; Downloads) so multiple queued downloads no longer all stream at once uncapped - choose "One at a Time" or a limit of 1-8.
+            [NEW] Downloads: optional subfolder organization (Movies/TV Shows/Anime, per-show, per-season, optional movie year) and optional auto-move of completed downloads into your Local Scraper folder, so they're picked up by local playback automatically.
+
+            Changelog 3.4.0
+            [NEW] Local/NAS file scraper: scans a configured local or network-mounted (SMB/NFS) folder for video files matching your library and surfaces them as a "Local" direct source alongside torrent/debrid/hoster results. Enable under Settings &gt; Providers &gt; Local Files.
+
+            Changelog 3.3.269
+            [CHANGE] Tools menu: consolidated Backup Settings, Restore Settings, and Wipe Addon Data (previously 3 separate entries) into one "Backup and Reset" folder. Reordered the menu so Download Manager and Sync Tools now sit right under Premium Services.
+
+            Changelog 3.3.268
+            [NEW] Tools menu: added a "Changelog" entry that displays Seren's version history and recent changes, without needing to open the Kodi Add-on browser.
+
+            Changelog 3.3.267
+            [REMOVE] TorBox: removed the "Enable TorBox Usenet Search" scraper. TorBox is discontinuing its separate usenet search API (search-api.torbox.app), so results would silently disappear or error going forward. This only affects finding new NZB sources through the search toggle - existing TorBox usenet functionality (browsing/adding/deleting downloads in My Files, resolving usenet items found via Cloud Scrapers) is unaffected and still works via TorBox's regular API.
+
+            Changelog 3.3.266
+            [NEW] Real-Debrid, Premiumize, Debrid-Link, AllDebrid, Trakt, and Simkl device-code authorization now shows the same scannable QR code (plus URL/code, also copied to clipboard) already used by MDBList/TorBox/Offcloud, replacing the old text-only progress dialog. Auth itself is unchanged - this only changes how the code is displayed.
+            [FIX] Trakt: canceling the auth window (or a rare timeout with no successful poll) could previously show a false "Successfully authenticated" message and trigger an unnecessary account sync. Now only fires on an actual successful login, matching Simkl's existing behavior.
+
+            Changelog 3.3.265
+            [NEW] Offcloud: added QR-code/device-code authorization (Settings - Debrid Accounts - Offcloud - Authorize Offcloud...), alongside the existing typed-API-key entry. Shows a scannable QR code alongside the verification URL and code (also copied to clipboard) - scan with a phone or visit the link on any device, approve, and Seren picks it up automatically. The API key field stays available for manual entry, and Account Info still confirms a typed key works.
+
+            Changelog 3.3.264
+            [NEW] TorBox: added QR-code/device-code authorization (Settings - Debrid Accounts - TorBox - Authorize TorBox...), replacing the typed-API-token flow with the same OAuth device-code pattern used by MDBList/Trakt/Simkl. Shows a scannable QR code alongside the verification URL and code (also copied to clipboard) - scan with a phone or visit the link on any device, approve, and Seren picks it up automatically.
+
+            Changelog 3.3.263
+            [NEW] MDBList: added QR-code/device-code authorization (Settings - Watch Accounts - MDBList - Authorize MDBList...), replacing the typed-API-key flow with the same OAuth device-code pattern already used by Trakt/Simkl. Shows a scannable QR code alongside the verification URL and code (also copied to clipboard) - scan with a phone or visit the link on any device, approve, and Seren picks it up automatically. Existing typed API keys keep working until you choose to re-authorize; access tokens auto-refresh in the background.
+
+            Changelog 3.3.262
+            [FIX] Corrected an invalid character in 3.3.261's changelog text that broke the addon's manifest file (addon.xml), which could have prevented the addon from installing or updating properly for some users. No functional code changed.
+
+            Changelog 3.3.261
+            [BUG] Fixed a navigation dead-end in Settings - Sort &amp; Filter - Choose Sorting. Setting any sort tier's method to "None" hides all lower tiers, by design, since tiers below a stopped chain aren't meaningful - but pressing Down from the last visible tier had nowhere to go and froze there, which is what "locked out of the menu" was. Down now reaches the Close button instead of dead-ending.
+
             Changelog 3.3.260
             [CHANGE] "MediaFusion Cache Service" (Settings - Advanced - Optional API Keys) now defaults to Real-Debrid instead of Debrid-Link for new installs/profiles. If you've already set a MediaFusion token, this setting is already saved to your chosen service and nothing changes; the new default only reaches profiles that haven't configured MediaFusion yet, where it stays inert until you add a token and pick a service.
 
