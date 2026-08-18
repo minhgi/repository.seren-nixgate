@@ -7,8 +7,6 @@ def do_version_change():
     if g.get_setting("seren.version") == g.CLEAN_VERSION:
         return
 
-    g.log("Clearing all caches on Seren version change", "info")
-
     # Clear stale Python bytecode cache — prevents old .pyc from overriding new .py files
     try:
         import os
@@ -25,42 +23,45 @@ def do_version_change():
     except Exception as e:
         g.log(f"Version change: Failed to clear __pycache__: {e}", "warning")
 
-    g.clear_cache(silent=True)
+    if g.get_bool_setting("cache.clearOnUpgrade", False):
+        g.log("Clearing all caches on Seren version change", "info")
 
-    # Also clear torrent cache and debrid cache to ensure fresh state
-    try:
-        from resources.lib.database.torrentCache import TorrentCache
-        TorrentCache().clear_all()
-        g.log("Version change: Cleared torrent cache", "info")
-    except Exception as e:
-        g.log(f"Version change: Failed to clear torrent cache: {e}", "warning")
+        g.clear_cache(silent=True)
 
-    try:
-        from resources.lib.database.debridCache import DebridCache
-        DebridCache().clear_all()
-        g.log("Version change: Cleared debrid hash cache", "info")
-    except Exception as e:
-        g.log(f"Version change: Failed to clear debrid cache: {e}", "warning")
+        # Also clear torrent cache and debrid cache to ensure fresh state
+        try:
+            from resources.lib.database.torrentCache import TorrentCache
+            TorrentCache().clear_all()
+            g.log("Version change: Cleared torrent cache", "info")
+        except Exception as e:
+            g.log(f"Version change: Failed to clear torrent cache: {e}", "warning")
 
-    try:
-        from resources.lib.database.providerPerformance import ProviderPerformance
-        ProviderPerformance().clear_all()
-        g.log("Version change: Cleared provider performance stats", "info")
-    except Exception as e:
-        g.log(f"Version change: Failed to clear provider performance stats: {e}", "warning")
+        try:
+            from resources.lib.database.debridCache import DebridCache
+            DebridCache().clear_all()
+            g.log("Version change: Cleared debrid hash cache", "info")
+        except Exception as e:
+            g.log(f"Version change: Failed to clear debrid cache: {e}", "warning")
 
-    try:
-        from resources.lib.database.animeCache import AnimeCache
-        AnimeCache().execute_sql("DELETE FROM anime_titles WHERE anidb_id != 0", ())
-        g.log("Version change: Cleared AniDB titles cache (episode-title pollution fix)", "info")
-    except Exception as e:
-        g.log(f"Version change: Failed to clear AniDB titles cache: {e}", "warning")
+        try:
+            from resources.lib.database.providerPerformance import ProviderPerformance
+            ProviderPerformance().clear_all()
+            g.log("Version change: Cleared provider performance stats", "info")
+        except Exception as e:
+            g.log(f"Version change: Failed to clear provider performance stats: {e}", "warning")
 
-    # Clean stale Kodi texture cache entries to prevent thumbnail loading storm.
-    # After cache clear, skin widgets re-render and Kodi's CImageLoader tries loading
-    # hundreds of thumbnails whose cached files may no longer exist, flooding the log
-    # with errors and freezing the UI.
-    _clean_stale_textures()
+        try:
+            from resources.lib.database.animeCache import AnimeCache
+            AnimeCache().execute_sql("DELETE FROM anime_titles WHERE anidb_id != 0", ())
+            g.log("Version change: Cleared AniDB titles cache (episode-title pollution fix)", "info")
+        except Exception as e:
+            g.log(f"Version change: Failed to clear AniDB titles cache: {e}", "warning")
+
+        # Clean stale Kodi texture cache entries to prevent thumbnail loading storm.
+        # After cache clear, skin widgets re-render and Kodi's CImageLoader tries loading
+        # hundreds of thumbnails whose cached files may no longer exist, flooding the log
+        # with errors and freezing the UI.
+        _clean_stale_textures()
 
     g.set_setting("seren.version", g.CLEAN_VERSION)
 

@@ -124,7 +124,7 @@
 			Rework for Seren 2.0
 		</news>
 	</extension>
-</addon><addon id="plugin.video.seren" version="3.5.24" name="Seren" provider-name="Nixgates">
+</addon><addon id="plugin.video.seren" version="3.5.25" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -191,6 +191,8 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.5.25
+            [NEW] Added a "Clear Cache on Version Upgrade" toggle (Settings - General - Miscellaneous, default off). Previously Seren cleared its metadata cache, local torrent cache, debrid hash cache, and provider performance stats unconditionally on every version change with no way to opt out; that's now gated behind this toggle and off by default. Python bytecode cache is still always cleared on upgrade regardless of this setting, since stale .pyc files can override new .py files.
             Changelog 3.5.24
             [CHANGE] Movie Calendar tile redesign for a more streamlined look: the release badge (countdown/star) moved from the bottom-center of the poster to the top-right corner; the release date no longer shows the year (redundant with the month/year header already shown at the top of the calendar); that month/year header is now centered and bold instead of dim and left-aligned. The movie title now overlays the bottom of the poster, but only on movies with no real watch progress yet - once you've started watching, the existing watch-progress wash takes over that same space instead of competing with the title text for the same pixels.
             Changelog 3.5.23
@@ -200,6 +202,7 @@
             [FIX] Movie Calendar - three rendering defects found during live testing, all in movie_calendar.xml only, no data/logic changes: (1) the rating label used a 6-digit textcolor (FFD700) instead of 8-digit ARGB - Kodi parsed the missing alpha channel as 00 (fully transparent), so the rating number was computed correctly but invisible on every tile; now FFFFD700. (2) the Prev/Next/Close button row used a group-level &lt;right&gt; position with no &lt;width&gt; on the group, which Kodi can't resolve, so the row silently fell back to left=0 and rendered at the top-left overlapping the title instead of the top-right; now given an explicit &lt;left&gt; instead. (3) the day-badge circle overlapped the release-date label's bottom strip, hiding the year (e.g. "08/13/" instead of "08/13/2026"); the badge now sits flush with the poster's bottom edge and the date/rating strips moved below it, so nothing overlaps. Confirmed live post-fix: full dates, correct ratings (including "0.0" for an unreleased title with TMDb metadata already seeded but no votes yet), and a properly top-right button row.
             Changelog 3.5.21
             [NEW] Movie Calendar (My Movies, gated by the "Movie Calendar" toggle in Watch Accounts - Menu Item Visibility, off by default) - a dense poster grid of every movie releasing in a given month, sourced from Trakt's calendars/all/movies endpoint (previously unused anywhere in this addon), one tile per movie ordered by release date, with previous/next month navigation. Each poster shows its release date and rating, plus a colour-coded release-day badge: green (released, metadata populated), orange (released, metadata still incomplete), grey (not yet released). MDBList and Simkl don't feed into it - neither service exposes a comparable movie-calendar endpoint, unlike the existing TV calendar which blends in both as enrichment. The "Movie Calendar" toggle added in 3.5.20 as a placeholder now has real effect; its help text has been updated to match. TMDb Helper / Extended Info integration on calendar tiles is intentionally not part of this release.
+
             Changelog 3.5.20
             [FEATURE] Added "Menu Item Visibility" settings section under Watch Accounts, below Cross-Service Sync - On/Off toggles for "Movie Calendar" (placeholder, reserved for a future feature), "My Watch List Calendar", "Merge Movie", and "Merge TV Show". All off by default.
             [FEATURE] Added "Merge - In Progress TV Shows" to My Shows, directly after "Merge - In Progress Episodes" - the same in-progress data merged from Trakt/MDBList/Simkl, shown as a show list instead of an episode list.
