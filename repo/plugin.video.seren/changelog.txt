@@ -10,7 +10,6 @@
 
 [B]3.5.21[/B]
 - [NEW] Movie Calendar (My Movies, gated by the "Movie Calendar" toggle in Watch Accounts - Menu Item Visibility, off by default) - a dense poster grid of every movie releasing in a given month, sourced from Trakt's calendars/all/movies endpoint (previously unused anywhere in this addon), one tile per movie ordered by release date, with previous/next month navigation. Each poster shows its release date and rating, plus a colour-coded release-day badge: green (released, metadata populated), orange (released, metadata still incomplete), grey (not yet released). MDBList and Simkl don't feed into it - neither service exposes a comparable movie-calendar endpoint, unlike the existing TV calendar which blends in both as enrichment. The "Movie Calendar" toggle added in 3.5.20 as a placeholder now has real effect; its help text has been updated to match. TMDb Helper / Extended Info integration on calendar tiles is intentionally not part of this release.
-
 [B]3.5.20[/B]
 - [FEATURE] Added "Menu Item Visibility" settings section under Watch Accounts, below Cross-Service Sync - On/Off toggles for "Movie Calendar" (placeholder, reserved for a future feature), "My Watch List Calendar", "Merge Movie", and "Merge TV Show". All off by default.
 - [FEATURE] Added "Merge - In Progress TV Shows" to My Shows, directly after "Merge - In Progress Episodes" - the same in-progress data merged from Trakt/MDBList/Simkl, shown as a show list instead of an episode list.

@@ -7006,6 +7006,9 @@ msgid "Movie Calendar"
 msgstr "Movie Calendar"
 
 msgctxt "#31511"
+msgid "Reserved for a future movie calendar menu entry. Currently has no effect."
+msgstr "Reserved for a future movie calendar menu entry. Currently has no effect."
+
 msgid "Browse movies releasing this month in a poster grid, ordered by release date"
 msgstr "Browse movies releasing this month in a poster grid, ordered by release date"
 
@@ -7032,7 +7035,6 @@ msgstr "Merge - In Progress TV Shows"
 msgctxt "#31517"
 msgid "Shows with an episode in progress on Trakt, MDBList, or Simkl, deduplicated"
 msgstr "Shows with an episode in progress on Trakt, MDBList, or Simkl, deduplicated"
-
 msgctxt "#31518"
 msgid "No movies found for this month"
 msgstr "No movies found for this month"
