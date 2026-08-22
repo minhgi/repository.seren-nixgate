@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="repository.seren-nixgate" name="Seren Nixgate" version="1.0.0" provider-name="minhgi">
+<addon id="repository.seren-nixgate" name="Seren Nixgate" version="1.0.1" provider-name="minhgi">
     <extension point="xbmc.addon.repository" name="Seren Nixgate Repository">
         <dir>
             <info compressed="false">https://raw.githubusercontent.com/minhgi/repository.seren-nixgate/main/repo/zips/addons.xml</info>
@@ -13,8 +13,8 @@
         <disclaimer></disclaimer>
         <platform>all</platform>
         <assets>
-            <icon>ico-seren-3</icon>
-            <fanart>fanart-seren-3</fanart>
+            <icon>ico-seren-3.png</icon>
+            <fanart>fanart-seren-3.png</fanart>
         </assets>
     </extension>
 </addon>
