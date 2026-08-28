@@ -316,12 +316,14 @@ class SimklAPI(ApiBase):
         :param params: URL params for request
         :return: requests response
         """
+        timeout = params.pop("timeout", 10)
         params.update(self._default_params())
         return self.session.post(
             parse.urljoin(self.ApiUrl, url),
             json=data,
             params=params,
             headers=self._get_headers(),
+            timeout=timeout,
         )
 
     def post_json(self, url, data=None, **params):

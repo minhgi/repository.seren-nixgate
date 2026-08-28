@@ -168,7 +168,13 @@ class Sources:
         self.cloud_scrapers = []
         self.running_providers = []
         self.language = 'en'
+        self._perf_records = []
+        self._perf_lock = threading.Lock()
         self._apikeys = self._build_apikeys()
+        # Per-scrape simple_info is identical for every provider (same item_information
+        # and media_type for the whole instance) — compute once, not once per provider thread.
+        self._simple_info_lock = threading.Lock()
+        self._simple_info_cache = None
         self._cache_checked_hashes = set()
         self._cache_check_lock = threading.Lock()
         # S15 — Debrid cache grace: tracks in-flight TorrentCacheCheck batches.
@@ -421,6 +427,13 @@ class Sources:
 
         finally:
             self.window.close()
+            # wait=False: providers may still be running past the bounded grace period above
+            # (this is the deliberate "finalise with partial results" path) - a blocking close
+            # here would turn that bounded timeout into an unbounded wait.
+            self.torrent_threads.close(wait=False)
+            self.hoster_threads.close(wait=False)
+            self.adaptive_threads.close(wait=False)
+            self.direct_threads.close(wait=False)
 
     def _handle_pre_scrape_modifiers(self):
         """
@@ -788,6 +801,10 @@ class Sources:
                     bg_thread = None
                     bg_collector = None
                     bg_tier_num = None
+                # Flush now: the abandoned tier's daemon thread is never joined,
+                # so the end-of-loop flush below would otherwise lose whatever
+                # already-completed providers recorded before this early exit.
+                self._flush_provider_performance()
                 break
 
             # ── All-Tier Sweep: bank leftover time from fast tiers ──
@@ -802,6 +819,7 @@ class Sources:
                 if leftover > 0:
                     tier_deadlines[next_tier_num] += leftover
 
+        self._flush_provider_performance()
 
     def _create_adaptive_threads(self):
         for i in self.adaptive_providers:
@@ -1415,6 +1433,28 @@ class Sources:
         if provider_name in self.sources_information['statistics']['remainingProviders']:
             self.sources_information['statistics']['remainingProviders'].remove(provider_name)
 
+    def _get_cached_simple_info(self, info):
+        """Build simple_show/movie_info once per scrape, then hand each caller its own copy.
+
+        info is always self.item_information across every caller, so the expensive build
+        (title cleaning, settings reads, TitleSubsCache/anime lookups) is identical regardless
+        of which provider asks — safe to build once for the instance's lifetime. Double-checked
+        locking since this is called from concurrent provider threads. Providers receive a live
+        simple_info and some append to its alias list, so each caller gets a shallow copy with
+        its own alias list — mutations from one provider must not leak into another's view.
+        """
+        if self._simple_info_cache is None:
+            with self._simple_info_lock:
+                if self._simple_info_cache is None:
+                    if self.media_type == g.MEDIA_EPISODE:
+                        self._simple_info_cache = self._build_simple_show_info(info)
+                    else:
+                        self._simple_info_cache = self._build_simple_movie_info(info)
+        simple_info = dict(self._simple_info_cache)
+        alias_key = 'show_aliases' if self.media_type == g.MEDIA_EPISODE else 'aliases'
+        simple_info[alias_key] = list(simple_info[alias_key])
+        return simple_info
+
     def _get_provider_sources(self, info, provider, provider_type, process_function,
                               skip_cache_check=False, result_collector=None):
         provider_name = provider[1].upper()
@@ -1436,13 +1476,10 @@ class Sources:
             self.running_providers.append(provider_source)
 
             try:
+                simple_info = self._get_cached_simple_info(info)
                 if self.media_type == g.MEDIA_EPISODE:
-                    simple_info = self._build_simple_show_info(info)
-
                     results = provider_source.episode(simple_info, info, apikeys=self._apikeys)
                 else:
-                    simple_info = self._build_simple_movie_info(info)
-
                     try:
                         results = provider_source.movie(
                             info['info']['title'],
@@ -1694,6 +1731,7 @@ class Sources:
                     )
 
             sources = thread_pool.wait_completion()
+            thread_pool.close()
             self.sources_information['cloudFiles'] = sources or []
 
         finally:
@@ -2061,6 +2099,16 @@ class Sources:
 
     def _build_hoster_variables(self, info, media_type):
 
+        if media_type == 'sources':
+            # This branch never touches `info`, so skip the deep copy - it runs once per
+            # provider thread in _get_hosters() and the copy was pure overhead here.
+            hostpr_dict = [host[0] for debrid in self.hoster_domains['premium'].values() for host in debrid]
+            host_dict = self.hoster_domains['free']
+            return host_dict, hostpr_dict
+
+        # __build_hoster_tvshow_variables mutates info['info']['aliases'] in place
+        # (aliases.append(...)), so copy first to keep one provider thread from
+        # corrupting the shared metadata dict another thread is reading.
         info = copy.deepcopy(info)
 
         if media_type == 'tvshow':
@@ -2069,10 +2117,6 @@ class Sources:
             return self.__build_hoster_episode_variables(info)
         elif media_type == 'movie':
             return self.__build_hoster_movie_variables(info)
-        elif media_type == 'sources':
-            hostpr_dict = [host[0] for debrid in self.hoster_domains['premium'].values() for host in debrid]
-            host_dict = self.hoster_domains['free']
-            return host_dict, hostpr_dict
 
     @staticmethod
     def __build_hoster_movie_variables(info):
@@ -2271,9 +2315,13 @@ class Sources:
             return None
 
     def _record_provider_performance(self, provider_name, start_time, result_count, failed):
-        """Record scrape metrics to the provider performance DB.
+        """Queue scrape metrics for the provider performance DB.
 
-        Called from _get_provider_sources finally block. Non-blocking (background thread).
+        Called from _get_provider_sources finally block, which may run on any
+        tier's worker thread. Appends to an in-memory batch (lock-protected —
+        multiple tiers' workers can call this concurrently) instead of writing
+        immediately; _flush_provider_performance() writes the whole batch in
+        one pass after every tier finishes scraping.
 
         Args:
             provider_name: provider name (UPPER from provider tuple)
@@ -2281,33 +2329,53 @@ class Sources:
             result_count: number of raw results returned (0 if none/failed)
             failed: True if the scrape raised an exception
         """
+        if not g.get_bool_setting('general.providerPerformance'):
+            return
+
+        elapsed_ms = int((time.time() - start_time) * 1000)
+        with self._perf_lock:
+            self._perf_records.append((provider_name.lower(), elapsed_ms, result_count, failed))
+
+    def _flush_provider_performance(self):
+        """Write this scrape's queued provider-performance records in one batch.
+
+        Called once, after every tier has finished (end of
+        _tiered_torrent_orchestrator) — not per-provider and not from a worker
+        thread, so the auto-disable check below reads counts that already
+        include this scrape's own failures instead of racing the write.
+        """
+        with self._perf_lock:
+            records = self._perf_records
+            self._perf_records = []
+        if not records:
+            return
+
         pp = self._get_provider_perf_db()
         if pp is None:
             return
 
-        elapsed_ms = int((time.time() - start_time) * 1000)
-        name_lower = provider_name.lower()
+        try:
+            pp.record_batch(records)
+        except Exception as e:
+            g.log(f"ProviderPerformance batch write error: {e}", "warning")
+            return
 
-        if failed:
-            pp.record_failure_background(name_lower, elapsed_ms)
-            # Check for auto-disable threshold
-            try:
-                fail_threshold = g.get_int_setting('general.providerFailThreshold', 5)
+        failed_providers = {name for name, _ms, _count, failed in records if failed}
+        if not failed_providers:
+            return
+        try:
+            fail_threshold = g.get_int_setting('general.providerFailThreshold', 5)
+            for name_lower in failed_providers:
                 consec = pp.get_consecutive_failures(name_lower)
-                # consec was before this failure was recorded; the background thread
-                # will increment it. Check against threshold - 1 since the write
-                # hasn't happened yet, or just let next scrape catch it.
-                if consec + 1 >= fail_threshold:
+                if consec >= fail_threshold:
                     pp.set_status(name_lower, 'disabled')
                     g.log(
-                        f"Provider Performance: {provider_name} auto-disabled after "
-                        f"{consec + 1} consecutive failures (threshold={fail_threshold})",
+                        f"Provider Performance: {name_lower} auto-disabled after "
+                        f"{consec} consecutive failures (threshold={fail_threshold})",
                         "warning",
                     )
-            except Exception:
-                pass
-        else:
-            pp.record_scrape_background(name_lower, result_count, 0, elapsed_ms)
+        except Exception:
+            pass
 
 
 class TorrentCacheCheck:
@@ -2466,6 +2534,7 @@ class TorrentCacheCheck:
                 if _sc._cache_check_active_count <= 0:
                     _sc._cache_check_active_count = 0  # floor at 0
                     _sc._cache_check_done.set()
+            self.threads.close()
 
     def _split_by_db_cache(self, torrent_list, debrid_key):
         """Split torrent_list into DB-cached and unchecked lists for a debrid service.

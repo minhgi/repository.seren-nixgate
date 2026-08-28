@@ -752,7 +752,9 @@ class TraktAPI(ApiBase):
         :param data: POST Data to send to endpoint
         :return: requests response
         """
-        return self.session.post(parse.urljoin(self.ApiUrl, url), json=data, headers=self._get_headers())
+        return self.session.post(
+            parse.urljoin(self.ApiUrl, url), json=data, headers=self._get_headers(), timeout=10
+        )
 
     def post_json(self, url, data):
         """
@@ -771,7 +773,9 @@ class TraktAPI(ApiBase):
         :param data: PUT Data to send to endpoint
         :return: requests response
         """
-        return self.session.put(parse.urljoin(self.ApiUrl, url), json=data, headers=self._get_headers())
+        return self.session.put(
+            parse.urljoin(self.ApiUrl, url), json=data, headers=self._get_headers(), timeout=10
+        )
 
     @trakt_guard_response
     def delete_request(self, url):
@@ -780,7 +784,7 @@ class TraktAPI(ApiBase):
         :param url: URL endpoint to perform request to
         :return: requests response
         """
-        return self.session.delete(parse.urljoin(self.ApiUrl, url), headers=self._get_headers())
+        return self.session.delete(parse.urljoin(self.ApiUrl, url), headers=self._get_headers(), timeout=10)
 
     def get_username(self):
         """

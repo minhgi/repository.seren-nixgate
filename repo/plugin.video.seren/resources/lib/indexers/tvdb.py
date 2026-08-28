@@ -233,6 +233,7 @@ class TVDBAPI(ApiBase):
                         f"{self.baseUrl}login",
                         json=self._get_login_body(),
                         headers=self._get_headers(),
+                        timeout=10,
                     ).json()
                     self._save_settings(response)
                     g.log("Refreshed TVDB Token")
@@ -249,6 +250,7 @@ class TVDBAPI(ApiBase):
                     f"{self.baseUrl}login",
                     json=self._get_login_body(),
                     headers=self._get_headers(),
+                    timeout=10,
                 ).json()
                 self._save_settings(response)
         except RanOnceAlready:

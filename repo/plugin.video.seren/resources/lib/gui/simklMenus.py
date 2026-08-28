@@ -1,6 +1,7 @@
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import as_completed
 from functools import cached_property
 
+from resources.lib.common.thread_pool import ThreadPoolExecutor
 from resources.lib.modules.globals import g
 
 
@@ -92,8 +93,10 @@ class Menus:
         finally:
             # wait=False enforces the 20s as_completed ceiling rather than blocking on
             # shutdown - see mdblistMenus.py's identical finally block for the full
-            # reasoning (already-submitted futures still finish in the background).
-            executor.shutdown(wait=False)
+            # reasoning. cancel_futures drops queued-but-unstarted lookups (backported to
+            # Python 3.8 by common/thread_pool.py); running futures still finish in the
+            # background, and nothing here reads their results.
+            executor.shutdown(wait=False, cancel_futures=True)
 
         if resolved:
             self._seed_trakt_sync(resolved, media_type)
@@ -154,28 +157,63 @@ class Menus:
         from resources.lib.database.trakt_sync.shows import TraktSyncDatabase as ShowsDatabase
 
         rows = self.simkl_database.get_bookmarks("episode")
+        if not rows:
+            g.cancel_directory()
+            return
         shows_db = ShowsDatabase()
         hidden_shows = self.hidden_database.get_hidden_items("progress_watched", "tvshow")
-        episodes = []
-        for row in rows:
-            trakt_show = self.trakt_api.search_by_tmdb_id(row["tmdb_id"], "show")
-            if not trakt_show or not trakt_show.get("trakt_id"):
-                g.log(
-                    f"Simkl menus: no Trakt match for tmdb_id {row['tmdb_id']} (show), "
-                    "skipping in-progress episode",
-                    "debug",
-                )
-                continue
-            if trakt_show["trakt_id"] in hidden_shows:
-                continue
-            episode = shows_db.get_episode_action_args(trakt_show["trakt_id"], row["season"], row["number"])
-            if not episode:
-                continue
-            episodes.append(episode)
+        results = [None] * len(rows)
+        executor = ThreadPoolExecutor(max_workers=min(10, len(rows)))
+        try:
+            futures = {
+                executor.submit(self.trakt_api.search_by_tmdb_id, row["tmdb_id"], "show"): i
+                for i, row in enumerate(rows)
+            }
+            seen = set()
+            try:
+                for future in as_completed(futures, timeout=20):
+                    i = futures[future]
+                    results[i] = self._collect_in_progress_episode(future, rows[i], shows_db, hidden_shows)
+                    seen.add(i)
+            except Exception as e:
+                g.log(f"Simkl menus: in-progress episode resolve batch timed out, using partial results: {e}", "warning")
+                for future in futures:
+                    i = futures[future]
+                    if i not in seen and future.done():
+                        results[i] = self._collect_in_progress_episode(future, rows[i], shows_db, hidden_shows)
+        finally:
+            # wait=False enforces the 20s as_completed ceiling rather than blocking on
+            # shutdown - see _resolve()'s identical finally block for the full reasoning.
+            # cancel_futures drops queued-but-unstarted lookups (backported to Python 3.8
+            # by common/thread_pool.py); running futures finish in the background unread.
+            executor.shutdown(wait=False, cancel_futures=True)
+        episodes = [ep for ep in results if ep]
         if not episodes:
             g.cancel_directory()
             return
         self.list_builder.mixed_episode_builder(episodes, no_paging=True)
+
+    @staticmethod
+    def _collect_in_progress_episode(future, row, shows_db, hidden_shows):
+        try:
+            trakt_show = future.result()
+        except Exception as e:
+            g.log(f"Simkl menus: error resolving tmdb_id {row['tmdb_id']} (show): {e}", "warning")
+            return None
+        if not trakt_show or not trakt_show.get("trakt_id"):
+            g.log(
+                f"Simkl menus: no Trakt match for tmdb_id {row['tmdb_id']} (show), "
+                "skipping in-progress episode",
+                "debug",
+            )
+            return None
+        if trakt_show["trakt_id"] in hidden_shows:
+            return None
+        try:
+            return shows_db.get_episode_action_args(trakt_show["trakt_id"], row["season"], row["number"])
+        except Exception as e:
+            g.log(f"Simkl menus: error building episode args for tmdb_id {row['tmdb_id']} (show): {e}", "warning")
+            return None
 
     def _status_movies(self, status):
         """Live Simkl status-bucket fetch for My Movies (Plan to Watch/Completed/

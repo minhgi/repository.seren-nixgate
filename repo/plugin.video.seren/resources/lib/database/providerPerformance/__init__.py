@@ -11,7 +11,6 @@ Schema: provider (PK), scrape_count, total_results, total_cached, total_time_ms,
 
 import collections
 import time
-from threading import Thread
 
 from resources.lib.database import Database
 from resources.lib.modules.globals import g
@@ -45,12 +44,14 @@ schema = {
 class ProviderPerformance(Database):
     """Persistent store for provider scraping performance metrics.
 
-    Usage from getSources.py:
+    getSources.py queues (provider, elapsed_ms, results, failed) tuples per
+    scrape and flushes them in one call:
         pp = ProviderPerformance()
-        pp.record_scrape('torrentio', results=42, cached=38, time_ms=1200)
-        pp.record_failure('magnetdl', time_ms=30000)
+        pp.record_batch([('torrentio', 1200, 42, False), ('magnetdl', 30000, 0, True)])
         stats = pp.get_all_stats()           # list of dicts
         score = pp.get_provider_score('dmm')  # float 0-100
+
+    record_scrape()/record_failure() remain available for single-record use.
     """
 
     def __init__(self):
@@ -101,14 +102,6 @@ class ProviderPerformance(Database):
         except Exception as e:
             g.log(f"ProviderPerformance.record_scrape error: {e}", "warning")
 
-    def record_scrape_background(self, provider, results, cached, time_ms):
-        """Non-blocking version of record_scrape."""
-        Thread(
-            target=self.record_scrape,
-            args=(provider, results, cached, time_ms),
-            daemon=True,
-        ).start()
-
     def record_failure(self, provider, time_ms):
         """Record a failed scrape (exception/timeout, not just 0 results).
 
@@ -147,13 +140,51 @@ class ProviderPerformance(Database):
         except Exception as e:
             g.log(f"ProviderPerformance.record_failure error: {e}", "warning")
 
-    def record_failure_background(self, provider, time_ms):
-        """Non-blocking version of record_failure."""
-        Thread(
-            target=self.record_failure,
-            args=(provider, time_ms),
-            daemon=True,
-        ).start()
+    def record_batch(self, records):
+        """Batched upsert for (provider, elapsed_ms, results, failed) tuples.
+
+        Same net effect as calling record_scrape()/record_failure() once per
+        record — one executemany for successes and one for failures, instead
+        of a SELECT+branch round trip per record. Provider names are expected
+        already-lowercased (callers building the batch already do this).
+        """
+        if not records:
+            return
+        now = int(time.time())
+        scrapes = [(provider, results, 0, time_ms, now) for provider, time_ms, results, failed in records if not failed]
+        failures = [(provider, time_ms, now) for provider, time_ms, results, failed in records if failed]
+        try:
+            if scrapes:
+                self.execute_sql(
+                    "INSERT INTO provider_stats "
+                    "(provider, scrape_count, total_results, total_cached, total_time_ms, "
+                    "consecutive_failures, last_scrape_time, status) "
+                    "VALUES (?, 1, ?, ?, ?, 0, ?, 'active') "
+                    "ON CONFLICT(provider) DO UPDATE SET "
+                    "scrape_count = scrape_count + 1, "
+                    "total_results = total_results + excluded.total_results, "
+                    "total_cached = total_cached + excluded.total_cached, "
+                    "total_time_ms = total_time_ms + excluded.total_time_ms, "
+                    "consecutive_failures = CASE WHEN excluded.total_results > 0 THEN 0 ELSE consecutive_failures END, "
+                    "last_scrape_time = excluded.last_scrape_time, "
+                    "status = CASE WHEN excluded.total_results > 0 THEN 'active' ELSE status END",
+                    scrapes,
+                )
+            if failures:
+                self.execute_sql(
+                    "INSERT INTO provider_stats "
+                    "(provider, scrape_count, total_results, total_cached, total_time_ms, "
+                    "consecutive_failures, last_scrape_time, status) "
+                    "VALUES (?, 1, 0, 0, ?, 1, ?, 'active') "
+                    "ON CONFLICT(provider) DO UPDATE SET "
+                    "scrape_count = scrape_count + 1, "
+                    "total_time_ms = total_time_ms + excluded.total_time_ms, "
+                    "consecutive_failures = consecutive_failures + 1, "
+                    "last_scrape_time = excluded.last_scrape_time",
+                    failures,
+                )
+        except Exception as e:
+            g.log(f"ProviderPerformance.record_batch error: {e}", "warning")
 
     def set_status(self, provider, status):
         """Set provider status: 'active', 'demoted', or 'disabled'.

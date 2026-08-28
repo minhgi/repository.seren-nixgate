@@ -13,26 +13,29 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
         pull_all = params.pop("pull_all", False)
         params["limit"] = self.page_limit
         get = MetadataHandler.get_trakt_info
-        for page in self.trakt_api.get_all_pages_json(url, **params):
-            g.log(f"extract_trakt_page({url}, {media_type}): page has {len(page)} items", "debug")
-            if results := self.task_queue.map_results(
-                self._indexed_list_contents,
-                ((get(i, "username"), get(i, "trakt_id"), media_type) for i in page),
-                kwargs_iterable=repeat(params),
-            ):
-                matched = [i for i in page if results.get(i.get("trakt_id")) and len(results.get(i.get("trakt_id"))) != 0]
-                g.log(f"extract_trakt_page({url}, {media_type}): {len(matched)}/{len(page)} lists have content", "debug")
-                result.extend(matched)
-                if not pull_all and len(result) >= (self.page_limit * page_number):
-                    return result[self.page_limit * (page_number - 1) : self.page_limit * page_number]
-            else:
-                g.log(f"extract_trakt_page({url}, {media_type}): no results from task_queue (all lists empty or API returned nothing)", "debug")
+        try:
+            for page in self.trakt_api.get_all_pages_json(url, **params):
+                g.log(f"extract_trakt_page({url}, {media_type}): page has {len(page)} items", "debug")
+                if results := self.task_queue.map_results(
+                    self._indexed_list_contents,
+                    ((get(i, "username"), get(i, "trakt_id"), media_type) for i in page),
+                    kwargs_iterable=repeat(params),
+                ):
+                    matched = [i for i in page if results.get(i.get("trakt_id")) and len(results.get(i.get("trakt_id"))) != 0]
+                    g.log(f"extract_trakt_page({url}, {media_type}): {len(matched)}/{len(page)} lists have content", "debug")
+                    result.extend(matched)
+                    if not pull_all and len(result) >= (self.page_limit * page_number):
+                        return result[self.page_limit * (page_number - 1) : self.page_limit * page_number]
+                else:
+                    g.log(f"extract_trakt_page({url}, {media_type}): no results from task_queue (all lists empty or API returned nothing)", "debug")
 
-        g.log(f"extract_trakt_page({url}, {media_type}): total result count={len(result)}", "debug")
-        if pull_all and no_paging:
-            return result
-        else:
-            return result[self.page_limit * (page_number - 1) : self.page_limit * page_number]
+            g.log(f"extract_trakt_page({url}, {media_type}): total result count={len(result)}", "debug")
+            if pull_all and no_paging:
+                return result
+            else:
+                return result[self.page_limit * (page_number - 1) : self.page_limit * page_number]
+        finally:
+            self.task_queue.close()
 
     def _indexed_list_contents(self, username, trakt_id, media_type, **params):
         params["page"] = 1

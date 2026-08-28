@@ -37,6 +37,10 @@ _DEBRID_PROVIDER_TO_DB_KEY = {
     'torbox': 'tb', 'debrid_link': 'dl', 'offcloud': 'oc',
 }
 
+# [HASH] token stripper for reorder_sources() - compiled once at import instead of
+# rebuilt on every play (Otaku pattern: e.g. "[E5A85899]").
+_HASH_TOKEN_RE = re.compile(r'\[[0-9A-Fa-f]{8,}\]')
+
 
 # Batch D / S13 — Feature #3 last-resolved quality memory.
 # Maps the internal debrid_provider key to a human-readable label that
@@ -501,8 +505,7 @@ class Resolver:
             return sources
 
         # Strip [HASH] tokens (e.g. [E5A85899]) — Otaku pattern
-        _hash_re = re.compile(r'\[[0-9A-Fa-f]{8,}\]')
-        lp = _hash_re.sub('', lp).strip()
+        lp = _HASH_TOKEN_RE.sub('', lp).strip()
         if not lp:
             return sources
 
@@ -517,7 +520,7 @@ class Resolver:
 
         for idx, source in enumerate(sources):
             rel = str(source.get('release_title', ''))
-            rel = _hash_re.sub('', rel).strip()
+            rel = _HASH_TOKEN_RE.sub('', rel).strip()
 
             # Exact title match
             if rel == lp:
@@ -575,4 +578,6 @@ class Resolver:
             g.log_stacktrace()
             xbmcgui.Dialog().notification(g.ADDON_NAME, g.get_language_string(30485))
             return hosters
+        finally:
+            thread_pool.close()
         return hosters

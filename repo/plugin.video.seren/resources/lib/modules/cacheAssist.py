@@ -163,37 +163,43 @@ class _BaseCacheAssist(TorrentAssist):
         )
 
     def status_update_loop(self):
-        while not g.abort_requested() and not self.cancelled:
-            if g.wait_for_abort(10):
-                raise KodiShutdownException("Kodi Shutdown requested, cancelling download")
-            try:
-                self._update_status()
-                g.log(
-                    self.progress_message.format(
-                        self.status,
-                        self.current_percent,
-                        self.get_display_speed(),
-                        self.seeds,
-                    ),
-                    "debug",
-                )
-                if self.status == "finished":
-                    self._notify_user_of_completion()
-                    self._update_database()
+        # This method runs ON one of self.thread_pool's own worker threads when reached via the
+        # background put() paths in do_cache() - the finally below must use wait=False, since a
+        # blocking close() here would be that worker trying to join itself (RuntimeError).
+        try:
+            while not g.abort_requested() and not self.cancelled:
+                if g.wait_for_abort(10):
+                    raise KodiShutdownException("Kodi Shutdown requested, cancelling download")
+                try:
+                    self._update_status()
+                    g.log(
+                        self.progress_message.format(
+                            self.status,
+                            self.current_percent,
+                            self.get_display_speed(),
+                            self.seeds,
+                        ),
+                        "debug",
+                    )
+                    if self.status == "finished":
+                        self._notify_user_of_completion()
+                        self._update_database()
+                        break
+
+                    if self.status == "downloading":
+                        self._do_download_frame()
+                    else:
+                        self._handle_failure("Unknown Failure at Debrid Provider")
+
+                except KodiShutdownException:
+                    self._delete_transfer()
                     break
 
-                if self.status == "downloading":
-                    self._do_download_frame()
-                else:
-                    self._handle_failure("Unknown Failure at Debrid Provider")
-
-            except KodiShutdownException:
-                self._delete_transfer()
-                break
-
-            except Exception as e:
-                self._delete_transfer()
-                raise e
+                except Exception as e:
+                    self._delete_transfer()
+                    raise e
+        finally:
+            self.thread_pool.close(wait=False)
 
     def _notify_user_of_completion(self):
         if not self.silent:

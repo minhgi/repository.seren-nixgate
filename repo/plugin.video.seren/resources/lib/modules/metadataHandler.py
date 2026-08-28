@@ -183,9 +183,10 @@ class MetadataHandler:
 
     # region format art
     def format_db_object(self, db_object):
-        return [self.format_meta(i) for i in db_object]
+        episode_meta_enabled = g.get_bool_setting('anime.episodeMeta', True)
+        return [self.format_meta(i, episode_meta_enabled) for i in db_object]
 
-    def format_meta(self, db_object):
+    def format_meta(self, db_object, episode_meta_enabled=None):
         trakt_data = db_object.get("trakt_object")
         tmdb_object = db_object.get("tmdb_object")
         tvdb_object = db_object.get("tvdb_object")
@@ -210,7 +211,11 @@ class MetadataHandler:
         # Anime episode metadata overlay — replaces generic TMDB titles/plots/thumbs
         # with anime-specific data from Simkl/AniZip/Tenrai/AniDB/Kitsu
         if result["info"].get("mediatype") == "episode":
-            self._apply_anime_episode_meta(result, db_object)
+            self._apply_anime_episode_meta(
+                result,
+                db_object,
+                g.get_bool_setting('anime.episodeMeta', True) if episode_meta_enabled is None else episode_meta_enabled,
+            )
 
         return result
 
@@ -282,7 +287,16 @@ class MetadataHandler:
         data["art"] = tools.smart_merge_dictionary(data["art"], show_season_art_mixin, True)
 
     def _apply_best_fit_meta_data(self, trakt_data, tmdb_data, tvdb_data, fanart_object, omdb_object):
-        media_type = trakt_data["info"]["mediatype"]
+        # trakt_data can legitimately be None (a trakt_sync row cleared out of band -
+        # see movie_calendar_data.py's cache-hit self-heal) - fall back to whichever
+        # other provider actually has a mediatype instead of assuming trakt is always
+        # present, matching the tools.safe_dict_get() pattern the rest of this call
+        # chain already uses for trakt_data.
+        media_type = (
+            tools.safe_dict_get(trakt_data, "info", "mediatype")
+            or tools.safe_dict_get(tmdb_data, "info", "mediatype")
+            or tools.safe_dict_get(tvdb_data, "info", "mediatype")
+        )
         result = {}
 
         self._apply_best_fit_info(result, trakt_data, tmdb_data, tvdb_data, omdb_object)
@@ -320,7 +334,7 @@ class MetadataHandler:
         tvdb_data,
         omdb_object,
     ):
-        result.update({"info": tools.safe_dict_get(trakt_data, "info")})
+        result.update({"info": tools.safe_dict_get(trakt_data, "info") or {}})
 
         if tmdb_data:
             result["info"] = tools.smart_merge_dictionary(
@@ -400,7 +414,7 @@ class MetadataHandler:
 
     @staticmethod
     def _use_trakt_air_date(trakt_data, result):
-        if result['info']['mediatype'] == g.MEDIA_MOVIE:
+        if result['info'].get('mediatype') == g.MEDIA_MOVIE:
             return
         if trakt_premiered_date := tools.safe_dict_get(trakt_data, "info", "premiered"):
             result['info']['premiered'] = trakt_premiered_date
@@ -418,7 +432,7 @@ class MetadataHandler:
     @staticmethod
     def _title_fallback(meta):
         if not meta["info"].get('title'):
-            media_type = meta["info"]["mediatype"]
+            media_type = meta["info"].get("mediatype")
             title = None
             if media_type == "episode":
                 title = g.get_language_string(30529).format(meta["info"]["episode"])
@@ -480,6 +494,7 @@ class MetadataHandler:
             return self._handle_season_art(art_data)
         elif media_type == "episode":
             return self._handle_episode_art(art_data)
+        return art_data
 
     @staticmethod
     def _sort_art(art):
@@ -984,7 +999,7 @@ class MetadataHandler:
                 )
 
     @staticmethod
-    def _apply_anime_episode_meta(result, db_object):
+    def _apply_anime_episode_meta(result, db_object, episode_meta_enabled):
         """Overlay anime-specific episode metadata onto the formatted result.
 
         Called from format_meta() for episode items only. Checks if the show is anime,
@@ -992,7 +1007,7 @@ class MetadataHandler:
         fallback chain (with SQLite caching). Overlays only non-empty fields — existing
         TMDB/TVDB data is preserved as fallback.
         """
-        if not g.get_bool_setting('anime.episodeMeta', True):
+        if not episode_meta_enabled:
             return
 
         info = result.get("info", {})

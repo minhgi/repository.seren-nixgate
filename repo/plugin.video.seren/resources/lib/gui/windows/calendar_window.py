@@ -14,9 +14,12 @@ class CalendarWindow(BaseWindow):
 
     def onInit(self):
         self.list_control = self.getControlList(1000)
-        self._populate_menu_items()
-        self.set_default_focus(self.list_control, 2999, control_list_reset=True)
-        super().onInit()
+        try:
+            self._populate_menu_items()
+            self.set_default_focus(self.list_control, 2999, control_list_reset=True)
+        finally:
+            # closes any busy dialog - must run even if population raises
+            super().onInit()
 
         if not self.episodes:
             g.notification(g.ADDON_NAME, g.get_language_string(31474))
@@ -46,7 +49,14 @@ class CalendarWindow(BaseWindow):
             "is_upcoming", str(bool(air_date and air_date >= g.datetime_to_string(datetime.datetime.utcnow())))
         )
 
-        rating = info.get("rating")
+        # _calendar_rating_override (Simkl/MDBList's own score for a
+        # union-sourced episode - see calendar_data.py's
+        # _annotate_union_ratings()) takes precedence over Trakt/TMDB's
+        # rating when present; info["rating"] itself is never touched, since
+        # it's a shared/cached object other features also read.
+        rating = episode.get("_calendar_rating_override")
+        if rating is None:
+            rating = info.get("rating")
         list_item.setProperty("rating_tmdb", str(rating) if rating else "")
 
         return list_item

@@ -1,5 +1,7 @@
+from concurrent.futures import as_completed
 from functools import cached_property
 
+from resources.lib.common.thread_pool import ThreadPoolExecutor
 from resources.lib.modules.globals import g
 
 
@@ -71,15 +73,15 @@ class Menus:
 
     @staticmethod
     def _trakt_active():
-        return bool(g.get_setting('trakt.auth')) and g.get_bool_setting('trakt.enabled', False)
+        return g.trakt_active()
 
     @staticmethod
     def _mdblist_active():
-        return g.get_setting('mdblist.enabled') == "true" and bool(g.get_setting('mdblist.auth') or g.get_setting('mdblist.apikey'))
+        return g.mdblist_active()
 
     @staticmethod
     def _simkl_active():
-        return bool(g.get_setting('simkl.auth')) and g.get_bool_setting('simkl.enabled')
+        return g.simkl_active()
 
     @staticmethod
     def _merge_by_key(trakt_rows, trakt_key_fn, trakt_ts_fn, *other_sources):
@@ -238,8 +240,9 @@ class Menus:
 
         shows_db = ShowsDatabase()
         if self._mdblist_active():
-            for row in self.mdblist_menus._live_playback_rows("episode"):
-                trakt_show = self.mdblist_menus.trakt_api.search_by_tmdb_id(row["tmdb_id"], "show")
+            mdblist_rows = self.mdblist_menus._live_playback_rows("episode")
+            resolved = self._resolve_shows_by_tmdb_id(mdblist_rows, self.mdblist_menus.trakt_api)
+            for row, trakt_show in zip(mdblist_rows, resolved):
                 if not trakt_show or not trakt_show.get("trakt_id"):
                     continue
                 show_id = trakt_show["trakt_id"]
@@ -255,8 +258,9 @@ class Menus:
                 merged[show_id] = (ts, episode)
 
         if self._simkl_active():
-            for row in self.simkl_menus.simkl_database.get_bookmarks("episode"):
-                trakt_show = self.simkl_menus.trakt_api.search_by_tmdb_id(row["tmdb_id"], "show")
+            simkl_rows = self.simkl_menus.simkl_database.get_bookmarks("episode")
+            resolved = self._resolve_shows_by_tmdb_id(simkl_rows, self.simkl_menus.trakt_api)
+            for row, trakt_show in zip(simkl_rows, resolved):
                 if not trakt_show or not trakt_show.get("trakt_id"):
                     continue
                 show_id = trakt_show["trakt_id"]
@@ -272,6 +276,51 @@ class Menus:
                 merged[show_id] = (ts, episode)
 
         return merged
+
+    @staticmethod
+    def _resolve_shows_by_tmdb_id(rows, trakt_api):
+        """Resolves each row's tmdb_id to a Trakt show object in parallel (mirrors
+        simklMenus.py's Menus._resolve()/in_progress_episodes()), returning a list
+        aligned index-for-index with rows (None where no match/lookup error) so
+        callers can zip(rows, resolved) and keep their existing sequential
+        merge-by-recency logic untouched. Only the resolve step is parallelized -
+        the MDBList and Simkl blocks in _in_progress_show_map() still run one after
+        the other, since existing[0] >= ts tie-breaking depends on that order."""
+        if not rows:
+            return []
+        results = [None] * len(rows)
+        executor = ThreadPoolExecutor(max_workers=min(10, len(rows)))
+        try:
+            futures = {
+                executor.submit(trakt_api.search_by_tmdb_id, row["tmdb_id"], "show"): i
+                for i, row in enumerate(rows)
+            }
+            seen = set()
+            try:
+                for future in as_completed(futures, timeout=20):
+                    i = futures[future]
+                    try:
+                        results[i] = future.result()
+                    except Exception as e:
+                        g.log(f"Merge menus: error resolving tmdb_id {rows[i]['tmdb_id']} (show): {e}", "warning")
+                    seen.add(i)
+            except Exception as e:
+                g.log(f"Merge menus: resolve batch timed out, using partial results: {e}", "warning")
+                for future in futures:
+                    i = futures[future]
+                    if i not in seen and future.done():
+                        try:
+                            results[i] = future.result()
+                        except Exception as e2:
+                            g.log(f"Merge menus: error resolving tmdb_id {rows[i]['tmdb_id']} (show): {e2}", "warning")
+        finally:
+            # wait=False enforces the 20s as_completed ceiling above instead of blocking
+            # on the slowest straggler; cancel_futures drops queued-but-unstarted lookups
+            # (common/thread_pool.py's ThreadPoolExecutor backports cancel_futures to
+            # Python 3.8). Futures already running finish in the background - the finally
+            # runs after both the main and fallback loops, so nothing reads a cancelled one.
+            executor.shutdown(wait=False, cancel_futures=True)
+        return results
 
     def in_progress_episodes(self):
         """Episode-level render of _in_progress_show_map() - one row per show,

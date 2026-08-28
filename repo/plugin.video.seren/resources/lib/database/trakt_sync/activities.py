@@ -267,6 +267,7 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
 
             self._queue_with_progress(self._fetch_hidden_section, sections)
             items = self.mill_task_queue.wait_completion()
+            self.mill_task_queue.close()
             self.execute_sql("DELETE FROM hidden")
             self.execute_sql(
                 db.insert_query,
@@ -668,6 +669,7 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
 
             self._queue_with_progress(fetch_rated_episodes, [(i,) for i in range(1, 11)])
             trakt_rated_episodes = self.mill_task_queue.wait_completion()
+            self.mill_task_queue.close()
             self.insert_trakt_shows(i.get("show") for i in trakt_rated_episodes)
 
             self._mill_if_needed(

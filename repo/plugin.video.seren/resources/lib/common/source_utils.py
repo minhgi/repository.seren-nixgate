@@ -2,6 +2,7 @@
 Module for common utilities that may be used when working with source items
 """
 import contextlib
+from functools import lru_cache
 import re
 import string
 
@@ -617,6 +618,7 @@ def strip_non_ascii_and_unprintable(text):
     return _ASCII_NON_PRINTABLE.sub("", text)
 
 
+@lru_cache(maxsize=4096)
 def clean_title(title, broken=None):
     """
     Returns a cleaned version of the provided title

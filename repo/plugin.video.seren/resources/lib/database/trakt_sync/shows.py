@@ -532,51 +532,54 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
     def _update_objects(self, db_list_to_update, media_type):
 
         threadpool = ThreadPool()
-        for i in db_list_to_update:
-            threadpool.put(self.metadataHandler.update, i)
-        updated_items = threadpool.wait_completion()
+        try:
+            for i in db_list_to_update:
+                threadpool.put(self.metadataHandler.update, i)
+            updated_items = threadpool.wait_completion()
 
-        if updated_items is None:
-            return
+            if updated_items is None:
+                return
 
-        threadpool.put(
-            self.save_to_meta_table,
-            (i for i in updated_items if i and "trakt_object" in i),
-            media_type,
-            "trakt",
-            "trakt_id",
-        )
-        threadpool.put(
-            self.save_to_meta_table,
-            (i for i in updated_items if i and "tmdb_object" in i),
-            media_type,
-            "tmdb",
-            "tmdb_id",
-        )
-        threadpool.put(
-            self.save_to_meta_table,
-            (i for i in updated_items if i and "tvdb_object" in i),
-            media_type,
-            "tvdb",
-            "tvdb_id",
-        )
-        threadpool.put(
-            self.save_to_meta_table,
-            (i for i in updated_items if i and "fanart_object" in i),
-            media_type,
-            "fanart",
-            "tvdb_id",
-        )
-        threadpool.put(
-            self.save_to_meta_table,
-            (i for i in updated_items if i and "omdb_object" in i),
-            media_type,
-            "omdb",
-            "imdb_id",
-        )
-        threadpool.wait_completion()
+            threadpool.put(
+                self.save_to_meta_table,
+                (i for i in updated_items if i and "trakt_object" in i),
+                media_type,
+                "trakt",
+                "trakt_id",
+            )
+            threadpool.put(
+                self.save_to_meta_table,
+                (i for i in updated_items if i and "tmdb_object" in i),
+                media_type,
+                "tmdb",
+                "tmdb_id",
+            )
+            threadpool.put(
+                self.save_to_meta_table,
+                (i for i in updated_items if i and "tvdb_object" in i),
+                media_type,
+                "tvdb",
+                "tvdb_id",
+            )
+            threadpool.put(
+                self.save_to_meta_table,
+                (i for i in updated_items if i and "fanart_object" in i),
+                media_type,
+                "fanart",
+                "tvdb_id",
+            )
+            threadpool.put(
+                self.save_to_meta_table,
+                (i for i in updated_items if i and "omdb_object" in i),
+                media_type,
+                "omdb",
+                "imdb_id",
+            )
+            threadpool.wait_completion()
 
-        return updated_items
+            return updated_items
+        finally:
+            threadpool.close()
 
     def _format_objects(self, updated_items):
         return self.metadataHandler.format_db_object(updated_items)
@@ -907,6 +910,7 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
             if not i.get("show"):
                 self.task_queue.put(self._get_single_show_meta, i["trakt_show_id"])
         self.task_queue.wait_completion()
+        self.task_queue.close()
 
         shows = self.fetchall(
             f"""

@@ -98,14 +98,19 @@ class DebridCache(Database):
             return
         try:
             now = int(time.time())
-            for h, cached in hash_results:
-                ttl_hours = CACHE_TTL_HOURS if cached == 'True' else CACHE_TTL_HOURS_UNCACHED
-                expires   = now + (ttl_hours * 3600)
-                self.execute_sql(
-                    "INSERT OR REPLACE INTO debrid_data (hash, debrid, cached, expires) "
-                    "VALUES (?, ?, ?, ?)",
-                    (h, debrid, cached, expires),
+            rows = [
+                (
+                    h,
+                    debrid,
+                    cached,
+                    now + ((CACHE_TTL_HOURS if cached == 'True' else CACHE_TTL_HOURS_UNCACHED) * 3600),
                 )
+                for h, cached in hash_results
+            ]
+            self.execute_sql(
+                "INSERT OR REPLACE INTO debrid_data (hash, debrid, cached, expires) VALUES (?, ?, ?, ?)",
+                rows,
+            )
         except Exception as e:
             g.log(f"DebridCache.set_many error: {e}", "warning")
 
@@ -130,12 +135,11 @@ class DebridCache(Database):
         try:
             now = int(time.time())
             expires = now + (CACHE_TTL_HOURS_INFRINGING * 3600)
-            for h in hash_list:
-                self.execute_sql(
-                    "INSERT OR REPLACE INTO debrid_data (hash, debrid, cached, expires) "
-                    "VALUES (?, ?, ?, ?)",
-                    (h, debrid, 'False', expires),
-                )
+            rows = [(h, debrid, 'False', expires) for h in hash_list]
+            self.execute_sql(
+                "INSERT OR REPLACE INTO debrid_data (hash, debrid, cached, expires) VALUES (?, ?, ?, ?)",
+                rows,
+            )
             g.log(
                 f"DebridCache: Marked {len(hash_list)} hash(es) as infringing for "
                 f"{debrid} (7-day suppression)",

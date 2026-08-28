@@ -98,12 +98,15 @@ class UndesirableCache(Database):
         if not entries:
             return
         try:
-            for keyword, user_defined, enabled in entries:
-                self.execute_sql(
-                    "INSERT OR REPLACE INTO undesirables (keyword, user_defined, enabled) "
-                    "VALUES (?, ?, ?)",
-                    (keyword.lower().strip(), int(user_defined), int(enabled)),
-                )
+            rows = [
+                (keyword.lower().strip(), int(user_defined), int(enabled))
+                for keyword, user_defined, enabled in entries
+            ]
+            self.execute_sql(
+                "INSERT OR REPLACE INTO undesirables (keyword, user_defined, enabled) "
+                "VALUES (?, ?, ?)",
+                rows,
+            )
         except Exception as e:
             g.log(f"UndesirableCache.set_many error: {e}", "warning")
 
@@ -116,11 +119,10 @@ class UndesirableCache(Database):
         if not keywords:
             return
         try:
-            for keyword in keywords:
-                self.execute_sql(
-                    "DELETE FROM undesirables WHERE keyword = ?",
-                    (keyword,),
-                )
+            self.execute_sql(
+                "DELETE FROM undesirables WHERE keyword = ?",
+                [(keyword,) for keyword in keywords],
+            )
         except Exception as e:
             g.log(f"UndesirableCache.remove_many error: {e}", "warning")
 

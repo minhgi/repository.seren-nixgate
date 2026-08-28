@@ -299,6 +299,8 @@ class SourceSorter:
 
         for i in range(1, 9):
             sm = g.get_int_setting(f"general.sortmethod.{i}")
+            if sm not in sort_method_settings:
+                sm = 0
             reverse = g.get_bool_setting(f"general.sortmethod.{i}.reverse")
 
             if sort_method_settings[sm] is None:

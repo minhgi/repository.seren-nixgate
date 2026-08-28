@@ -60,8 +60,12 @@ def _kodi_core_string(message_id):
 
 
 @lru_cache(maxsize=1)
-def _stream_language_names():
-    names = []
+def _stream_language_pairs():
+    """(code, name) pairs for every ISO 639-1 code Kodi can resolve to a display
+    name, deduped by name and sorted by name. Shared by _stream_language_names()
+    (names only, for the subtitle/audio pickers) and manual_calendar_filter.
+    choose_language() (needs the code too, to persist calendar.language)."""
+    pairs = []
     seen = set()
     for code in ISO639_1_CODES:
         try:
@@ -71,9 +75,14 @@ def _stream_language_names():
         if not name or name in seen:
             continue
         seen.add(name)
-        names.append(name)
-    names.sort(key=str.casefold)
-    return tuple(names)
+        pairs.append((code, name))
+    pairs.sort(key=lambda pair: pair[1].casefold())
+    return tuple(pairs)
+
+
+@lru_cache(maxsize=1)
+def _stream_language_names():
+    return tuple(name for _code, name in _stream_language_pairs())
 
 
 def _special_options(kind):

@@ -971,6 +971,7 @@ class TraktSyncDatabase(Database):
 
                 queue_wrapper(self._pull_show_seasons, [(i, mill_episodes) for i in sync_lock.running_ids])
                 results = self.mill_task_queue.wait_completion()
+                self.mill_task_queue.close()
 
                 seasons = []
                 episodes = []
@@ -1231,12 +1232,9 @@ class TraktSyncDatabase(Database):
                 if media_type == "shows":
                     query += " AND watched_episodes < episode_count"
             result_ids = self.fetchall(query)
+            matched_ids = {r.get("trakt_id") for r in result_ids}
             result.extend(
-                [
-                    p
-                    for p in current_page
-                    if any(r for r in result_ids if p.get("trakt_id", get(p, "trakt_id")) == r.get("trakt_id"))
-                ]
+                [p for p in current_page if p.get("trakt_id", get(p, "trakt_id")) in matched_ids]
             )
 
         no_paging = params.get("no_paging", False)

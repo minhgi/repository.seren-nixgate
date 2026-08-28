@@ -23,6 +23,11 @@
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
+				<setting id="trakt.dropped.hideWatched" type="boolean" label="31526" help="31527">
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+				</setting>
 				<setting id="general.genres.endpoint.movies" type="integer" label="30447" help="31220">
 					<level>0</level>
 					<default>1</default>
@@ -1341,6 +1346,11 @@
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
+				<setting id="tvschedule.enabled" type="boolean" label="31539" help="31542">
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+				</setting>
 				<setting id="mergemovies.enabled" type="boolean" label="31512" help="31513">
 					<level>0</level>
 					<default>false</default>
@@ -1350,6 +1360,46 @@
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
+				</setting>
+			</group>
+			<group id="7" label="31537">
+				<setting id="calendar.region" type="string" label="31529" help="31530">
+					<level>0</level>
+					<default/>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<enable>false</enable>
+					<control type="edit" format="string">
+						<heading>31529</heading>
+					</control>
+				</setting>
+				<setting id="calendar.chooseRegion" type="action" label="31531" help="31532">
+					<level>0</level>
+					<data>RunPlugin(plugin://plugin.video.seren/?action=chooseCalendarRegion)</data>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="button" format="action"/>
+				</setting>
+				<setting id="calendar.language" type="string" label="31533" help="31534">
+					<level>0</level>
+					<default/>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<enable>false</enable>
+					<control type="edit" format="string">
+						<heading>31533</heading>
+					</control>
+				</setting>
+				<setting id="calendar.chooseLanguage" type="action" label="31535" help="31536">
+					<level>0</level>
+					<data>RunPlugin(plugin://plugin.video.seren/?action=chooseCalendarLanguage)</data>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="button" format="action"/>
 				</setting>
 			</group>
 		</category>

@@ -52,27 +52,49 @@ def get_calendar_episodes():
     spanning recent (13 days back) through upcoming (30 days forward)."""
     from resources.lib.modules.syncGateway import configured_providers
     from resources.lib.database.trakt_sync.shows import TraktSyncDatabase as ShowsDatabase
+    from resources.lib.indexers.trakt import TraktAPI
 
     providers = configured_providers()
+    if not providers:
+        # Matches movie_calendar_data.py's/tv_schedule_data.py's own guard -
+        # this module never had one (nothing to gate before now: with every
+        # branch below already conditional on a specific provider, zero
+        # providers meant zero API calls and an empty result regardless).
+        # The Trakt-off fallback below is a real, unconditional API call
+        # though, so without this guard a zero-provider user would newly
+        # start seeing Trakt's public "everything airing" feed instead of
+        # the empty result every other zero-provider path already gives.
+        return []
+
+    recent_start = datetime.date.today() - datetime.timedelta(days=13)
+    tomorrow = datetime.date.today() + datetime.timedelta(days=1)
 
     if "trakt" in providers:
-        from resources.lib.indexers.trakt import TraktAPI
-
-        raw_calendar_items = _fetch_raw_trakt_calendar(TraktAPI())
+        raw_calendar_items = _fetch_raw_trakt_calendar(TraktAPI(), recent_start, tomorrow)
     else:
-        raw_calendar_items = []
+        # calendars/my/shows is OAuth-only (unlike movie_calendar_data.py's/
+        # tv_schedule_data.py's own base layers, both calendars/all/* - public,
+        # no account needed) - there's no personal-watchlist equivalent to fall
+        # back to when Trakt is off, so this mirrors the other two calendars'
+        # own public floor layer instead of returning nothing here. The
+        # Simkl/MDBList union below already runs independent of Trakt's state
+        # either way, unaffected by this branch.
+        raw_calendar_items = _fetch_public_trakt_calendar(TraktAPI(), recent_start, tomorrow)
     covered_show_ids = {i["trakt_show_id"] for i in raw_calendar_items if i.get("trakt_show_id")}
 
     shows_db = ShowsDatabase()
     trakt_items = shows_db.get_mixed_episode_list(raw_calendar_items, hide_unaired=False) if raw_calendar_items else []
 
     candidate_tmdb_ids = {}  # dict (not set) purely to preserve first-seen order for the cap
+    simkl_id_by_tmdb = {}
     # Simkl/MDBList are enrichment on top of Trakt's own calendar, not a hard dependency -
     # both helpers already degrade to [] on a transient fetch failure (get_json returns
     # None on failure, never raises), so no try/except is needed at this call site.
     if "simkl" in providers:
-        for tmdb_id in _simkl_plantowatch_tmdb_ids():
+        for tmdb_id, simkl_id in _simkl_plantowatch_tmdb_ids():
             candidate_tmdb_ids.setdefault(tmdb_id, None)
+            if simkl_id is not None:
+                simkl_id_by_tmdb.setdefault(tmdb_id, simkl_id)
     if "mdblist" in providers:
         for tmdb_id in _mdblist_watchlist_tmdb_ids():
             candidate_tmdb_ids.setdefault(tmdb_id, None)
@@ -83,13 +105,37 @@ def get_calendar_episodes():
         g.log(f"calendar_data: union cap reached, dropped {dropped} Simkl/MDBList-only show(s) this open", "warning")
 
     extra_items = _resolve_extra_shows(capped_ids, covered_show_ids, shows_db)
+    _annotate_union_ratings(extra_items, capped_ids, simkl_id_by_tmdb, providers)
 
     merged = trakt_items + extra_items
     merged.sort(key=lambda i: get_air_date(i) or "")
     return merged
 
 
-def _fetch_raw_trakt_calendar(trakt_api):
+def _annotate_union_ratings(extra_items, capped_ids, simkl_id_by_tmdb, providers):
+    """Attaches _calendar_rating_override onto each Simkl/MDBList-union episode
+    (never onto Trakt-sourced rows - that set never goes through
+    _resolve_extra_shows(), so it never carries a _source_tmdb_id tag to
+    match against). calendar_window.py prefers this over info["rating"] when
+    present; mutating info["rating"] directly instead would have corrupted a
+    cached, shared episode object used by unrelated features."""
+    if not extra_items:
+        return
+
+    from resources.lib.modules.calendar_ratings import fetch_union_ratings, pick_best_rating
+
+    mdblist_ratings, simkl_ratings = fetch_union_ratings(capped_ids, simkl_id_by_tmdb, "show", providers)
+    if not mdblist_ratings and not simkl_ratings:
+        return
+
+    for item in extra_items:
+        tmdb_id = item.pop("_source_tmdb_id", None)
+        rating = pick_best_rating(simkl_ratings.get(tmdb_id), mdblist_ratings.get(tmdb_id), None)
+        if rating is not None:
+            item["_calendar_rating_override"] = rating
+
+
+def _fetch_raw_trakt_calendar(trakt_api, recent_start, tomorrow):
     """Same two windows tvshowMenus.py already fetches - unchanged values,
     just returned as raw Trakt objects instead of being handed straight to
     mixed_episode_builder(). Hidden-shows filter matches my_recent_episodes()'s
@@ -97,16 +143,35 @@ def _fetch_raw_trakt_calendar(trakt_api):
     today, but a merged calendar view is one list, one filter, applied once."""
     from resources.lib.database.trakt_sync.hidden import TraktSyncDatabase as HiddenDatabase
 
-    recent_start = datetime.datetime.now() - datetime.timedelta(days=13)
     recent = trakt_api.get_json(
         f"calendars/my/shows/{recent_start.strftime('%Y-%m-%d')}/14", extended="full", pull_all=True
     ) or []
 
-    tomorrow = g.datetime_to_string(datetime.date.today() + datetime.timedelta(days=1))
-    upcoming = trakt_api.get_json(f"calendars/my/shows/{tomorrow}/30", extended="full", pull_all=True) or []
+    upcoming = trakt_api.get_json(
+        f"calendars/my/shows/{g.datetime_to_string(tomorrow)}/30", extended="full", pull_all=True
+    ) or []
 
     hidden_shows = HiddenDatabase().get_hidden_items("calendar", "tvshow")
     return [i for i in (recent + upcoming) if i.get("trakt_show_id") not in hidden_shows]
+
+
+def _fetch_public_trakt_calendar(trakt_api, recent_start, tomorrow):
+    """Trakt-off fallback covering the same combined window
+    _fetch_raw_trakt_calendar() does (recent_start through tomorrow+29, 44
+    days total) - calendars/all/shows is the same public, non-authenticated
+    endpoint movie_calendar_data.py's own base layer already uses (confirmed
+    live: still serves data with Trakt disabled), so this only replaces the
+    personal-watchlist source above; the Simkl/MDBList union layer already
+    runs independent of Trakt's state either way."""
+    from resources.lib.database.trakt_sync.hidden import TraktSyncDatabase as HiddenDatabase
+
+    span_days = (tomorrow - recent_start).days + 30
+    raw = trakt_api.get_json(
+        f"calendars/all/shows/{recent_start.strftime('%Y-%m-%d')}/{span_days}", extended="full", pull_all=True
+    ) or []
+
+    hidden_shows = HiddenDatabase().get_hidden_items("calendar", "tvshow")
+    return [i for i in raw if i.get("trakt_show_id") not in hidden_shows]
 
 
 def _simkl_plantowatch_tmdb_ids():
@@ -114,18 +179,34 @@ def _simkl_plantowatch_tmdb_ids():
     deliberately not the resolve/render half, since this module needs raw
     tmdb_ids to dedupe against the Trakt set before resolving, not a rendered
     directory (_status_shows() itself calls g.cancel_directory() on empty,
-    which doesn't apply here)."""
+    which doesn't apply here). Also reused by tv_schedule_data.py's own
+    watchlist layer (same Simkl plantowatch source, same candidate-cap need).
+
+    Returns (tmdb_id, simkl_id) pairs, not bare tmdb_ids - simkl_id is only
+    ever available here, before SimklMenus._resolve() converts a candidate to
+    a Trakt object and drops everything Simkl-specific; both calendar_data.py
+    and tv_schedule_data.py need it to look up Simkl's own rating for a
+    Simkl-sourced item afterwards. tmdb_id is normalized to int - Simkl and
+    MDBList don't agree on JSON type for the same id (confirmed live
+    elsewhere in this module family), and the rating lookup this feeds
+    depends on consistent typing to match at all."""
     from resources.lib.indexers.simkl import SimklAPI
 
     page = SimklAPI().get_json("sync/all-items/shows/plantowatch")
     if page is None:
         return []
-    tmdb_ids = []
+    pairs = []
     for entry in page.get("shows") or []:
-        tmdb_id = ((entry.get("show") or {}).get("ids") or {}).get("tmdb")
-        if tmdb_id is not None:
-            tmdb_ids.append(tmdb_id)
-    return tmdb_ids
+        ids = (entry.get("show") or {}).get("ids") or {}
+        tmdb_id = ids.get("tmdb")
+        if tmdb_id is None:
+            continue
+        try:
+            tmdb_id = int(tmdb_id)
+        except (TypeError, ValueError):
+            continue
+        pairs.append((tmdb_id, ids.get("simkl")))
+    return pairs
 
 
 def _mdblist_watchlist_tmdb_ids():
@@ -167,6 +248,11 @@ def _resolve_extra_shows(tmdb_ids, covered_show_ids, shows_db):
         episodes = shows_db.get_episode_list(trakt_show_id, hide_unaired=False) or []
         episode = _pick_relevant_episode(episodes)
         if episode:
+            # Transient tag, popped by _annotate_union_ratings() - an episode
+            # object carries no tmdb_id of its own (only its parent show
+            # does, and that's about to go out of scope), so this is the only
+            # point the association survives to the rating-lookup step.
+            episode["_source_tmdb_id"] = show.get("tmdb_id")
             items.append(episode)
     return items
 

@@ -16,11 +16,7 @@ class Menus:
             description=g.get_language_string(30365),
             menu_item=g.create_icon_dict("shows", g.ICONS_PATH),
         )
-        if (
-            (g.get_setting('trakt.auth') and g.get_bool_setting('trakt.enabled', False))
-            or (g.get_setting('mdblist.enabled') == "true" and (g.get_setting('mdblist.auth') or g.get_setting('mdblist.apikey')))
-            or (g.get_setting('simkl.auth') and g.get_bool_setting('simkl.enabled'))
-        ):
+        if g.trakt_active() or g.mdblist_active() or g.simkl_active():
             g.add_directory_item(
                 g.get_language_string(30001),
                 action='myMovies',
@@ -119,11 +115,7 @@ class Menus:
             description='View Current Downloads',
             menu_item=g.create_icon_dict("download", g.ICONS_PATH),
         )
-        if (
-            (g.get_setting('trakt.auth') and g.get_bool_setting('trakt.enabled', False))
-            or (g.get_setting('mdblist.enabled') == "true" and (g.get_setting('mdblist.auth') or g.get_setting('mdblist.apikey')))
-            or (g.get_setting('simkl.auth') and g.get_bool_setting('simkl.enabled'))
-        ):
+        if g.trakt_active() or g.mdblist_active() or g.simkl_active():
             g.add_directory_item(
                 g.get_language_string(31122),
                 action='syncTools',

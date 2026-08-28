@@ -219,14 +219,22 @@ class Menus:
 
     @staticmethod
     def my_shows():
-        trakt_active = bool(g.get_setting('trakt.auth')) and g.get_bool_setting('trakt.enabled', False)
-        mdblist_active = g.get_setting('mdblist.enabled') == "true" and bool(g.get_setting('mdblist.auth') or g.get_setting('mdblist.apikey'))
-        simkl_active = bool(g.get_setting('simkl.auth')) and g.get_bool_setting('simkl.enabled')
+        trakt_active = g.trakt_active()
+        mdblist_active = g.mdblist_active()
+        simkl_active = g.simkl_active()
         if (trakt_active or mdblist_active or simkl_active) and g.get_bool_setting('watchlistcalendar.enabled', False):
             g.add_directory_item(
                 g.get_language_string(31472),
                 action="calendarBrowse",
                 description=g.get_language_string(31475),
+                menu_item=g.create_icon_dict("shows_update", g.ICONS_PATH),
+                is_folder=False,
+            )
+        if (trakt_active or mdblist_active or simkl_active) and g.get_bool_setting('tvschedule.enabled', False):
+            g.add_directory_item(
+                g.get_language_string(31539),
+                action="tvScheduleBrowse",
+                description=g.get_language_string(31542),
                 menu_item=g.create_icon_dict("shows_update", g.ICONS_PATH),
                 is_folder=False,
             )
@@ -492,6 +500,13 @@ class Menus:
             hide_unaired=False,
             hide_watched=False,
         )
+        if g.PAGE == 1:
+            g.add_directory_item(
+                g.get_language_string(31521),
+                action="traktWatchlistBulkDrop",
+                description=g.get_language_string(31522),
+                menu_item=g.create_icon_dict("shows_watched", g.ICONS_PATH),
+            )
         self.list_builder.show_list_builder(
             trakt_list,
             no_paging=paginate,
@@ -500,8 +515,53 @@ class Menus:
         )
 
     @trakt_auth_guard
+    def watchlist_bulk_drop(self):
+        # Bulk-hide counterpart to dropped_shows_bulk_restore() below - same live-fetch,
+        # multiselect, then POST shape, mirrored in the opposite direction: POST
+        # users/hidden/dropped (add) instead of .../remove, and add_hidden_item() instead
+        # of remove_item() for the local hidden-table cache.
+        trakt_list = self.shows_database.extract_trakt_page(
+            "users/me/watchlist/shows",
+            extended="full",
+            ignore_cache=True,
+            no_paging=True,
+            hide_unaired=False,
+            hide_watched=False,
+        )
+        if not trakt_list:
+            g.notification(g.ADDON_NAME, g.get_language_string(31525))
+            self.my_shows_watchlist()
+            return
+
+        list_items = [
+            item.get("title") or MetadataHandler.get_trakt_info(item, "title") or ""
+            for item in trakt_list
+        ]
+        selected = xbmcgui.Dialog().multiselect(
+            f"{g.ADDON_NAME}: {g.get_language_string(31523)}", list_items
+        )
+
+        if not selected:
+            self.my_shows_watchlist()
+            return
+
+        show_ids = [trakt_list[i].get("trakt_id") for i in selected]
+        show_ids = [i for i in show_ids if i is not None]
+
+        self.trakt_api.post_json(
+            "users/hidden/dropped", {"shows": [{"ids": {"trakt": i}} for i in show_ids]}
+        )
+        for trakt_id in show_ids:
+            self.hidden_database.add_hidden_item(trakt_id, "tvshow", "dropped")
+
+        g.notification(g.ADDON_NAME, g.get_language_string(31524).format(len(show_ids)))
+        g.trigger_widget_refresh()
+        self.my_shows_watchlist()
+
+    @trakt_auth_guard
     def dropped_shows(self):
         paginate = not g.get_bool_setting("general.paginatetraktlists")
+        hide_watched = g.get_bool_setting("trakt.dropped.hideWatched")
         trakt_list = self.shows_database.extract_trakt_page(
             "users/hidden/dropped",
             type="show",
@@ -510,9 +570,20 @@ class Menus:
             ignore_cache=True,
             no_paging=paginate,
             hide_unaired=False,
-            hide_watched=False,
+            hide_watched=hide_watched,
         )
         if not trakt_list:
+            # hide_watched can empty an otherwise non-empty Dropped Shows list (all dropped
+            # shows fully watched). Surface the Restore action instead of dead-ending the
+            # screen, since restoring is exactly what a user in that state needs to reach.
+            if hide_watched and g.PAGE == 1:
+                g.notification(g.ADDON_NAME, g.get_language_string(31528))
+                g.add_directory_item(
+                    g.get_language_string(31480),
+                    action="traktDroppedShowsRestore",
+                    description=g.get_language_string(31481),
+                    menu_item=g.create_icon_dict("shows_watched", g.ICONS_PATH),
+                )
             g.cancel_directory()
             return
         if g.PAGE == 1:
@@ -526,7 +597,7 @@ class Menus:
             trakt_list,
             no_paging=paginate,
             hide_unaired=False,
-            hide_watched=False,
+            hide_watched=hide_watched,
         )
 
     @trakt_auth_guard
@@ -550,11 +621,11 @@ class Menus:
             return
 
         list_items = [
-            xbmcgui.ListItem(label=item.get("title") or MetadataHandler.get_trakt_info(item, "title") or "")
+            item.get("title") or MetadataHandler.get_trakt_info(item, "title") or ""
             for item in trakt_list
         ]
         selected = xbmcgui.Dialog().multiselect(
-            f"{g.ADDON_NAME}: {g.get_language_string(31482)}", list_items, useDetails=True
+            f"{g.ADDON_NAME}: {g.get_language_string(31482)}", list_items
         )
 
         if not selected:
@@ -818,10 +889,10 @@ class Menus:
         self.list_builder.season_list_builder(args["trakt_id"], no_paging=True, hide_watched=False)
 
     def season_episodes(self, args):
-        self.list_builder.episode_list_builder(args["trakt_show_id"], args["trakt_id"], no_paging=True)
+        self.list_builder.episode_list_builder(args["trakt_show_id"], args["trakt_id"], no_paging=True, hide_watched=False)
 
     def flat_episode_list(self, args):
-        self.list_builder.episode_list_builder(args["trakt_id"], no_paging=True)
+        self.list_builder.episode_list_builder(args["trakt_id"], no_paging=True, hide_watched=False)
 
     def shows_genres(self):
         g.add_directory_item(

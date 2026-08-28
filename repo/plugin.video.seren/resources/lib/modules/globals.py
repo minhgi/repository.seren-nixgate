@@ -257,6 +257,45 @@ listitem_properties = [
 ]
 
 
+_SKIN_COLOR_LOOKUP = {
+    "skin.arctic.horizon": "ff0385b5",
+    "skin.arctic.horizon.2": "ff0385b5",
+    "skin.arctic.zephyr": "ff0385b5",
+    "skin.arctic.zephyr.2": "ff0385b5",
+    "skin.aura": "ff0385b5",
+    "skin.auramod": "deepskyblue",
+    "skin.confluence": "ffeb9e17",
+    "skin.eminence": {
+        "default": "ff33b5e5",
+        "crimson": "ffdc143c",
+        "emerald": "ffdc143c",
+        "lilac": "ffa682a6",
+        "lime": "ffb5e533",
+        "magenta": "ffe533b5",
+        "orange": "ffd76c38",
+    },
+    "skin.eminence.2": "ff287ba8",
+    "skin.estouchy": "ff11e7b1",
+    "skin.estuary": {
+        "default": "ff11e7b1",
+        "brown": "ffff4400",
+        "charcoal": "ff11e7b1",
+        "chartreuse": "ff24c6c9",
+        "concrete": "ffff8c00",
+        "gold": "fffff000",
+        "green": "ff14d519",
+        "maroon": "ff24c6c9",
+        "midnight": "ff5be5ee",
+        "orange": "fffff100",
+        "pink": "ff94d800",
+        "rose": "ffff0261",
+        "teal": "ffc67f03",
+        "violet": "ffff0054",
+    },
+    "skin.fuse.neue": "ffe53564",
+}
+
+
 class GlobalVariables:
     CONTENT_MENU = ""
     CONTENT_FILES = "files"
@@ -425,6 +464,8 @@ class GlobalVariables:
             "PREMIUMIZE_DB_PATH": self.PREMIUMIZE_DB_PATH,
             "DEBRID_CACHE_DB_PATH": self.DEBRID_CACHE_DB_PATH,
             "PROVIDER_PERF_DB_PATH": self.PROVIDER_PERF_DB_PATH,
+            "TV_SCHEDULE_DB_PATH": self.TV_SCHEDULE_DB_PATH,
+            "MOVIE_CALENDAR_DB_PATH": self.MOVIE_CALENDAR_DB_PATH,
             "UNDESIRABLES_DB_PATH": self.UNDESIRABLES_DB_PATH,
             "TITLE_SUBS_DB_PATH": self.TITLE_SUBS_DB_PATH,
             "TRAKT_SYNC_DB_PATH": self.TRAKT_SYNC_DB_PATH,
@@ -508,6 +549,8 @@ class GlobalVariables:
             self.PREMIUMIZE_DB_PATH = state["PREMIUMIZE_DB_PATH"]
             self.DEBRID_CACHE_DB_PATH = state["DEBRID_CACHE_DB_PATH"]
             self.PROVIDER_PERF_DB_PATH = state["PROVIDER_PERF_DB_PATH"]
+            self.TV_SCHEDULE_DB_PATH = state["TV_SCHEDULE_DB_PATH"]
+            self.MOVIE_CALENDAR_DB_PATH = state["MOVIE_CALENDAR_DB_PATH"]
             self.UNDESIRABLES_DB_PATH = state["UNDESIRABLES_DB_PATH"]
             self.TITLE_SUBS_DB_PATH = state["TITLE_SUBS_DB_PATH"]
             self.TRAKT_SYNC_DB_PATH = state["TRAKT_SYNC_DB_PATH"]
@@ -796,6 +839,8 @@ class GlobalVariables:
         self.PREMIUMIZE_DB_PATH = tools.translate_path(os.path.join(self.ADDON_USERDATA_PATH, "premiumize.db"))
         self.DEBRID_CACHE_DB_PATH = tools.translate_path(os.path.join(self.ADDON_USERDATA_PATH, "debridCache.db"))
         self.PROVIDER_PERF_DB_PATH = tools.translate_path(os.path.join(self.ADDON_USERDATA_PATH, "providerPerf.db"))
+        self.TV_SCHEDULE_DB_PATH = tools.translate_path(os.path.join(self.ADDON_USERDATA_PATH, "tvSchedule.db"))
+        self.MOVIE_CALENDAR_DB_PATH = tools.translate_path(os.path.join(self.ADDON_USERDATA_PATH, "movieCalendar.db"))
         self.UNDESIRABLES_DB_PATH = tools.translate_path(os.path.join(self.ADDON_USERDATA_PATH, "undesirables.db"))
         self.TITLE_SUBS_DB_PATH = tools.translate_path(os.path.join(self.ADDON_USERDATA_PATH, "titleSubs.db"))
         self.TRAKT_SYNC_DB_PATH = tools.translate_path(os.path.join(self.ADDON_USERDATA_PATH, "traktSync.db"))
@@ -1129,49 +1174,11 @@ class GlobalVariables:
 
     @staticmethod
     def _try_get_color_from_skin():
-        skin_color_lookup = {
-            "skin.arctic.horizon": "ff0385b5",
-            "skin.arctic.horizon.2": "ff0385b5",
-            "skin.arctic.zephyr": "ff0385b5",
-            "skin.arctic.zephyr.2": "ff0385b5",
-            "skin.aura": "ff0385b5",
-            "skin.auramod": "deepskyblue",
-            "skin.confluence": "ffeb9e17",
-            "skin.eminence": {
-                "default": "ff33b5e5",
-                "crimson": "ffdc143c",
-                "emerald": "ffdc143c",
-                "lilac": "ffa682a6",
-                "lime": "ffb5e533",
-                "magenta": "ffe533b5",
-                "orange": "ffd76c38",
-            },
-            "skin.eminence.2": "ff287ba8",
-            "skin.estouchy": "ff11e7b1",
-            "skin.estuary": {
-                "default": "ff11e7b1",
-                "brown": "ffff4400",
-                "charcoal": "ff11e7b1",
-                "chartreuse": "ff24c6c9",
-                "concrete": "ffff8c00",
-                "gold": "fffff000",
-                "green": "ff14d519",
-                "maroon": "ff24c6c9",
-                "midnight": "ff5be5ee",
-                "orange": "fffff100",
-                "pink": "ff94d800",
-                "rose": "ffff0261",
-                "teal": "ffc67f03",
-                "violet": "ffff0054",
-            },
-            "skin.fuse.neue": "ffe53564",
-        }
-
         if focus_color := xbmc.getInfoLabel("Skin.String(focuscolor.name)"):  # jurial based skins.
             return focus_color
 
         if skin_dir := xbmc.getSkinDir():
-            if isinstance(skin_color := skin_color_lookup.get(skin_dir), dict):
+            if isinstance(skin_color := _SKIN_COLOR_LOOKUP.get(skin_dir), dict):
                 skin_color = skin_color.get(
                     xbmc.getInfoLabel("Skin.CurrentTheme").lower(), skin_color.get("default", None)
                 )
@@ -1315,6 +1322,17 @@ class GlobalVariables:
 
     def debrid_available(self):
         return self._debrid_available
+
+    def trakt_active(self):
+        return bool(self.get_setting('trakt.auth')) and self.get_bool_setting('trakt.enabled', False)
+
+    def mdblist_active(self):
+        return self.get_setting('mdblist.enabled') == "true" and bool(
+            self.get_setting('mdblist.auth') or self.get_setting('mdblist.apikey')
+        )
+
+    def simkl_active(self):
+        return bool(self.get_setting('simkl.auth')) and self.get_bool_setting('simkl.enabled')
 
     def local_scraping_configured(self):
         """Settings-only check, no I/O — safe to call from the synchronous dispatch path."""

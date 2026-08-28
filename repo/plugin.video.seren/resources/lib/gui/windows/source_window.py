@@ -23,11 +23,11 @@ QUALITY_COLORS = {
 }
 
 
-def _get_quality_color(quality):
+def _get_quality_color(quality, colors_enabled=True):
     """Return the color name for a given quality string.
     Falls back to the user's accent color if quality colors are disabled
     or the quality is unknown."""
-    if not g.get_bool_setting("general.qualityColors", True):
+    if not colors_enabled:
         return g.get_user_text_color()
     return QUALITY_COLORS.get(quality, g.get_user_text_color())
 
@@ -63,6 +63,7 @@ class SourceWindow(BaseWindow):
 
     def populate_sources_list(self):
         self.display_list.reset()
+        quality_colors_enabled = g.get_bool_setting("general.qualityColors", True)
 
         for i in self.sources:
             menu_item = xbmcgui.ListItem(label=f"{i['release_title']}")
@@ -100,7 +101,7 @@ class SourceWindow(BaseWindow):
                 menu_item.setProperty("provider", str(provider).replace("_", " "))
 
             # Quality color tag
-            menu_item.setProperty("quality_color", _get_quality_color(i.get("quality", "SD")))
+            menu_item.setProperty("quality_color", _get_quality_color(i.get("quality", "SD"), quality_colors_enabled))
 
             # Inject source type tags (CACHED, SEASON, SHOW) into info set for display
             display_info = set(i.get("info", set()))

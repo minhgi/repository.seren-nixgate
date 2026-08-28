@@ -470,7 +470,12 @@ class OffCloudWalker(BaseDebridWalker):
 
 class LocalFileWalker(BaseDebridWalker):
     provider = "local_downloads"
-    downloads_folder = g.get_setting("download.location")
+
+    @property
+    def downloads_folder(self):
+        # Read fresh each use - a class-level g.get_setting() froze this at import time
+        # and never reflected a mid-session change to the download location.
+        return g.get_setting("download.location")
 
     def _get_folder_list(self, path):
         directory_listing = xbmcvfs.listdir(path)

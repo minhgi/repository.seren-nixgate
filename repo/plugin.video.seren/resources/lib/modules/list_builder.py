@@ -203,7 +203,11 @@ class ListBuilder:
                 g.close_directory(content_type, sort=sort)
 
                 # Prefetch next page metadata in background (populates SQLite + L1 cache)
-                if has_next_page and content_type in (g.CONTENT_MOVIE, g.CONTENT_SHOW):
+                if has_next_page and content_type in (
+                    g.CONTENT_MOVIE,
+                    g.CONTENT_SHOW,
+                    g.CONTENT_EPISODE,
+                ):
                     self._prefetch_next_page()
 
     def _prefetch_next_page(self):
@@ -259,9 +263,12 @@ class ListBuilder:
         return air_date < datetime.datetime.utcnow()
 
     def _post_process_list(self, item_list, prepend_date=False, mixed_list=False):
-        return [self._post_process(item, prepend_date, mixed_list) for item in item_list]
+        filler_detection_enabled = g.get_bool_setting("anime.fillerDetection")
+        return [
+            self._post_process(item, prepend_date, mixed_list, filler_detection_enabled) for item in item_list
+        ]
 
-    def _post_process(self, item, prepend_date=False, mixed_list=False):
+    def _post_process(self, item, prepend_date=False, mixed_list=False, filler_detection_enabled=False):
         if not item:
             return
 
@@ -283,7 +290,7 @@ class ListBuilder:
                 name = self._handle_episode_title_appending(name, item, self.title_appends_general)
 
             # Filler episode detection for anime
-            name = self._handle_filler_tag(name, item)
+            name = self._handle_filler_tag(name, item, filler_detection_enabled)
 
         if item["info"]["mediatype"] == "list" and self.list_title_appends == 1:
             username = item["info"].get("username", "")
@@ -315,9 +322,9 @@ class ListBuilder:
         return name
 
     @staticmethod
-    def _handle_filler_tag(name, item):
+    def _handle_filler_tag(name, item, filler_detection_enabled):
         """Tag filler episodes for anime content with a colored FILLER label."""
-        if not g.get_bool_setting("anime.fillerDetection"):
+        if not filler_detection_enabled:
             return name
         try:
             genres = item.get("info", {}).get("genre", [])

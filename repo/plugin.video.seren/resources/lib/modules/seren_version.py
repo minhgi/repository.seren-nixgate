@@ -66,11 +66,14 @@ def do_version_change():
     g.set_setting("seren.version", g.CLEAN_VERSION)
 
     # Reuselanguageinvoker update.  This should be last to execute as it can do a profile reload.
-    # Restore the user's reuselanguageinvoker preference after version change.
-    # Default is disabled, but if the user previously enabled it, respect that choice.
-    maintenance.toggle_reuselanguageinvoker(
-        True if g.get_setting("reuselanguageinvoker") == "Enabled" else False
-    )
+    # Force reuselanguageinvoker off on every version change instead of restoring the user's
+    # prior preference. Enabling it collides with this addon's eternal service.py keep-alive
+    # loop occupying its own invoker slot forever, hanging every subsequent plugin invocation.
+    # No shipped version of this addon has ever had it enabled by default; this also heals any
+    # install whose addon.xml a previous version already flipped to true.
+    # interactive=False: this runs unattended (no user action triggered it), so it must not
+    # block on a modal dialog — a busy-spinner overlay can hide it, hanging the addon forever.
+    maintenance.toggle_reuselanguageinvoker(False, interactive=False)
 
 
 def _clean_stale_textures():

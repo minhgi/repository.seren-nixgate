@@ -2,8 +2,8 @@ from resources.lib.gui.windows.base_window import BaseWindow
 from resources.lib.modules.globals import g
 
 SORT_OPTIONS = {
-    "sortmethod": [30513, 30237, 30252, 30570, 30251, 30571, 30572, 30573, 30575, 30667, 30684, 30685],
-    # None, Resolution, Source Type, Debrid Provider, Size, Low Cam Sort, HEVC, DV/HDR, Audio Channels, Seeders, Audio Language, Subtitle Language
+    "sortmethod": [30513, 30237, 30252, 30570, 30251, 30571, 30572, 30573, 30575, 30667],
+    # None, Resolution, Source Type, Debrid Provider, Size, Low Cam Sort, HEVC, DV/HDR, Audio Channels, Seeders
     "none": [],
     "resolution": [],
     "sourcetypesort": [30581, 30249, 30470, 30057, 30058, 30631],
@@ -17,10 +17,6 @@ SORT_OPTIONS = {
     # None, DV, HDR
     "audiochannels": [],
     "seeders": [],
-    "audiolang": [30686, 30687, 30688, 30689, 30513],
-    # Multi-Audio, Dual-Audio, Sub, Dub, None
-    "sublang": [30690, 30513],
-    # Multi-Sub, None
 }
 SORT_METHODS = [
     "none",
@@ -33,8 +29,6 @@ SORT_METHODS = [
     "hdrsort",
     "audiochannels",
     "seeders",
-    "audiolang",
-    "sublang",
 ]
 
 
@@ -48,15 +42,21 @@ class SortSelect(BaseWindow):
 
         self.sort_lists = [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000]
 
-        self.sort_options = {
-            f"general.{key}.{idx}": g.get_int_setting(f"general.{key}.{idx}")
-            for key in SORT_OPTIONS
-            for idx in range(1, len(SORT_OPTIONS[key]))
-        }
+        self.sort_options = {}
+        for key in SORT_OPTIONS:
+            if key == "sortmethod":
+                for idx in range(1, len(self.sort_lists) + 1):
+                    value = g.get_int_setting(f"general.{key}.{idx}")
+                    if value >= len(SORT_METHODS):
+                        value = 0
+                    self.sort_options[f"general.{key}.{idx}"] = value
+            else:
+                for idx in range(1, len(SORT_OPTIONS[key])):
+                    self.sort_options[f"general.{key}.{idx}"] = g.get_int_setting(f"general.{key}.{idx}")
         self.sort_options.update(
             {
                 f"general.sortmethod.{idx}.reverse": g.get_bool_setting(f"general.sortmethod.{idx}.reverse")
-                for idx in range(1, len(SORT_OPTIONS['sortmethod']))
+                for idx in range(1, len(self.sort_lists) + 1)
             }
         )
         self.max_level = 8
@@ -78,14 +78,6 @@ class SortSelect(BaseWindow):
             for j in range(6):
                 self.clearProperty(f'general.sortmethod.{i}.label.{j}')
                 self.clearProperty(f'general.sortmethod.{i}.label.{j}.last')
-
-    @staticmethod
-    def _set_setting_item_properties(menu_item, setting):
-        for label in setting:
-            if label == "label":
-                menu_item.setLabel(g.get_language_string(setting[label]))
-            else:
-                menu_item.setProperty(label, str(setting[label]))
 
     def _populate_list(self, level):
         sort_method = f"general.sortmethod.{level}"

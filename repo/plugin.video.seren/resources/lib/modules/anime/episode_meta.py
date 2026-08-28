@@ -19,6 +19,7 @@ Reference: Otaku Testing 5.2.81 uses the same Simkl → AniZip → Jikan fallbac
 """
 
 import time
+from functools import lru_cache
 
 import requests
 
@@ -49,6 +50,7 @@ _KITSU_BASE = 'https://kitsu.io/api/edge'
 _TIMEOUT = 10
 
 
+@lru_cache(maxsize=256)
 def get_episode_data(mal_id=None, anidb_id=None, simkl_id=None, kitsu_id=None,
                      season=1, episode_count=None, anilist_id=None):
     """Main entry point — fetch episode metadata using the cascading fallback chain.

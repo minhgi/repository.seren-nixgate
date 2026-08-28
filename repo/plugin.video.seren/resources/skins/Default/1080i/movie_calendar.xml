@@ -127,7 +127,19 @@
 		<control type="panel" id="1000">
 			<viewtype label="Grid">panel</viewtype>
 			<pagecontrol>1111</pagecontrol>
-			<onleft>1111</onleft>
+			<!-- onleft/onright point at the Prev/Next buttons, not a self-loop - a panel's
+			     native boundary check only fires per-row (column 0 for onleft, a row's last
+			     item for onright, partial last row included), but control_id alone can't tell
+			     Python "that fired" apart from "a normal within-row move landed here", since
+			     both keep focus on this same control id either way. Redirecting to the buttons'
+			     own distinct ids gives handle_action() an unambiguous signal, and only ever
+			     redirects on a genuine boundary - Kodi consults onleft/onright at all only when
+			     internal navigation has nowhere further to go. Same fetch-and-page call
+			     (_navigate_month) the buttons' own onclick already uses, so the visual result is
+			     identical to clicking them; matches TvScheduleWindow's own Left/Right-pages
+			     precedent, adapted for one multi-column panel instead of 7 single-column lists. -->
+			<onleft>3001</onleft>
+			<onright>3002</onright>
 			<onup>3001</onup>
 			<left>40</left>
 			<top>170</top>

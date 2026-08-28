@@ -62,6 +62,7 @@ _ROUTE_TABLE = {
     "movieGenresGet":       _menu("resources.lib.gui.movieMenus", "movies_genre_list", "action_args"),
     "movieYears":           _menu("resources.lib.gui.movieMenus", "movies_years"),
     "movieCalendarBrowse":  _func("resources.lib.gui.windows.movie_calendar_window", "open_movie_calendar"),
+    "tvScheduleBrowse":     _func("resources.lib.gui.windows.tv_schedule_window", "open_tv_schedule"),
     "movieYearsMovies":     _menu("resources.lib.gui.movieMenus", "movie_years_results", "action_args"),
     "movieByActor":         _menu("resources.lib.gui.movieMenus", "movies_by_actor", "action_args"),
     "myWatchedMovies":      _menu("resources.lib.gui.movieMenus", "my_watched_movies"),
@@ -69,11 +70,16 @@ _ROUTE_TABLE = {
     "moviePopularRecent":   _menu("resources.lib.gui.movieMenus", "movie_popular_recent"),
     "movieTrendingRecent":  _menu("resources.lib.gui.movieMenus", "movie_trending_recent"),
 
+    # --- Calendar filter (shared: Movie Calendar / TV Schedule) ---
+    "chooseCalendarRegion":   _func("resources.lib.modules.manual_calendar_filter", "choose_region"),
+    "chooseCalendarLanguage": _func("resources.lib.modules.manual_calendar_filter", "choose_language"),
+
     # --- Show menus ---
     "showsHome":            _menu("resources.lib.gui.tvshowMenus", "discover_shows"),
     "myShows":              _menu("resources.lib.gui.tvshowMenus", "my_shows"),
     "showsMyCollection":    _menu("resources.lib.gui.tvshowMenus", "my_shows_collection"),
     "showsMyWatchlist":     _menu("resources.lib.gui.tvshowMenus", "my_shows_watchlist"),
+    "traktWatchlistBulkDrop": _menu("resources.lib.gui.tvshowMenus", "watchlist_bulk_drop"),
     "showsMyFavorites":     _menu("resources.lib.gui.tvshowMenus", "my_shows_favorites"),
     "showsMyProgress":      _menu("resources.lib.gui.tvshowMenus", "my_show_progress"),
     "showsMyRecentEpisodes": _menu("resources.lib.gui.tvshowMenus", "my_recent_episodes"),
@@ -1601,10 +1607,12 @@ def dispatch(params):
         from resources.lib.gui.windows.calendar_window import CalendarWindow
         from resources.lib.database.skinManager import SkinManager
 
+        g.show_busy_dialog()
         try:
             window = CalendarWindow(*SkinManager().confirm_skin_path("calendar.xml"))
             window.doModal()
         finally:
+            g.close_busy_dialog()
             del window
 
     elif action == "longLifeServiceManager":

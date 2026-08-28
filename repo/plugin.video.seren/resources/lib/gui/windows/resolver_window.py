@@ -38,11 +38,12 @@ class ResolverWindow(SingleItemWindow):
         verifier = ContentVerifier(self.item_information, self.sources)
         cloud_miss_count = 0
         cloud_miss_threshold = g.get_int_setting("general.cloudMissThreshold", 3)
+        quality_colors_enabled = g.get_bool_setting("general.qualityColors", True)
 
         for source in self.sources:
             if self.canceled:
                 return None, None
-            self._update_window_properties(source)
+            self._update_window_properties(source, quality_colors_enabled)
             try:
                 stream_link, release_title = self.resolver.resolve_single_source(
                     source, self.item_information, self.pack_select
@@ -92,7 +93,7 @@ class ResolverWindow(SingleItemWindow):
     def get_return_data(self):
         return (None, None) if self.canceled else self.return_data
 
-    def _update_window_properties(self, source):
+    def _update_window_properties(self, source, quality_colors_enabled=None):
         debrid_provider = source.get("debrid_provider", "None").replace("_", " ")
         if "size" in source and source["size"] != "Variable":
             self.setProperty("source_size", tools.source_size_display(source["size"]))
@@ -110,7 +111,12 @@ class ResolverWindow(SingleItemWindow):
             provider = f"{provider} (Local Cache)"
         self.setProperty("source_provider", provider)
         self.setProperty("source_resolution", source["quality"])
-        self.setProperty("source_resolution_color", _get_quality_color(source["quality"]))
+        colors_enabled = (
+            g.get_bool_setting("general.qualityColors", True)
+            if quality_colors_enabled is None
+            else quality_colors_enabled
+        )
+        self.setProperty("source_resolution_color", _get_quality_color(source["quality"], colors_enabled))
 
         # Inject source type tags (CACHED, SEASON, SHOW) into info set for display
         display_info = set(source.get("info", set()))

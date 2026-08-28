@@ -1,0 +1,1598 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<window type="dialog">
+	<coordinates>
+		<left>0</left>
+		<top>0</top>
+		<width>1920</width>
+		<height>1080</height>
+	</coordinates>
+
+	<defaultcontrol always="true">1000</defaultcontrol>
+
+	<controls>
+
+		<!-- Background -->
+		<control type="group">
+			<top>0</top>
+			<left>0</left>
+			<width>1920</width>
+			<height>1080</height>
+
+			<control type="image">
+				<texture>white.png</texture>
+				<colordiffuse>FF000000</colordiffuse>
+			</control>
+
+			<control type="image">
+				<texture background="true">$INFO[Window().Property(seren.fanart)]</texture>
+				<colordiffuse>66FFFFFF</colordiffuse>
+			</control>
+
+			<control type="image">
+				<texture background="true">white.png</texture>
+				<colordiffuse>CC000000</colordiffuse>
+			</control>
+		</control>
+
+		<!-- Title -->
+		<control type="group">
+			<top>25</top>
+			<left>40</left>
+
+			<control type="label">
+				<width>1200</width>
+				<height>50</height>
+				<label>[UPPERCASE][COLOR $INFO[Window().Property(settings.color)]]Seren[/COLOR] - $ADDON[plugin.video.seren 31539][/UPPERCASE]</label>
+				<font>font37</font>
+				<textcolor>white</textcolor>
+			</control>
+		</control>
+
+		<!-- Week range label, centered across the full window -->
+		<control type="label">
+			<top>25</top>
+			<left>0</left>
+			<width>1920</width>
+			<height>50</height>
+			<font>font37</font>
+			<textcolor>66FFFFFF</textcolor>
+			<align>center</align>
+			<label>[B]$INFO[Window().Property(week_label)][/B]</label>
+		</control>
+
+		<control type="group">
+			<top>25</top>
+			<left>1630</left>
+
+			<control type="button" id="3001">
+				<width>50</width>
+				<height>50</height>
+				<font>font32</font>
+				<label>&lt;</label>
+				<align>center</align>
+				<aligny>center</aligny>
+				<texturefocus colordiffuse="$INFO[Window().Property(settings.color)]">white.png</texturefocus>
+				<texturenofocus colordiffuse="22000000">white.png</texturenofocus>
+				<onright>3002</onright>
+				<ondown>1000</ondown>
+			</control>
+
+			<control type="button" id="3002">
+				<left>60</left>
+				<width>50</width>
+				<height>50</height>
+				<font>font32</font>
+				<label>&gt;</label>
+				<align>center</align>
+				<aligny>center</aligny>
+				<texturefocus colordiffuse="$INFO[Window().Property(settings.color)]">white.png</texturefocus>
+				<texturenofocus colordiffuse="22000000">white.png</texturenofocus>
+				<onleft>3001</onleft>
+				<onright>2999</onright>
+				<ondown>1000</ondown>
+			</control>
+
+			<!-- Close -->
+			<control type="button" id="2999">
+				<left>130</left>
+				<width>140</width>
+				<height>50</height>
+				<font>font12</font>
+				<textoffsetx>20</textoffsetx>
+				<texturefocus colordiffuse="$INFO[Window().Property(settings.color)]">white.png</texturefocus>
+				<texturenofocus colordiffuse="22000000">white.png</texturenofocus>
+				<label>$ADDON[plugin.video.seren 30459]</label>
+				<align>right</align>
+				<aligny>center</aligny>
+				<textcolor>FFFFFFFF</textcolor>
+				<onleft>3002</onleft>
+				<ondown>1000</ondown>
+			</control>
+		</control>
+
+		<!-- Day column 0: header + episode list -->
+		<control type="group">
+			<left>40</left>
+			<top>170</top>
+
+			<control type="label">
+				<top>0</top>
+				<width>256</width>
+				<height>34</height>
+				<font>font32</font>
+				<textcolor>white</textcolor>
+				<align>center</align>
+				<label>$INFO[Window().Property(day_name_0)]</label>
+			</control>
+			<control type="label">
+				<top>36</top>
+				<width>256</width>
+				<height>26</height>
+				<font>font13</font>
+				<textcolor>66FFFFFF</textcolor>
+				<align>center</align>
+				<label>$INFO[Window().Property(day_date_0)]</label>
+			</control>
+		</control>
+
+		<control type="list" id="1000">
+			<left>40</left>
+			<top>250</top>
+			<width>256</width>
+			<height>780</height>
+			<scrolltime>200</scrolltime>
+			<onup>2999</onup>
+			<onleft>1000</onleft>
+			<onright>1001</onright>
+
+			<itemlayout width="246" height="112">
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>50</width>
+					<height>74</height>
+					<aspectratio>stretch</aspectratio>
+					<texture>$INFO[ListItem.Art(poster)]</texture>
+					<visible>!String.IsEmpty(ListItem.Art(poster))</visible>
+					<colordiffuse>AAFFFFFF</colordiffuse>
+				</control>
+
+				<control type="label">
+					<left>58</left>
+					<top>2</top>
+					<width>188</width>
+					<height>22</height>
+					<font>font20_title</font>
+					<textcolor>FFFFFFFF</textcolor>
+					<label>[B]$INFO[ListItem.Property(show_title)][/B]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>26</top>
+					<width>188</width>
+					<height>20</height>
+					<font>font10</font>
+					<textcolor>$INFO[Window().Property(settings.color)]</textcolor>
+					<label>$INFO[ListItem.Property(episode_code)] - $INFO[ListItem.Property(air_time_label)]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>48</top>
+					<width>188</width>
+					<height>40</height>
+					<font>font10</font>
+					<textcolor>66FFFFFF</textcolor>
+					<wrapmultiline>true</wrapmultiline>
+					<label>$INFO[ListItem.Property(episode_title)]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>90</top>
+					<width>188</width>
+					<height>20</height>
+					<font>font10</font>
+					<textcolor>FFFFD700</textcolor>
+					<label>$INFO[ListItem.Property(rating_display)]</label>
+					<visible>!String.IsEmpty(ListItem.Property(rating_display)) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+
+				<control type="label">
+					<left>0</left>
+					<top>40</top>
+					<width>246</width>
+					<height>30</height>
+					<font>font13</font>
+					<textcolor>66FFFFFF</textcolor>
+					<align>center</align>
+					<label>$INFO[ListItem.Label]</label>
+					<visible>String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>4</width>
+					<height>112</height>
+					<texture colordiffuse="FF4CAF50">white.png</texture>
+					<visible>String.IsEqual(ListItem.Property(air_status),aired) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>4</width>
+					<height>112</height>
+					<texture colordiffuse="FF9E9E9E">white.png</texture>
+					<visible>String.IsEqual(ListItem.Property(air_status),upcoming) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+			</itemlayout>
+
+			<focusedlayout width="246" height="112">
+				<control type="image">
+					<left>-4</left>
+					<top>-4</top>
+					<width>254</width>
+					<height>120</height>
+					<texture colordiffuse="33FFFFFF">white.png</texture>
+					<visible>Control.HasFocus(1000)</visible>
+				</control>
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>50</width>
+					<height>74</height>
+					<aspectratio>stretch</aspectratio>
+					<texture>$INFO[ListItem.Art(poster)]</texture>
+					<visible>!String.IsEmpty(ListItem.Art(poster))</visible>
+					<colordiffuse>AAFFFFFF</colordiffuse>
+				</control>
+
+				<control type="label">
+					<left>58</left>
+					<top>2</top>
+					<width>188</width>
+					<height>22</height>
+					<font>font20_title</font>
+					<textcolor>FFFFFFFF</textcolor>
+					<label>[B]$INFO[ListItem.Property(show_title)][/B]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>26</top>
+					<width>188</width>
+					<height>20</height>
+					<font>font10</font>
+					<textcolor>$INFO[Window().Property(settings.color)]</textcolor>
+					<label>$INFO[ListItem.Property(episode_code)] - $INFO[ListItem.Property(air_time_label)]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>48</top>
+					<width>188</width>
+					<height>40</height>
+					<font>font10</font>
+					<textcolor>66FFFFFF</textcolor>
+					<wrapmultiline>true</wrapmultiline>
+					<label>$INFO[ListItem.Property(episode_title)]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>90</top>
+					<width>188</width>
+					<height>20</height>
+					<font>font10</font>
+					<textcolor>FFFFD700</textcolor>
+					<label>$INFO[ListItem.Property(rating_display)]</label>
+					<visible>!String.IsEmpty(ListItem.Property(rating_display)) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+
+				<control type="label">
+					<left>0</left>
+					<top>40</top>
+					<width>246</width>
+					<height>30</height>
+					<font>font13</font>
+					<textcolor>66FFFFFF</textcolor>
+					<align>center</align>
+					<label>$INFO[ListItem.Label]</label>
+					<visible>String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>4</width>
+					<height>112</height>
+					<texture colordiffuse="FF4CAF50">white.png</texture>
+					<visible>String.IsEqual(ListItem.Property(air_status),aired) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>4</width>
+					<height>112</height>
+					<texture colordiffuse="FF9E9E9E">white.png</texture>
+					<visible>String.IsEqual(ListItem.Property(air_status),upcoming) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+			</focusedlayout>
+		</control>
+
+		<!-- Day column 1: header + episode list -->
+		<control type="group">
+			<left>304</left>
+			<top>170</top>
+
+			<control type="label">
+				<top>0</top>
+				<width>256</width>
+				<height>34</height>
+				<font>font32</font>
+				<textcolor>white</textcolor>
+				<align>center</align>
+				<label>$INFO[Window().Property(day_name_1)]</label>
+			</control>
+			<control type="label">
+				<top>36</top>
+				<width>256</width>
+				<height>26</height>
+				<font>font13</font>
+				<textcolor>66FFFFFF</textcolor>
+				<align>center</align>
+				<label>$INFO[Window().Property(day_date_1)]</label>
+			</control>
+		</control>
+
+		<control type="list" id="1001">
+			<left>304</left>
+			<top>250</top>
+			<width>256</width>
+			<height>780</height>
+			<scrolltime>200</scrolltime>
+			<onup>2999</onup>
+			<onleft>1000</onleft>
+			<onright>1002</onright>
+
+			<itemlayout width="246" height="112">
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>50</width>
+					<height>74</height>
+					<aspectratio>stretch</aspectratio>
+					<texture>$INFO[ListItem.Art(poster)]</texture>
+					<visible>!String.IsEmpty(ListItem.Art(poster))</visible>
+					<colordiffuse>AAFFFFFF</colordiffuse>
+				</control>
+
+				<control type="label">
+					<left>58</left>
+					<top>2</top>
+					<width>188</width>
+					<height>22</height>
+					<font>font20_title</font>
+					<textcolor>FFFFFFFF</textcolor>
+					<label>[B]$INFO[ListItem.Property(show_title)][/B]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>26</top>
+					<width>188</width>
+					<height>20</height>
+					<font>font10</font>
+					<textcolor>$INFO[Window().Property(settings.color)]</textcolor>
+					<label>$INFO[ListItem.Property(episode_code)] - $INFO[ListItem.Property(air_time_label)]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>48</top>
+					<width>188</width>
+					<height>40</height>
+					<font>font10</font>
+					<textcolor>66FFFFFF</textcolor>
+					<wrapmultiline>true</wrapmultiline>
+					<label>$INFO[ListItem.Property(episode_title)]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>90</top>
+					<width>188</width>
+					<height>20</height>
+					<font>font10</font>
+					<textcolor>FFFFD700</textcolor>
+					<label>$INFO[ListItem.Property(rating_display)]</label>
+					<visible>!String.IsEmpty(ListItem.Property(rating_display)) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+
+				<control type="label">
+					<left>0</left>
+					<top>40</top>
+					<width>246</width>
+					<height>30</height>
+					<font>font13</font>
+					<textcolor>66FFFFFF</textcolor>
+					<align>center</align>
+					<label>$INFO[ListItem.Label]</label>
+					<visible>String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>4</width>
+					<height>112</height>
+					<texture colordiffuse="FF4CAF50">white.png</texture>
+					<visible>String.IsEqual(ListItem.Property(air_status),aired) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>4</width>
+					<height>112</height>
+					<texture colordiffuse="FF9E9E9E">white.png</texture>
+					<visible>String.IsEqual(ListItem.Property(air_status),upcoming) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+			</itemlayout>
+
+			<focusedlayout width="246" height="112">
+				<control type="image">
+					<left>-4</left>
+					<top>-4</top>
+					<width>254</width>
+					<height>120</height>
+					<texture colordiffuse="33FFFFFF">white.png</texture>
+					<visible>Control.HasFocus(1001)</visible>
+				</control>
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>50</width>
+					<height>74</height>
+					<aspectratio>stretch</aspectratio>
+					<texture>$INFO[ListItem.Art(poster)]</texture>
+					<visible>!String.IsEmpty(ListItem.Art(poster))</visible>
+					<colordiffuse>AAFFFFFF</colordiffuse>
+				</control>
+
+				<control type="label">
+					<left>58</left>
+					<top>2</top>
+					<width>188</width>
+					<height>22</height>
+					<font>font20_title</font>
+					<textcolor>FFFFFFFF</textcolor>
+					<label>[B]$INFO[ListItem.Property(show_title)][/B]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>26</top>
+					<width>188</width>
+					<height>20</height>
+					<font>font10</font>
+					<textcolor>$INFO[Window().Property(settings.color)]</textcolor>
+					<label>$INFO[ListItem.Property(episode_code)] - $INFO[ListItem.Property(air_time_label)]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>48</top>
+					<width>188</width>
+					<height>40</height>
+					<font>font10</font>
+					<textcolor>66FFFFFF</textcolor>
+					<wrapmultiline>true</wrapmultiline>
+					<label>$INFO[ListItem.Property(episode_title)]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>90</top>
+					<width>188</width>
+					<height>20</height>
+					<font>font10</font>
+					<textcolor>FFFFD700</textcolor>
+					<label>$INFO[ListItem.Property(rating_display)]</label>
+					<visible>!String.IsEmpty(ListItem.Property(rating_display)) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+
+				<control type="label">
+					<left>0</left>
+					<top>40</top>
+					<width>246</width>
+					<height>30</height>
+					<font>font13</font>
+					<textcolor>66FFFFFF</textcolor>
+					<align>center</align>
+					<label>$INFO[ListItem.Label]</label>
+					<visible>String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>4</width>
+					<height>112</height>
+					<texture colordiffuse="FF4CAF50">white.png</texture>
+					<visible>String.IsEqual(ListItem.Property(air_status),aired) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>4</width>
+					<height>112</height>
+					<texture colordiffuse="FF9E9E9E">white.png</texture>
+					<visible>String.IsEqual(ListItem.Property(air_status),upcoming) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+			</focusedlayout>
+		</control>
+
+		<!-- Day column 2: header + episode list -->
+		<control type="group">
+			<left>568</left>
+			<top>170</top>
+
+			<control type="label">
+				<top>0</top>
+				<width>256</width>
+				<height>34</height>
+				<font>font32</font>
+				<textcolor>white</textcolor>
+				<align>center</align>
+				<label>$INFO[Window().Property(day_name_2)]</label>
+			</control>
+			<control type="label">
+				<top>36</top>
+				<width>256</width>
+				<height>26</height>
+				<font>font13</font>
+				<textcolor>66FFFFFF</textcolor>
+				<align>center</align>
+				<label>$INFO[Window().Property(day_date_2)]</label>
+			</control>
+		</control>
+
+		<control type="list" id="1002">
+			<left>568</left>
+			<top>250</top>
+			<width>256</width>
+			<height>780</height>
+			<scrolltime>200</scrolltime>
+			<onup>2999</onup>
+			<onleft>1001</onleft>
+			<onright>1003</onright>
+
+			<itemlayout width="246" height="112">
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>50</width>
+					<height>74</height>
+					<aspectratio>stretch</aspectratio>
+					<texture>$INFO[ListItem.Art(poster)]</texture>
+					<visible>!String.IsEmpty(ListItem.Art(poster))</visible>
+					<colordiffuse>AAFFFFFF</colordiffuse>
+				</control>
+
+				<control type="label">
+					<left>58</left>
+					<top>2</top>
+					<width>188</width>
+					<height>22</height>
+					<font>font20_title</font>
+					<textcolor>FFFFFFFF</textcolor>
+					<label>[B]$INFO[ListItem.Property(show_title)][/B]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>26</top>
+					<width>188</width>
+					<height>20</height>
+					<font>font10</font>
+					<textcolor>$INFO[Window().Property(settings.color)]</textcolor>
+					<label>$INFO[ListItem.Property(episode_code)] - $INFO[ListItem.Property(air_time_label)]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>48</top>
+					<width>188</width>
+					<height>40</height>
+					<font>font10</font>
+					<textcolor>66FFFFFF</textcolor>
+					<wrapmultiline>true</wrapmultiline>
+					<label>$INFO[ListItem.Property(episode_title)]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>90</top>
+					<width>188</width>
+					<height>20</height>
+					<font>font10</font>
+					<textcolor>FFFFD700</textcolor>
+					<label>$INFO[ListItem.Property(rating_display)]</label>
+					<visible>!String.IsEmpty(ListItem.Property(rating_display)) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+
+				<control type="label">
+					<left>0</left>
+					<top>40</top>
+					<width>246</width>
+					<height>30</height>
+					<font>font13</font>
+					<textcolor>66FFFFFF</textcolor>
+					<align>center</align>
+					<label>$INFO[ListItem.Label]</label>
+					<visible>String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>4</width>
+					<height>112</height>
+					<texture colordiffuse="FF4CAF50">white.png</texture>
+					<visible>String.IsEqual(ListItem.Property(air_status),aired) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>4</width>
+					<height>112</height>
+					<texture colordiffuse="FF9E9E9E">white.png</texture>
+					<visible>String.IsEqual(ListItem.Property(air_status),upcoming) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+			</itemlayout>
+
+			<focusedlayout width="246" height="112">
+				<control type="image">
+					<left>-4</left>
+					<top>-4</top>
+					<width>254</width>
+					<height>120</height>
+					<texture colordiffuse="33FFFFFF">white.png</texture>
+					<visible>Control.HasFocus(1002)</visible>
+				</control>
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>50</width>
+					<height>74</height>
+					<aspectratio>stretch</aspectratio>
+					<texture>$INFO[ListItem.Art(poster)]</texture>
+					<visible>!String.IsEmpty(ListItem.Art(poster))</visible>
+					<colordiffuse>AAFFFFFF</colordiffuse>
+				</control>
+
+				<control type="label">
+					<left>58</left>
+					<top>2</top>
+					<width>188</width>
+					<height>22</height>
+					<font>font20_title</font>
+					<textcolor>FFFFFFFF</textcolor>
+					<label>[B]$INFO[ListItem.Property(show_title)][/B]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>26</top>
+					<width>188</width>
+					<height>20</height>
+					<font>font10</font>
+					<textcolor>$INFO[Window().Property(settings.color)]</textcolor>
+					<label>$INFO[ListItem.Property(episode_code)] - $INFO[ListItem.Property(air_time_label)]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>48</top>
+					<width>188</width>
+					<height>40</height>
+					<font>font10</font>
+					<textcolor>66FFFFFF</textcolor>
+					<wrapmultiline>true</wrapmultiline>
+					<label>$INFO[ListItem.Property(episode_title)]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>90</top>
+					<width>188</width>
+					<height>20</height>
+					<font>font10</font>
+					<textcolor>FFFFD700</textcolor>
+					<label>$INFO[ListItem.Property(rating_display)]</label>
+					<visible>!String.IsEmpty(ListItem.Property(rating_display)) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+
+				<control type="label">
+					<left>0</left>
+					<top>40</top>
+					<width>246</width>
+					<height>30</height>
+					<font>font13</font>
+					<textcolor>66FFFFFF</textcolor>
+					<align>center</align>
+					<label>$INFO[ListItem.Label]</label>
+					<visible>String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>4</width>
+					<height>112</height>
+					<texture colordiffuse="FF4CAF50">white.png</texture>
+					<visible>String.IsEqual(ListItem.Property(air_status),aired) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>4</width>
+					<height>112</height>
+					<texture colordiffuse="FF9E9E9E">white.png</texture>
+					<visible>String.IsEqual(ListItem.Property(air_status),upcoming) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+			</focusedlayout>
+		</control>
+
+		<!-- Day column 3: header + episode list -->
+		<control type="group">
+			<left>832</left>
+			<top>170</top>
+
+			<control type="label">
+				<top>0</top>
+				<width>256</width>
+				<height>34</height>
+				<font>font32</font>
+				<textcolor>white</textcolor>
+				<align>center</align>
+				<label>$INFO[Window().Property(day_name_3)]</label>
+			</control>
+			<control type="label">
+				<top>36</top>
+				<width>256</width>
+				<height>26</height>
+				<font>font13</font>
+				<textcolor>66FFFFFF</textcolor>
+				<align>center</align>
+				<label>$INFO[Window().Property(day_date_3)]</label>
+			</control>
+		</control>
+
+		<control type="list" id="1003">
+			<left>832</left>
+			<top>250</top>
+			<width>256</width>
+			<height>780</height>
+			<scrolltime>200</scrolltime>
+			<onup>2999</onup>
+			<onleft>1002</onleft>
+			<onright>1004</onright>
+
+			<itemlayout width="246" height="112">
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>50</width>
+					<height>74</height>
+					<aspectratio>stretch</aspectratio>
+					<texture>$INFO[ListItem.Art(poster)]</texture>
+					<visible>!String.IsEmpty(ListItem.Art(poster))</visible>
+					<colordiffuse>AAFFFFFF</colordiffuse>
+				</control>
+
+				<control type="label">
+					<left>58</left>
+					<top>2</top>
+					<width>188</width>
+					<height>22</height>
+					<font>font20_title</font>
+					<textcolor>FFFFFFFF</textcolor>
+					<label>[B]$INFO[ListItem.Property(show_title)][/B]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>26</top>
+					<width>188</width>
+					<height>20</height>
+					<font>font10</font>
+					<textcolor>$INFO[Window().Property(settings.color)]</textcolor>
+					<label>$INFO[ListItem.Property(episode_code)] - $INFO[ListItem.Property(air_time_label)]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>48</top>
+					<width>188</width>
+					<height>40</height>
+					<font>font10</font>
+					<textcolor>66FFFFFF</textcolor>
+					<wrapmultiline>true</wrapmultiline>
+					<label>$INFO[ListItem.Property(episode_title)]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>90</top>
+					<width>188</width>
+					<height>20</height>
+					<font>font10</font>
+					<textcolor>FFFFD700</textcolor>
+					<label>$INFO[ListItem.Property(rating_display)]</label>
+					<visible>!String.IsEmpty(ListItem.Property(rating_display)) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+
+				<control type="label">
+					<left>0</left>
+					<top>40</top>
+					<width>246</width>
+					<height>30</height>
+					<font>font13</font>
+					<textcolor>66FFFFFF</textcolor>
+					<align>center</align>
+					<label>$INFO[ListItem.Label]</label>
+					<visible>String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>4</width>
+					<height>112</height>
+					<texture colordiffuse="FF4CAF50">white.png</texture>
+					<visible>String.IsEqual(ListItem.Property(air_status),aired) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>4</width>
+					<height>112</height>
+					<texture colordiffuse="FF9E9E9E">white.png</texture>
+					<visible>String.IsEqual(ListItem.Property(air_status),upcoming) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+			</itemlayout>
+
+			<focusedlayout width="246" height="112">
+				<control type="image">
+					<left>-4</left>
+					<top>-4</top>
+					<width>254</width>
+					<height>120</height>
+					<texture colordiffuse="33FFFFFF">white.png</texture>
+					<visible>Control.HasFocus(1003)</visible>
+				</control>
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>50</width>
+					<height>74</height>
+					<aspectratio>stretch</aspectratio>
+					<texture>$INFO[ListItem.Art(poster)]</texture>
+					<visible>!String.IsEmpty(ListItem.Art(poster))</visible>
+					<colordiffuse>AAFFFFFF</colordiffuse>
+				</control>
+
+				<control type="label">
+					<left>58</left>
+					<top>2</top>
+					<width>188</width>
+					<height>22</height>
+					<font>font20_title</font>
+					<textcolor>FFFFFFFF</textcolor>
+					<label>[B]$INFO[ListItem.Property(show_title)][/B]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>26</top>
+					<width>188</width>
+					<height>20</height>
+					<font>font10</font>
+					<textcolor>$INFO[Window().Property(settings.color)]</textcolor>
+					<label>$INFO[ListItem.Property(episode_code)] - $INFO[ListItem.Property(air_time_label)]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>48</top>
+					<width>188</width>
+					<height>40</height>
+					<font>font10</font>
+					<textcolor>66FFFFFF</textcolor>
+					<wrapmultiline>true</wrapmultiline>
+					<label>$INFO[ListItem.Property(episode_title)]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>90</top>
+					<width>188</width>
+					<height>20</height>
+					<font>font10</font>
+					<textcolor>FFFFD700</textcolor>
+					<label>$INFO[ListItem.Property(rating_display)]</label>
+					<visible>!String.IsEmpty(ListItem.Property(rating_display)) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+
+				<control type="label">
+					<left>0</left>
+					<top>40</top>
+					<width>246</width>
+					<height>30</height>
+					<font>font13</font>
+					<textcolor>66FFFFFF</textcolor>
+					<align>center</align>
+					<label>$INFO[ListItem.Label]</label>
+					<visible>String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>4</width>
+					<height>112</height>
+					<texture colordiffuse="FF4CAF50">white.png</texture>
+					<visible>String.IsEqual(ListItem.Property(air_status),aired) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>4</width>
+					<height>112</height>
+					<texture colordiffuse="FF9E9E9E">white.png</texture>
+					<visible>String.IsEqual(ListItem.Property(air_status),upcoming) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+			</focusedlayout>
+		</control>
+
+		<!-- Day column 4: header + episode list -->
+		<control type="group">
+			<left>1096</left>
+			<top>170</top>
+
+			<control type="label">
+				<top>0</top>
+				<width>256</width>
+				<height>34</height>
+				<font>font32</font>
+				<textcolor>white</textcolor>
+				<align>center</align>
+				<label>$INFO[Window().Property(day_name_4)]</label>
+			</control>
+			<control type="label">
+				<top>36</top>
+				<width>256</width>
+				<height>26</height>
+				<font>font13</font>
+				<textcolor>66FFFFFF</textcolor>
+				<align>center</align>
+				<label>$INFO[Window().Property(day_date_4)]</label>
+			</control>
+		</control>
+
+		<control type="list" id="1004">
+			<left>1096</left>
+			<top>250</top>
+			<width>256</width>
+			<height>780</height>
+			<scrolltime>200</scrolltime>
+			<onup>2999</onup>
+			<onleft>1003</onleft>
+			<onright>1005</onright>
+
+			<itemlayout width="246" height="112">
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>50</width>
+					<height>74</height>
+					<aspectratio>stretch</aspectratio>
+					<texture>$INFO[ListItem.Art(poster)]</texture>
+					<visible>!String.IsEmpty(ListItem.Art(poster))</visible>
+					<colordiffuse>AAFFFFFF</colordiffuse>
+				</control>
+
+				<control type="label">
+					<left>58</left>
+					<top>2</top>
+					<width>188</width>
+					<height>22</height>
+					<font>font20_title</font>
+					<textcolor>FFFFFFFF</textcolor>
+					<label>[B]$INFO[ListItem.Property(show_title)][/B]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>26</top>
+					<width>188</width>
+					<height>20</height>
+					<font>font10</font>
+					<textcolor>$INFO[Window().Property(settings.color)]</textcolor>
+					<label>$INFO[ListItem.Property(episode_code)] - $INFO[ListItem.Property(air_time_label)]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>48</top>
+					<width>188</width>
+					<height>40</height>
+					<font>font10</font>
+					<textcolor>66FFFFFF</textcolor>
+					<wrapmultiline>true</wrapmultiline>
+					<label>$INFO[ListItem.Property(episode_title)]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>90</top>
+					<width>188</width>
+					<height>20</height>
+					<font>font10</font>
+					<textcolor>FFFFD700</textcolor>
+					<label>$INFO[ListItem.Property(rating_display)]</label>
+					<visible>!String.IsEmpty(ListItem.Property(rating_display)) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+
+				<control type="label">
+					<left>0</left>
+					<top>40</top>
+					<width>246</width>
+					<height>30</height>
+					<font>font13</font>
+					<textcolor>66FFFFFF</textcolor>
+					<align>center</align>
+					<label>$INFO[ListItem.Label]</label>
+					<visible>String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>4</width>
+					<height>112</height>
+					<texture colordiffuse="FF4CAF50">white.png</texture>
+					<visible>String.IsEqual(ListItem.Property(air_status),aired) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>4</width>
+					<height>112</height>
+					<texture colordiffuse="FF9E9E9E">white.png</texture>
+					<visible>String.IsEqual(ListItem.Property(air_status),upcoming) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+			</itemlayout>
+
+			<focusedlayout width="246" height="112">
+				<control type="image">
+					<left>-4</left>
+					<top>-4</top>
+					<width>254</width>
+					<height>120</height>
+					<texture colordiffuse="33FFFFFF">white.png</texture>
+					<visible>Control.HasFocus(1004)</visible>
+				</control>
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>50</width>
+					<height>74</height>
+					<aspectratio>stretch</aspectratio>
+					<texture>$INFO[ListItem.Art(poster)]</texture>
+					<visible>!String.IsEmpty(ListItem.Art(poster))</visible>
+					<colordiffuse>AAFFFFFF</colordiffuse>
+				</control>
+
+				<control type="label">
+					<left>58</left>
+					<top>2</top>
+					<width>188</width>
+					<height>22</height>
+					<font>font20_title</font>
+					<textcolor>FFFFFFFF</textcolor>
+					<label>[B]$INFO[ListItem.Property(show_title)][/B]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>26</top>
+					<width>188</width>
+					<height>20</height>
+					<font>font10</font>
+					<textcolor>$INFO[Window().Property(settings.color)]</textcolor>
+					<label>$INFO[ListItem.Property(episode_code)] - $INFO[ListItem.Property(air_time_label)]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>48</top>
+					<width>188</width>
+					<height>40</height>
+					<font>font10</font>
+					<textcolor>66FFFFFF</textcolor>
+					<wrapmultiline>true</wrapmultiline>
+					<label>$INFO[ListItem.Property(episode_title)]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>90</top>
+					<width>188</width>
+					<height>20</height>
+					<font>font10</font>
+					<textcolor>FFFFD700</textcolor>
+					<label>$INFO[ListItem.Property(rating_display)]</label>
+					<visible>!String.IsEmpty(ListItem.Property(rating_display)) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+
+				<control type="label">
+					<left>0</left>
+					<top>40</top>
+					<width>246</width>
+					<height>30</height>
+					<font>font13</font>
+					<textcolor>66FFFFFF</textcolor>
+					<align>center</align>
+					<label>$INFO[ListItem.Label]</label>
+					<visible>String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>4</width>
+					<height>112</height>
+					<texture colordiffuse="FF4CAF50">white.png</texture>
+					<visible>String.IsEqual(ListItem.Property(air_status),aired) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>4</width>
+					<height>112</height>
+					<texture colordiffuse="FF9E9E9E">white.png</texture>
+					<visible>String.IsEqual(ListItem.Property(air_status),upcoming) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+			</focusedlayout>
+		</control>
+
+		<!-- Day column 5: header + episode list -->
+		<control type="group">
+			<left>1360</left>
+			<top>170</top>
+
+			<control type="label">
+				<top>0</top>
+				<width>256</width>
+				<height>34</height>
+				<font>font32</font>
+				<textcolor>white</textcolor>
+				<align>center</align>
+				<label>$INFO[Window().Property(day_name_5)]</label>
+			</control>
+			<control type="label">
+				<top>36</top>
+				<width>256</width>
+				<height>26</height>
+				<font>font13</font>
+				<textcolor>66FFFFFF</textcolor>
+				<align>center</align>
+				<label>$INFO[Window().Property(day_date_5)]</label>
+			</control>
+		</control>
+
+		<control type="list" id="1005">
+			<left>1360</left>
+			<top>250</top>
+			<width>256</width>
+			<height>780</height>
+			<scrolltime>200</scrolltime>
+			<onup>2999</onup>
+			<onleft>1004</onleft>
+			<onright>1006</onright>
+
+			<itemlayout width="246" height="112">
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>50</width>
+					<height>74</height>
+					<aspectratio>stretch</aspectratio>
+					<texture>$INFO[ListItem.Art(poster)]</texture>
+					<visible>!String.IsEmpty(ListItem.Art(poster))</visible>
+					<colordiffuse>AAFFFFFF</colordiffuse>
+				</control>
+
+				<control type="label">
+					<left>58</left>
+					<top>2</top>
+					<width>188</width>
+					<height>22</height>
+					<font>font20_title</font>
+					<textcolor>FFFFFFFF</textcolor>
+					<label>[B]$INFO[ListItem.Property(show_title)][/B]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>26</top>
+					<width>188</width>
+					<height>20</height>
+					<font>font10</font>
+					<textcolor>$INFO[Window().Property(settings.color)]</textcolor>
+					<label>$INFO[ListItem.Property(episode_code)] - $INFO[ListItem.Property(air_time_label)]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>48</top>
+					<width>188</width>
+					<height>40</height>
+					<font>font10</font>
+					<textcolor>66FFFFFF</textcolor>
+					<wrapmultiline>true</wrapmultiline>
+					<label>$INFO[ListItem.Property(episode_title)]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>90</top>
+					<width>188</width>
+					<height>20</height>
+					<font>font10</font>
+					<textcolor>FFFFD700</textcolor>
+					<label>$INFO[ListItem.Property(rating_display)]</label>
+					<visible>!String.IsEmpty(ListItem.Property(rating_display)) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+
+				<control type="label">
+					<left>0</left>
+					<top>40</top>
+					<width>246</width>
+					<height>30</height>
+					<font>font13</font>
+					<textcolor>66FFFFFF</textcolor>
+					<align>center</align>
+					<label>$INFO[ListItem.Label]</label>
+					<visible>String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>4</width>
+					<height>112</height>
+					<texture colordiffuse="FF4CAF50">white.png</texture>
+					<visible>String.IsEqual(ListItem.Property(air_status),aired) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>4</width>
+					<height>112</height>
+					<texture colordiffuse="FF9E9E9E">white.png</texture>
+					<visible>String.IsEqual(ListItem.Property(air_status),upcoming) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+			</itemlayout>
+
+			<focusedlayout width="246" height="112">
+				<control type="image">
+					<left>-4</left>
+					<top>-4</top>
+					<width>254</width>
+					<height>120</height>
+					<texture colordiffuse="33FFFFFF">white.png</texture>
+					<visible>Control.HasFocus(1005)</visible>
+				</control>
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>50</width>
+					<height>74</height>
+					<aspectratio>stretch</aspectratio>
+					<texture>$INFO[ListItem.Art(poster)]</texture>
+					<visible>!String.IsEmpty(ListItem.Art(poster))</visible>
+					<colordiffuse>AAFFFFFF</colordiffuse>
+				</control>
+
+				<control type="label">
+					<left>58</left>
+					<top>2</top>
+					<width>188</width>
+					<height>22</height>
+					<font>font20_title</font>
+					<textcolor>FFFFFFFF</textcolor>
+					<label>[B]$INFO[ListItem.Property(show_title)][/B]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>26</top>
+					<width>188</width>
+					<height>20</height>
+					<font>font10</font>
+					<textcolor>$INFO[Window().Property(settings.color)]</textcolor>
+					<label>$INFO[ListItem.Property(episode_code)] - $INFO[ListItem.Property(air_time_label)]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>48</top>
+					<width>188</width>
+					<height>40</height>
+					<font>font10</font>
+					<textcolor>66FFFFFF</textcolor>
+					<wrapmultiline>true</wrapmultiline>
+					<label>$INFO[ListItem.Property(episode_title)]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>90</top>
+					<width>188</width>
+					<height>20</height>
+					<font>font10</font>
+					<textcolor>FFFFD700</textcolor>
+					<label>$INFO[ListItem.Property(rating_display)]</label>
+					<visible>!String.IsEmpty(ListItem.Property(rating_display)) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+
+				<control type="label">
+					<left>0</left>
+					<top>40</top>
+					<width>246</width>
+					<height>30</height>
+					<font>font13</font>
+					<textcolor>66FFFFFF</textcolor>
+					<align>center</align>
+					<label>$INFO[ListItem.Label]</label>
+					<visible>String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>4</width>
+					<height>112</height>
+					<texture colordiffuse="FF4CAF50">white.png</texture>
+					<visible>String.IsEqual(ListItem.Property(air_status),aired) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>4</width>
+					<height>112</height>
+					<texture colordiffuse="FF9E9E9E">white.png</texture>
+					<visible>String.IsEqual(ListItem.Property(air_status),upcoming) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+			</focusedlayout>
+		</control>
+
+		<!-- Day column 6: header + episode list -->
+		<control type="group">
+			<left>1624</left>
+			<top>170</top>
+
+			<control type="label">
+				<top>0</top>
+				<width>256</width>
+				<height>34</height>
+				<font>font32</font>
+				<textcolor>white</textcolor>
+				<align>center</align>
+				<label>$INFO[Window().Property(day_name_6)]</label>
+			</control>
+			<control type="label">
+				<top>36</top>
+				<width>256</width>
+				<height>26</height>
+				<font>font13</font>
+				<textcolor>66FFFFFF</textcolor>
+				<align>center</align>
+				<label>$INFO[Window().Property(day_date_6)]</label>
+			</control>
+		</control>
+
+		<control type="list" id="1006">
+			<left>1624</left>
+			<top>250</top>
+			<width>256</width>
+			<height>780</height>
+			<scrolltime>200</scrolltime>
+			<onup>2999</onup>
+			<onleft>1005</onleft>
+			<onright>1006</onright>
+
+			<itemlayout width="246" height="112">
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>50</width>
+					<height>74</height>
+					<aspectratio>stretch</aspectratio>
+					<texture>$INFO[ListItem.Art(poster)]</texture>
+					<visible>!String.IsEmpty(ListItem.Art(poster))</visible>
+					<colordiffuse>AAFFFFFF</colordiffuse>
+				</control>
+
+				<control type="label">
+					<left>58</left>
+					<top>2</top>
+					<width>188</width>
+					<height>22</height>
+					<font>font20_title</font>
+					<textcolor>FFFFFFFF</textcolor>
+					<label>[B]$INFO[ListItem.Property(show_title)][/B]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>26</top>
+					<width>188</width>
+					<height>20</height>
+					<font>font10</font>
+					<textcolor>$INFO[Window().Property(settings.color)]</textcolor>
+					<label>$INFO[ListItem.Property(episode_code)] - $INFO[ListItem.Property(air_time_label)]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>48</top>
+					<width>188</width>
+					<height>40</height>
+					<font>font10</font>
+					<textcolor>66FFFFFF</textcolor>
+					<wrapmultiline>true</wrapmultiline>
+					<label>$INFO[ListItem.Property(episode_title)]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>90</top>
+					<width>188</width>
+					<height>20</height>
+					<font>font10</font>
+					<textcolor>FFFFD700</textcolor>
+					<label>$INFO[ListItem.Property(rating_display)]</label>
+					<visible>!String.IsEmpty(ListItem.Property(rating_display)) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+
+				<control type="label">
+					<left>0</left>
+					<top>40</top>
+					<width>246</width>
+					<height>30</height>
+					<font>font13</font>
+					<textcolor>66FFFFFF</textcolor>
+					<align>center</align>
+					<label>$INFO[ListItem.Label]</label>
+					<visible>String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>4</width>
+					<height>112</height>
+					<texture colordiffuse="FF4CAF50">white.png</texture>
+					<visible>String.IsEqual(ListItem.Property(air_status),aired) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>4</width>
+					<height>112</height>
+					<texture colordiffuse="FF9E9E9E">white.png</texture>
+					<visible>String.IsEqual(ListItem.Property(air_status),upcoming) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+			</itemlayout>
+
+			<focusedlayout width="246" height="112">
+				<control type="image">
+					<left>-4</left>
+					<top>-4</top>
+					<width>254</width>
+					<height>120</height>
+					<texture colordiffuse="33FFFFFF">white.png</texture>
+					<visible>Control.HasFocus(1006)</visible>
+				</control>
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>50</width>
+					<height>74</height>
+					<aspectratio>stretch</aspectratio>
+					<texture>$INFO[ListItem.Art(poster)]</texture>
+					<visible>!String.IsEmpty(ListItem.Art(poster))</visible>
+					<colordiffuse>AAFFFFFF</colordiffuse>
+				</control>
+
+				<control type="label">
+					<left>58</left>
+					<top>2</top>
+					<width>188</width>
+					<height>22</height>
+					<font>font20_title</font>
+					<textcolor>FFFFFFFF</textcolor>
+					<label>[B]$INFO[ListItem.Property(show_title)][/B]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>26</top>
+					<width>188</width>
+					<height>20</height>
+					<font>font10</font>
+					<textcolor>$INFO[Window().Property(settings.color)]</textcolor>
+					<label>$INFO[ListItem.Property(episode_code)] - $INFO[ListItem.Property(air_time_label)]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>48</top>
+					<width>188</width>
+					<height>40</height>
+					<font>font10</font>
+					<textcolor>66FFFFFF</textcolor>
+					<wrapmultiline>true</wrapmultiline>
+					<label>$INFO[ListItem.Property(episode_title)]</label>
+					<visible>!String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="label">
+					<left>58</left>
+					<top>90</top>
+					<width>188</width>
+					<height>20</height>
+					<font>font10</font>
+					<textcolor>FFFFD700</textcolor>
+					<label>$INFO[ListItem.Property(rating_display)]</label>
+					<visible>!String.IsEmpty(ListItem.Property(rating_display)) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+
+				<control type="label">
+					<left>0</left>
+					<top>40</top>
+					<width>246</width>
+					<height>30</height>
+					<font>font13</font>
+					<textcolor>66FFFFFF</textcolor>
+					<align>center</align>
+					<label>$INFO[ListItem.Label]</label>
+					<visible>String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>4</width>
+					<height>112</height>
+					<texture colordiffuse="FF4CAF50">white.png</texture>
+					<visible>String.IsEqual(ListItem.Property(air_status),aired) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>4</width>
+					<height>112</height>
+					<texture colordiffuse="FF9E9E9E">white.png</texture>
+					<visible>String.IsEqual(ListItem.Property(air_status),upcoming) + !String.IsEqual(ListItem.Property(is_placeholder),true)</visible>
+				</control>
+			</focusedlayout>
+		</control>
+
+	</controls>
+</window>

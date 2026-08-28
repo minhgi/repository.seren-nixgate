@@ -2,6 +2,7 @@ import base64
 import collections
 import datetime
 import pickle
+import sqlite3
 import time
 import types
 from abc import ABCMeta
@@ -10,7 +11,7 @@ from functools import reduce
 from functools import wraps
 
 from resources.lib.common import tools
-from resources.lib.database import Database, SQLiteConnection
+from resources.lib.database import Database, SQLiteConnection, _evict_thread_connection
 from resources.lib.modules.exceptions import UnsupportedCacheParamException
 from resources.lib.modules.globals import g
 
@@ -18,6 +19,18 @@ from resources.lib.modules.globals import g
 # do_cleanup() prunes oldest rows when seren_cache.db exceeds this threshold.
 _CACHE_DB_MAX_SIZE_MB = 50
 _CACHE_DB_MAX_ROWS = 10_000
+
+# In-process MemCache index cap (window-property-backed - see MemCache class
+# docstring). Backstop against unbounded growth over a long Kodi uptime, not
+# the primary cleanup mechanism (that's MemCache.do_cleanup()'s 4-hourly expiry
+# sweep, wired in via common/maintenance.py). use_cache()'s cache_str hashes
+# call args into the key, so cardinality scales with distinct items queried,
+# not with the number of @use_cache call sites - a single heavy session's
+# metadata browsing can hold hundreds of still-valid (12h default TTL) entries
+# the expiry sweep won't touch until they individually age out. Sized well
+# above realistic single-session use so it only fires on pathological growth.
+_MEM_CACHE_MAX_INDEX_ENTRIES = 2000
+_MEM_CACHE_TRIM_TARGET = 1600
 
 schema = {
     "cache": {
@@ -230,14 +243,27 @@ class DatabaseCache(Database, CacheBase):
         if g.get_bool_runtime_setting(self._create_key("db.clean.busy")):
             return
         g.set_runtime_setting(self._create_key("db.clean.busy"), True)
+        # PRAGMA journal_mode below (both steps) needs no other connection open to
+        # this file — drop this thread's own pooled one first so it can't self-collide.
+        _evict_thread_connection(self._db_file)
         try:
             # Step 1: TTL expiry delete with fast-bulk PRAGMAs (ported from POV clean_databases).
             # synchronous=OFF + journal_mode=MEMORY avoids per-row fsync and disk-journal
             # overhead during bulk DELETE.  Cache DB is rebuildable; crash risk is acceptable.
+            # Best-effort: switching off WAL requires no other connection have the file open,
+            # and the eviction above only covers this thread — another thread's pooled
+            # connection can still hold it, so fall through on default (WAL) PRAGMAs rather
+            # than crash the caller.
             with SQLiteConnection(self._db_file) as conn:
-                with conn.cursor() as cur:
-                    cur.execute("PRAGMA synchronous = OFF")
-                    cur.execute("PRAGMA journal_mode = MEMORY")
+                try:
+                    with conn.cursor() as cur:
+                        cur.execute("PRAGMA synchronous = OFF")
+                        cur.execute("PRAGMA journal_mode = MEMORY")
+                except sqlite3.OperationalError:
+                    g.log(
+                        f"Fast-bulk PRAGMA unavailable for {self._db_file} cleanup (file in use elsewhere) — using defaults",
+                        "warning",
+                    )
                 with conn.transaction() as cur:
                     cur.execute(
                         f"DELETE FROM {self.cache_table_name} WHERE expires < ?",
@@ -257,9 +283,15 @@ class DatabaseCache(Database, CacheBase):
                         "info",
                     )
                     with SQLiteConnection(self._db_file) as conn:
-                        with conn.cursor() as cur:
-                            cur.execute("PRAGMA synchronous = OFF")
-                            cur.execute("PRAGMA journal_mode = MEMORY")
+                        try:
+                            with conn.cursor() as cur:
+                                cur.execute("PRAGMA synchronous = OFF")
+                                cur.execute("PRAGMA journal_mode = MEMORY")
+                        except sqlite3.OperationalError:
+                            g.log(
+                                f"Fast-bulk PRAGMA unavailable for {self._db_file} prune (file in use elsewhere) — using defaults",
+                                "warning",
+                            )
                         with conn.transaction() as cur:
                             cur.execute(
                                 f"DELETE FROM {self.cache_table_name} WHERE ROWID IN "
@@ -353,7 +385,17 @@ class MemCache(CacheBase):
         )
         self._get_index()
         self._index.add(f"{cache_id}:{expires}")
+        self._enforce_index_cap()
         self._save_index()
+
+    def _enforce_index_cap(self):
+        if len(self._index) <= _MEM_CACHE_MAX_INDEX_ENTRIES:
+            return
+        by_expiry = sorted(self._index, key=lambda item: float(item.split(":", 1)[1]))
+        overflow = len(by_expiry) - _MEM_CACHE_TRIM_TARGET
+        for item in by_expiry[:overflow]:
+            g.clear_runtime_setting(item.split(":", 1)[0])
+            self._index.discard(item)
 
     def do_cleanup(self):
         if self._exit or g.abort_requested():

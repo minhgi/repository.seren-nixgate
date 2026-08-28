@@ -1,10 +1,11 @@
 import re
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import as_completed
 from functools import cached_property
 from urllib.parse import quote
 
 import xbmcgui
 
+from resources.lib.common.thread_pool import ThreadPoolExecutor
 from resources.lib.modules.globals import g
 
 # MDBList's /lists/{listid}/items `sort` enum - key, display-string-id pairs, in the
@@ -152,10 +153,10 @@ class Menus:
             # `with ThreadPoolExecutor(...)` would block here on shutdown(wait=True) regardless
             # of the as_completed timeout above, silently turning the 20s ceiling into "however
             # long the slowest straggler takes." wait=False actually enforces the ceiling.
-            # (cancel_futures needs Python 3.9+; Kodi 21.3 embeds 3.8, so it's omitted here -
-            # already-submitted futures still run to completion in the background, but we no
-            # longer wait on them.)
-            executor.shutdown(wait=False)
+            # cancel_futures drops queued-but-unstarted lookups - common/thread_pool.py's
+            # ThreadPoolExecutor backports this to Python 3.8. Futures already running still
+            # finish in the background; nothing here waits on or reads their results.
+            executor.shutdown(wait=False, cancel_futures=True)
 
         if resolved:
             self._seed_trakt_sync(resolved, media_type)

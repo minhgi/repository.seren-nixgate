@@ -3802,34 +3802,6 @@ msgctxt "#30683"
 msgid "Fifth Priority"
 msgstr "Fifth Priority"
 
-msgctxt "#30684"
-msgid "Audio Language"
-msgstr "Audio Language"
-
-msgctxt "#30685"
-msgid "Subtitle Language"
-msgstr "Subtitle Language"
-
-msgctxt "#30686"
-msgid "Multi-Audio"
-msgstr "Multi-Audio"
-
-msgctxt "#30687"
-msgid "Dual-Audio"
-msgstr "Dual-Audio"
-
-msgctxt "#30688"
-msgid "Sub"
-msgstr "Sub"
-
-msgctxt "#30689"
-msgid "Dub"
-msgstr "Dub"
-
-msgctxt "#30690"
-msgid "Multi-Sub"
-msgstr "Multi-Sub"
-
 msgctxt "#30691"
 msgid "Filter Foreign Audio"
 msgstr "Filter Foreign Audio"
@@ -4037,10 +4009,6 @@ msgstr "Number of consecutive resolve failures (torrent no longer cached on debr
 msgctxt "#30744"
 msgid "Download cancelled. Keep downloading in your debrid cloud?"
 msgstr "Download cancelled. Keep downloading in your debrid cloud?"
-
-msgctxt "#30745"
-msgid ""
-msgstr ""
 
 msgctxt "#30746"
 msgid "Keep Downloading"
@@ -4433,6 +4401,7 @@ msgstr "Your AniDB password — stored locally, used only for GROUP_STATUS queri
 msgctxt "#30876"
 msgid "Account Info"
 msgstr "Account Info"
+
 msgctxt "#30877"
 msgid "Revoke Premiumize"
 msgstr "Revoke Premiumize"
@@ -7045,3 +7014,95 @@ msgstr "Clear Cache on Version Upgrade"
 msgctxt "#31520"
 msgid "When enabled, Seren automatically clears its metadata cache, local torrent cache, debrid hash cache, and provider performance stats whenever the addon version changes. Python bytecode cache is always cleared regardless of this setting."
 msgstr "When enabled, Seren automatically clears its metadata cache, local torrent cache, debrid hash cache, and provider performance stats whenever the addon version changes. Python bytecode cache is always cleared regardless of this setting."
+
+msgctxt "#31521"
+msgid "Drop Shows"
+msgstr "Drop Shows"
+
+msgctxt "#31522"
+msgid "Select shows from your watchlist to drop"
+msgstr "Select shows from your watchlist to drop"
+
+msgctxt "#31523"
+msgid "Select shows to drop"
+msgstr "Select shows to drop"
+
+msgctxt "#31524"
+msgid "{} show(s) dropped"
+msgstr "{} show(s) dropped"
+
+msgctxt "#31525"
+msgid "No shows in watchlist to drop"
+msgstr "No shows in watchlist to drop"
+
+msgctxt "#31526"
+msgid "Hide Fully-Watched Dropped Shows"
+msgstr "Hide Fully-Watched Dropped Shows"
+
+msgctxt "#31527"
+msgid "Hide shows from the Trakt - Dropped Shows screen once fully watched, independent of the general Hide Watched Items setting above. Off by default, so dropped shows remain visible regardless of watched status until you turn this on."
+msgstr "Hide shows from the Trakt - Dropped Shows screen once fully watched, independent of the general Hide Watched Items setting above. Off by default, so dropped shows remain visible regardless of watched status until you turn this on."
+
+msgctxt "#31528"
+msgid "All dropped shows are fully watched and hidden. Use Restore Dropped Shows below, or turn off Hide Fully-Watched Dropped Shows in settings."
+msgstr "All dropped shows are fully watched and hidden. Use Restore Dropped Shows below, or turn off Hide Fully-Watched Dropped Shows in settings."
+
+msgctxt "#31529"
+msgid "Calendar Region"
+msgstr "Calendar Region"
+
+msgctxt "#31530"
+msgid "The country code Movie Calendar filters by. Set using Choose Region below."
+msgstr "The country code Movie Calendar filters by. Set using Choose Region below."
+
+msgctxt "#31531"
+msgid "Choose Region"
+msgstr "Choose Region"
+
+msgctxt "#31532"
+msgid "Filters Movie Calendar to a single production country. This reflects where a movie was made, not where it's available to watch. Combines with the language filter below if both are set - leave this blank to filter by language only."
+msgstr "Filters Movie Calendar to a single production country. This reflects where a movie was made, not where it's available to watch. Combines with the language filter below if both are set - leave this blank to filter by language only."
+
+msgctxt "#31533"
+msgid "Calendar Language"
+msgstr "Calendar Language"
+
+msgctxt "#31534"
+msgid "The language code Movie Calendar filters by. Set using Choose Language below."
+msgstr "The language code Movie Calendar filters by. Set using Choose Language below."
+
+msgctxt "#31535"
+msgid "Choose Language"
+msgstr "Choose Language"
+
+msgctxt "#31536"
+msgid "Filters Movie Calendar to a single original language. Combines with the region filter above if both are set - leave this blank to filter by region only."
+msgstr "Filters Movie Calendar to a single original language. Combines with the region filter above if both are set - leave this blank to filter by region only."
+
+msgctxt "#31537"
+msgid "Calendar Region & Language"
+msgstr "Calendar Region & Language"
+
+msgctxt "#31538"
+msgid "No movies matched your region and language filter this month. Try clearing one in settings."
+msgstr "No movies matched your region and language filter this month. Try clearing one in settings."
+
+msgctxt "#31539"
+msgid "TV Shows Weekly Calendar"
+msgstr "TV Shows Weekly Calendar"
+
+msgctxt "#31540"
+msgid "No episodes found for this week"
+msgstr "No episodes found for this week"
+
+msgctxt "#31541"
+msgid "No episodes"
+msgstr "No episodes"
+
+msgctxt "#31542"
+msgid "Browse every TV show airing this week across Trakt, Simkl, and MDBList, filtered by the region/language settings above. Your watchlisted and currently-watching shows always appear regardless of the filter."
+msgstr "Browse every TV show airing this week across Trakt, Simkl, and MDBList, filtered by the region/language settings above. Your watchlisted and currently-watching shows always appear regardless of the filter."
+
+msgctxt "#31543"
+msgid "No shows matched your region and language filter this week. Try clearing one in settings."
+msgstr "No shows matched your region and language filter this week. Try clearing one in settings."

@@ -156,6 +156,23 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
     def _get_single_movie_meta(self, trakt_id):
         return self._get_single_meta(f"/movies/{trakt_id}", trakt_id, "movies")
 
+    def missing_trakt_meta_ids(self, trakt_ids):
+        """Subset of trakt_ids with no persisted raw Trakt object in movies_meta.
+        Used by movie_calendar_data.py's cache-hit branch to self-heal bookkeeping
+        (movieCalendar.db) that has outlived traktSync.db being cleared out of band
+        (e.g. Rebuild Database) - without this, a wiped row crashes
+        metadataHandler.format_db_object() on every future open of that month,
+        forever, since the cache-hit branch normally never re-inserts (see the
+        insert_trakt_movies() call in movie_calendar_data.py)."""
+        ids = {int(t) for t in trakt_ids if t is not None}
+        if not ids:
+            return []
+        id_list = ",".join(str(i) for i in ids)
+        present = {
+            r["id"] for r in self.fetchall(f"SELECT id FROM movies_meta WHERE type='trakt' AND id IN ({id_list})")
+        }
+        return sorted(ids - present)
+
     @guard_against_none_or_empty()
     def _update_movies(self, list_to_update):
         get = MetadataHandler.get_trakt_info
@@ -195,6 +212,7 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
         updated_items = self.task_queue.wait_completion()
 
         if not updated_items:
+            self.task_queue.close()
             return
 
         self.task_queue.put(
@@ -219,6 +237,7 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
             "imdb_id",
         )
         self.task_queue.wait_completion()
+        self.task_queue.close()
 
         formatted_items = self.metadataHandler.format_db_object(updated_items)
 

@@ -161,11 +161,12 @@ def account_premium_status_checks():
                 set_settings_status(service[2], status)
 
 
-def toggle_reuselanguageinvoker(forced_state=None):
+def toggle_reuselanguageinvoker(forced_state=None, interactive=True):
     def _store_and_reload(output):
         with open(file_path, "w+") as addon_xml:
             addon_xml.writelines(output)
-        xbmcgui.Dialog().ok(g.ADDON_NAME, g.get_language_string(30531))
+        if interactive:
+            xbmcgui.Dialog().ok(g.ADDON_NAME, g.get_language_string(30531))
         g.reload_profile()
 
     file_path = os.path.join(g.ADDON_DATA_PATH, "addon.xml")
@@ -184,6 +185,11 @@ def toggle_reuselanguageinvoker(forced_state=None):
                 file_lines[i] = file_lines[i].replace("true", "false")
                 g.set_setting("reuselanguageinvoker.status", "Disabled")
                 _store_and_reload(file_lines)
+            elif "false" in line_string and forced_state is False:
+                # addon.xml already matches forced_state: no file patch/reload needed, but the
+                # setting can still be stale (e.g. "Enabled" left over from before this was ever
+                # forced off) — sync it so Settings doesn't keep showing a state that isn't real.
+                g.set_setting("reuselanguageinvoker.status", "Disabled")
             break
 
 
@@ -275,3 +281,35 @@ def run_maintenance():
         )
     except Exception as e:
         g.log(f"ProviderPerformance maintenance error: {e}", "warning")
+
+    # Evict stale TV Schedule week bookkeeping (bootstrap data stays in the
+    # shared trakt_sync tables - only this feature's own fetch index is pruned)
+    try:
+        from resources.lib.database.tvSchedule import TvScheduleDatabase
+        from resources.lib.modules.tv_schedule_data import retention_cutoff
+
+        tsd = TvScheduleDatabase()
+        tsd.cleanup(retention_cutoff())
+        stats = tsd.get_stats()
+        g.log(
+            f"TvSchedule maintenance: {stats['total']} episode(s) tracked across {stats['weeks']} week(s)",
+            "info",
+        )
+    except Exception as e:
+        g.log(f"TvSchedule maintenance error: {e}", "warning")
+
+    # Evict stale Movie Calendar month bookkeeping (bootstrap data stays in the
+    # shared trakt_sync tables - only this feature's own fetch index is pruned)
+    try:
+        from resources.lib.database.movieCalendar import MovieCalendarDatabase
+        from resources.lib.modules.movie_calendar_data import retention_cutoff as movie_retention_cutoff
+
+        mcd = MovieCalendarDatabase()
+        mcd.cleanup(movie_retention_cutoff())
+        stats = mcd.get_stats()
+        g.log(
+            f"MovieCalendar maintenance: {stats['total']} movie(s) tracked across {stats['months']} month(s)",
+            "info",
+        )
+    except Exception as e:
+        g.log(f"MovieCalendar maintenance error: {e}", "warning")

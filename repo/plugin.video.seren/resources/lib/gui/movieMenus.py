@@ -201,10 +201,10 @@ class Menus:
 
     @staticmethod
     def my_movies():
-        trakt_active = bool(g.get_setting('trakt.auth')) and g.get_bool_setting('trakt.enabled', False)
-        mdblist_active = g.get_setting('mdblist.enabled') == "true" and bool(g.get_setting('mdblist.auth') or g.get_setting('mdblist.apikey'))
-        simkl_active = bool(g.get_setting('simkl.auth')) and g.get_bool_setting('simkl.enabled')
-        if trakt_active and g.get_bool_setting('moviecalendar.enabled', False):
+        trakt_active = g.trakt_active()
+        mdblist_active = g.mdblist_active()
+        simkl_active = g.simkl_active()
+        if (trakt_active or mdblist_active or simkl_active) and g.get_bool_setting('moviecalendar.enabled', False):
             g.add_directory_item(
                 g.get_language_string(31510),
                 action="movieCalendarBrowse",
