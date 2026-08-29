@@ -364,6 +364,9 @@ class GlobalVariables:
         self.REQUEST_PARAMS = None
         self.FROM_WIDGET = False
         self.PAGE = 1
+        # Last-seen value of the 'settings_derived_cache_generation' runtime counter
+        # (bumped by SerenMonitor.onSettingsChanged). See reconcile_settings_derived_caches().
+        self._settings_derived_cache_generation_seen = None
 
     def __del__(self):
         self.deinit()
@@ -389,6 +392,46 @@ class GlobalVariables:
         """
         for prop in self._CACHED_SETTING_PROPS:
             self.__dict__.pop(prop, None)
+
+    def reconcile_settings_derived_caches(self):
+        """Mirror SerenMonitor.onSettingsChanged()'s cache flush on the plugin-invoker path.
+
+        SerenMonitor is instantiated only in service.py, so under reuselanguageinvoker
+        (the plugin interpreter is reused across calls) a Kodi-GUI settings change never
+        invalidates g's settings-derived cached_property values, the MetadataHandler
+        singleton, or the trakt_sync L1 list cache on the plugin side until Kodi restarts.
+        onSettingsChanged() bumps the 'settings_derived_cache_generation' runtime counter;
+        this compares it and flushes the same trio when it moves. No-op when nothing
+        changed, and when reuselanguageinvoker is off (fresh interpreter, cold caches).
+        """
+        try:
+            generation = self.get_int_runtime_setting("settings_derived_cache_generation", 0)
+        except Exception:
+            return
+        if self._settings_derived_cache_generation_seen is None:
+            self._settings_derived_cache_generation_seen = generation
+            return
+        if generation == self._settings_derived_cache_generation_seen:
+            return
+        self.log(
+            f"RLI settings-derived cache reconcile: generation "
+            f"{self._settings_derived_cache_generation_seen} -> {generation}, flushing",
+            "debug",
+        )
+        self._settings_derived_cache_generation_seen = generation
+        self.clear_cached_settings_properties()
+        try:
+            from resources.lib.modules.metadataHandler import MetadataHandler
+
+            MetadataHandler.invalidate()
+        except Exception:
+            pass
+        try:
+            from resources.lib.database.trakt_sync import clear_list_cache
+
+            clear_list_cache()
+        except Exception:
+            pass
 
     def init_globals(self, argv=None, addon_id=None):
         self.IS_ADDON_FIRSTRUN = self.IS_ADDON_FIRSTRUN is None
@@ -424,6 +467,7 @@ class GlobalVariables:
 
         self.init_request(argv)
         self._init_cache()
+        self.reconcile_settings_derived_caches()
 
     def _store_service_state(self):
         """

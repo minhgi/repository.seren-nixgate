@@ -272,6 +272,10 @@ class ListBuilder:
         if not item:
             return
 
+        if "info" not in item:
+            g.log(f"Skeleton item has no info, dropping from list: {item}", "error")
+            return
+
         if self.show_original_title and item.get("info", {}).get("originaltitle"):
             name = item.get("info", {}).get("originaltitle")
         else:

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.video.seren" version="3.9.1" name="Seren" provider-name="Nixgates">
+<addon id="plugin.video.seren" version="3.9.4" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -66,6 +66,14 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.4
+            [FIX] Turning on Kodi's "reuse language invoker" setting through Seren's own Settings toggle no longer resets to off the next time Seren updates. Every update still ships with it off by default, and turning it on always goes through the same Settings toggle as before - this only makes that choice survive an update instead of silently reverting until you noticed and turned it back on again.
+            Changelog 3.9.3
+            [FIX] Switching to a different Simkl account left that account's cached list rows visible until Kodi restarted - Seren already cleared this short-term cache on a Trakt account switch, but the equivalent Simkl step never did. It now clears the same way.
+            [FIX] A show or movie item that was missing its metadata (a rare local-database gap) crashed the entire list it appeared in instead of being skipped. That item is now dropped from the list and the rest of the list renders normally.
+            [CHANGE] Hardening for the Trakt list short-term cache added in 3.9.2: its read/write/evict steps are now protected by a lock (only reachable with "reuse language invoker" on and more than 50 cached lists in one session), and its cache keys now also include which Trakt/Simkl/MDBList accounts are signed in, so a future account-switch path that forgets to clear this cache can't serve another account's rows.
+            Changelog 3.9.2
+            [FIX] When Kodi's "reuse language invoker" setting is on (it is off by default; some users enable it for speed), Kodi keeps one Seren plugin process alive and reuses it between actions. Seren's settings-changed handler only runs in the background service process, so several values the plugin process computes once and caches - which debrid providers are enabled, the metadata language/artwork option bundle, and the Trakt list short-term cache - stayed on their old values after you changed those settings from Kodi's GUI, until Kodi was restarted. The plugin process now compares a counter the service increments on each settings save and clears the same caches itself when it moves, so GUI setting changes apply on the next action. No change when "reuse language invoker" is off, where each action already starts a fresh process.
             Changelog 3.9.1
             [FIX] When Kodi's video library runs on MySQL (set via advancedsettings.xml) instead of the default local SQLite, Seren's clear-our-bookmarks step - run once while handling a playback resume point - left its MySQL connection open on exit and relied on Python's garbage collector to close it later. It now closes deterministically, the same way the SQLite path already did. No change for the default SQLite setup.
             Changelog 3.9.0

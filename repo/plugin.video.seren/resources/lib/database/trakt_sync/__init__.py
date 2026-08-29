@@ -2,6 +2,7 @@ import collections
 import datetime
 import hashlib
 import json
+import threading
 import time
 from functools import cached_property
 from urllib import parse
@@ -24,6 +25,7 @@ from resources.lib.modules.sync_lock import SyncLock
 # ---------------------------------------------------------------------------
 _LIST_CACHE = {}
 _LIST_CACHE_MAX = 50  # Max entries to prevent unbounded growth
+_LIST_CACHE_LOCK = threading.Lock()
 
 # Session-level set of db_file paths already migrated for the watchlisted/favorited
 # columns below - avoids a PRAGMA table_info() round trip on every TraktSyncDatabase()
@@ -36,29 +38,41 @@ _LIST_ITEMS_MIGRATED = set()
 
 
 def _list_cache_key(method_name, id_list, **params):
-    """Generate a cache key from method name, trakt IDs, and relevant params."""
-    key_data = f"{method_name}:{','.join(str(i) for i in sorted(id_list))}:{params.get('hide_unaired', '')}:{params.get('hide_watched', '')}:{g.PAGE}"
+    """Generate a cache key from method name, trakt IDs, relevant params, and the
+    username currently authenticated on each service. The username components are
+    defense-in-depth, not the primary invalidation path - an account switch already
+    re-queries the DB and gets a different id_list in the common case - but they mean
+    a missed clear_list_cache() call at some future account-switch site can no longer
+    serve another account's formatted rows (see clear_list_cache's callers)."""
+    key_data = (
+        f"{method_name}:{','.join(str(i) for i in sorted(id_list))}:"
+        f"{params.get('hide_unaired', '')}:{params.get('hide_watched', '')}:{g.PAGE}:"
+        f"{g.get_setting('trakt.username')}:{g.get_setting('simkl.username')}:{g.get_setting('mdblist.username')}"
+    )
     return hashlib.md5(key_data.encode()).hexdigest()
 
 
 def list_cache_get(key):
     """Get a cached list result. Returns None on miss."""
-    return _LIST_CACHE.get(key)
+    with _LIST_CACHE_LOCK:
+        return _LIST_CACHE.get(key)
 
 
 def list_cache_set(key, value):
     """Store a list result in the L1 cache."""
-    if len(_LIST_CACHE) >= _LIST_CACHE_MAX:
-        # Evict oldest ~25% of entries
-        evict_count = _LIST_CACHE_MAX // 4
-        for old_key in list(_LIST_CACHE.keys())[:evict_count]:
-            _LIST_CACHE.pop(old_key, None)
-    _LIST_CACHE[key] = value
+    with _LIST_CACHE_LOCK:
+        if len(_LIST_CACHE) >= _LIST_CACHE_MAX:
+            # Evict oldest ~25% of entries
+            evict_count = _LIST_CACHE_MAX // 4
+            for old_key in list(_LIST_CACHE.keys())[:evict_count]:
+                _LIST_CACHE.pop(old_key, None)
+        _LIST_CACHE[key] = value
 
 
 def clear_list_cache():
     """Clear the L1 list cache. Called on trakt sync, settings change, etc."""
-    _LIST_CACHE.clear()
+    with _LIST_CACHE_LOCK:
+        _LIST_CACHE.clear()
 
 schema = {
     "shows_meta": {

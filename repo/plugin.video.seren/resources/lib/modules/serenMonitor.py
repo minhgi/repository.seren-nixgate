@@ -34,6 +34,15 @@ class SerenMonitor(xbmc.Monitor):
             clear_list_cache()
         except Exception:
             pass
+        # Bump a generation counter the plugin-invoker path watches. Under
+        # reuselanguageinvoker the plugin interpreter is reused across calls and never
+        # runs this callback (SerenMonitor is instantiated only in service.py), so
+        # g.init_globals() -> reconcile_settings_derived_caches() compares this counter
+        # and flushes the same trio (cached settings props, MetadataHandler, list cache).
+        g.set_runtime_setting(
+            "settings_derived_cache_generation",
+            g.get_int_runtime_setting("settings_derived_cache_generation", 0) + 1,
+        )
         g.trigger_widget_refresh(if_playing=False)
 
     def onNotification(self, sender, method, data):

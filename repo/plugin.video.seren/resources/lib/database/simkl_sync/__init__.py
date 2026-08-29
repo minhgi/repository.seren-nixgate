@@ -154,11 +154,14 @@ class SimklSyncDatabase(Database):
         collapsed into one method since Simkl's tables hold only watch-state, not a
         browsable catalog cache like Trakt's - there's nothing worth preserving across
         a user switch)."""
+        from resources.lib.database.trakt_sync import clear_list_cache
+
         self.execute_sql("DELETE FROM movies")
         self.execute_sql("DELETE FROM shows")
         self.execute_sql("DELETE FROM bookmarks")
         self.execute_sql("DELETE FROM activities")
         self.set_base_activities()
+        clear_list_cache()
 
     def set_simkl_user(self, simkl_username):
         g.log(f"Setting Simkl Username: {simkl_username}")
