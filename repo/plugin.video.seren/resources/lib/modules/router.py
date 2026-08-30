@@ -185,6 +185,7 @@ _ROUTE_TABLE = {
     "mdblistCollectionMovies":   _menu("resources.lib.gui.mdblistMenus", "collection_movies"),
     "mdblistCollectionShows":    _menu("resources.lib.gui.mdblistMenus", "collection_shows"),
     "mdblistDroppedShows":       _menu("resources.lib.gui.mdblistMenus", "dropped_shows"),
+    "mdblistDroppedShowsRestore": _menu("resources.lib.gui.mdblistMenus", "dropped_shows_bulk_restore"),
     "mdblistWatchlistMovies":    _menu("resources.lib.gui.mdblistMenus", "watchlist_movies"),
     "mdblistWatchlistShows":     _menu("resources.lib.gui.mdblistMenus", "watchlist_shows"),
     "mdblistLikedLists":         _menu("resources.lib.gui.mdblistMenus", "liked_lists", "mediatype"),

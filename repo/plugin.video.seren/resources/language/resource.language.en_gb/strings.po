@@ -7106,3 +7106,38 @@ msgstr "Browse every TV show airing this week across Trakt, Simkl, and MDBList, 
 msgctxt "#31543"
 msgid "No shows matched your region and language filter this week. Try clearing one in settings."
 msgstr "No shows matched your region and language filter this week. Try clearing one in settings."
+
+#: /resources/lib/gui/trakt_context_menu.py
+msgctxt "#31544"
+msgid "Drop Show (MDBList)"
+msgstr "Drop Show (MDBList)"
+
+#: /resources/lib/gui/trakt_context_menu.py
+msgctxt "#31545"
+msgid "Show dropped on MDBList"
+msgstr "Show dropped on MDBList"
+
+#: /resources/lib/gui/trakt_context_menu.py
+msgctxt "#31546"
+msgid "Show must be in your MDBList watch history before it can be dropped"
+msgstr "Show must be in your MDBList watch history before it can be dropped"
+
+#: /resources/lib/gui/mdblistMenus.py
+msgctxt "#31547"
+msgid "Restore Dropped Shows (MDBList)"
+msgstr "Restore Dropped Shows (MDBList)"
+
+#: /resources/lib/gui/mdblistMenus.py
+msgctxt "#31548"
+msgid "Select dropped shows to restore"
+msgstr "Select dropped shows to restore"
+
+#: /resources/lib/gui/mdblistMenus.py
+msgctxt "#31549"
+msgid "{} show(s) restored"
+msgstr "{} show(s) restored"
+
+#: /resources/lib/gui/mdblistMenus.py
+msgctxt "#31550"
+msgid "No dropped shows to restore"
+msgstr "No dropped shows to restore"

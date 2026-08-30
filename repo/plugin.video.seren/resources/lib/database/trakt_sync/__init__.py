@@ -1,4 +1,5 @@
 import collections
+import copy
 import datetime
 import hashlib
 import json
@@ -53,20 +54,20 @@ def _list_cache_key(method_name, id_list, **params):
 
 
 def list_cache_get(key):
-    """Get a cached list result. Returns None on miss."""
+    """Get a cached list result. Returns None on miss. Deep-copied - renderers mutate/pop items in place."""
     with _LIST_CACHE_LOCK:
-        return _LIST_CACHE.get(key)
+        return copy.deepcopy(_LIST_CACHE.get(key))
 
 
 def list_cache_set(key, value):
-    """Store a list result in the L1 cache."""
+    """Store a list result in the L1 cache. Deep-copied - the caller still renders (mutates) `value` after this."""
     with _LIST_CACHE_LOCK:
         if len(_LIST_CACHE) >= _LIST_CACHE_MAX:
             # Evict oldest ~25% of entries
             evict_count = _LIST_CACHE_MAX // 4
             for old_key in list(_LIST_CACHE.keys())[:evict_count]:
                 _LIST_CACHE.pop(old_key, None)
-        _LIST_CACHE[key] = value
+        _LIST_CACHE[key] = copy.deepcopy(value)
 
 
 def clear_list_cache():

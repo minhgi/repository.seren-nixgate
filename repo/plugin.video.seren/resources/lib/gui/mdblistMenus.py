@@ -968,11 +968,70 @@ class Menus:
                 tmdb_ids.append(tmdb_id)
 
         has_more = bool((response.get("pagination") or {}).get("has_more"))
+        if g.PAGE == 1:
+            g.add_directory_item(
+                g.get_language_string(31547),
+                action="mdblistDroppedShowsRestore",
+                description=g.get_language_string(31548),
+                menu_item=g.create_icon_dict("shows_watched", g.ICONS_PATH),
+            )
         trakt_list = self._resolve(tmdb_ids, "show")
         if not trakt_list:
             g.cancel_directory()
             return
         self.list_builder.show_list_builder(trakt_list, hide_watched=False, force_next_page=has_more)
+
+    def dropped_shows_bulk_restore(self):
+        """Live-fetch sync/dropped raw (not Trakt-resolved, unlike dropped_shows() above) -
+        the multiselect dialog only needs title/year text, and MDBList's own response
+        already carries both directly on each entry (mdblist.apib's Dropped Shows GET
+        example), so there's no need to round-trip through Trakt just to power a plain-
+        text picker. Mirrors tvshowMenus.py's dropped_shows_bulk_restore() shape (fetch
+        all, multiselect, POST .../remove) but keyed on tmdb ids, MDBList's own id space,
+        rather than trakt_id. No local DB write on restore, matching dropped_shows()
+        being live-fetch-only above - there was never a local dropped record to clear.
+
+        Loops offset/has_more (dropped_shows()'s own real server-side pagination, see
+        its docstring) to collect every dropped show rather than capping at one page -
+        unlike _collection()'s documented 5000-item limitation above, sync/dropped is
+        single-type with a real has_more flag, so there's no shared-cursor obstacle to
+        looping past it, and the multiselect dialog needs the complete set anyway.
+        """
+        entries = []
+        offset = 0
+        while True:
+            response = self.mdblist_api.get_json("sync/dropped", offset=offset, limit=5000) or {}
+            for entry in response.get("shows") or []:
+                show = entry.get("show") or {}
+                tmdb_id = (show.get("ids") or {}).get("tmdb")
+                if tmdb_id is None:
+                    continue
+                title = show.get("title") or ""
+                year = show.get("year")
+                entries.append((tmdb_id, f"{title} ({year})" if year else title))
+            if not (response.get("pagination") or {}).get("has_more"):
+                break
+            offset += 5000
+
+        if not entries:
+            g.notification(g.ADDON_NAME, g.get_language_string(31550))
+            self.dropped_shows()
+            return
+
+        selected = xbmcgui.Dialog().multiselect(
+            f"{g.ADDON_NAME}: {g.get_language_string(31548)}", [e[1] for e in entries]
+        )
+        if not selected:
+            self.dropped_shows()
+            return
+
+        tmdb_ids = [entries[i][0] for i in selected]
+        self.mdblist_api.post_json(
+            "sync/dropped/remove", {"shows": [{"ids": {"tmdb": i}} for i in tmdb_ids]}
+        )
+
+        g.notification(g.ADDON_NAME, g.get_language_string(31549).format(len(tmdb_ids)))
+        self.dropped_shows()
 
     def _watchlist(self, media_type):
         """Live MDBList watchlist/items fetch for Watchlist Movies/Shows. mdblist.apib's

@@ -1,3 +1,4 @@
+import datetime
 from functools import cached_property
 
 import xbmcgui
@@ -148,6 +149,13 @@ class TraktContextMenu:
             if MDBListSyncDatabase().get_list_membership_count(list_lookup_id, list_mediatype) > 0:
                 self.dialog_list.append(g.get_language_string(31045))
             self.dialog_list.append(g.get_language_string(31062))
+            # Positioned right after Manage Lists, mirroring Trakt's own standard_list
+            # ordering above (Manage Lists, then Drop) - MDBList's dropped shows are
+            # shows-only (mdblist.apib's Dropped Shows section: "Shows only"), matching
+            # Trakt's own _hide_item, which only offers its "Dropped" picker option for
+            # mediatype == "tvshow" too.
+            if item_type == "tvshow":
+                self.dialog_list.append(g.get_language_string(31544))
 
             options.update(
                 {
@@ -169,6 +177,10 @@ class TraktContextMenu:
                     },
                     g.get_language_string(31062): {
                         "method": self._mdblist_manage_lists,
+                        "info_key": "info",
+                    },
+                    g.get_language_string(31544): {
+                        "method": self._mdblist_drop_show,
                         "info_key": "info",
                     },
                 }
@@ -1049,6 +1061,41 @@ class TraktContextMenu:
         from resources.lib.modules import cross_sync
 
         cross_sync.mirror_watched("mdblist", item_information, False)
+
+    def _mdblist_drop_show(self, item_information):
+        # dropped_at is required, unlike sync/watched's watched_at (mdblist.apib
+        # explicitly documents watched_at as defaulting to current time if omitted -
+        # the Dropped Shows section has no such note, and its POST example always
+        # includes the field), so it's always sent rather than assumed optional.
+        payload = self._info_to_mdblist_object(item_information)
+        if payload is None:
+            return
+        payload["shows"][0]["dropped_at"] = datetime.datetime.now(datetime.timezone.utc).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )
+        response = self.mdblist_api.post_json("sync/dropped", payload)
+        if not response or response.get("updated", {}).get("shows", 0) <= 0:
+            # mdblist.apib: "No new TraktWatched rows are created. If a show is not in
+            # watch history, it is returned as not_found" - a show the user has never
+            # watched will hit this on every attempt, so it gets its own message rather
+            # than the generic failure notification.
+            if response and response.get("not_found", {}).get("shows", 0) > 0:
+                g.notification(
+                    f"{g.ADDON_NAME}: {self.header_text}",
+                    g.get_language_string(31546),
+                )
+            else:
+                g.notification(
+                    f"{g.ADDON_NAME}: {self.header_text}",
+                    g.get_language_string(30287),
+                )
+            g.log(f"Failed to drop show on MDBList\nResponse: {response}")
+            return
+
+        g.notification(
+            f"{g.ADDON_NAME}: {self.header_text}",
+            g.get_language_string(31545),
+        )
 
     def _mdblist_clear_playback_entries(self, item_information):
         # No notification/refresh here - mark_watched clears silently while Clear Progress reports success/failure.

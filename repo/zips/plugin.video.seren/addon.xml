@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.video.seren" version="3.9.4" name="Seren" provider-name="Nixgates">
+<addon id="plugin.video.seren" version="3.9.9" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -66,6 +66,16 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.9
+            [FIX] Revisiting a show or movie list screen (Watchlist, Collection, My Shows, etc.) with the same filters could render it completely empty on the second and later visits, with every item logged as missing its info. The short-term list cache added for "reuse language invoker" sessions was storing the exact same data Seren was about to display, but displaying a list also consumes part of that data to build the on-screen listing - so the cached copy got consumed right along with the first visit's display, leaving nothing usable for the next one. The cache now keeps its own separate copy, so a cached list stays intact no matter how many times it's shown.
+            Changelog 3.9.8
+            [FIX] "Drop Shows" on the Trakt Watchlist screen (bulk-hide multiple shows at once) carried the same deadlock 3.9.6 and 3.9.7 fixed elsewhere: the screen refresh it triggered on the way back waits for Kodi's home screen, which can't happen while Seren is still on-screen waiting for that same call to finish. Once hit, only force-closing Kodi would recover - the shows were still dropped correctly, just the screen never returned. Fixed the same way as before: that extra refresh is removed; dropping now returns normally.
+            Changelog 3.9.7
+            [FIX] "Restore Dropped Shows (Trakt)" carried the same deadlock 3.9.6 fixed on the MDBList side: the screen refresh it triggered on the way back waits for Kodi's home screen, which can't happen while Seren is still on-screen waiting for that same call to finish. It hadn't been reported because it's timing-dependent, but the code path is identical, so it's fixed the same way - that extra refresh is removed; restoring now returns normally.
+            Changelog 3.9.6
+            [FIX] "Restore Dropped Shows (MDBList)" (new in 3.9.5) restored the show correctly but then hung on a loading spinner instead of returning to the list. The screen refresh it triggered on the way back waits for Kodi's home screen, which can't happen while Seren is still on-screen waiting for that same call to finish - a deadlock. That extra refresh wasn't needed to show the updated list anyway, so it's removed; restoring now returns normally.
+            Changelog 3.9.5
+            [NEW] MDBList's Dropped Shows gained a per-item "Drop Show (MDBList)" context-menu action (a show must already be in your MDBList watch history to be dropped, matching Trakt's own Dropped behavior) and a "Restore Dropped Shows (MDBList)" bulk-restore action on the Dropped Shows screen - MDBList previously only supported browsing dropped shows, with no way to drop or restore one from within Seren.
             Changelog 3.9.4
             [FIX] Turning on Kodi's "reuse language invoker" setting through Seren's own Settings toggle no longer resets to off the next time Seren updates. Every update still ships with it off by default, and turning it on always goes through the same Settings toggle as before - this only makes that choice survive an update instead of silently reverting until you noticed and turned it back on again.
             Changelog 3.9.3

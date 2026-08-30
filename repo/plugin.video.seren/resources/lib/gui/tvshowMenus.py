@@ -555,7 +555,6 @@ class Menus:
             self.hidden_database.add_hidden_item(trakt_id, "tvshow", "dropped")
 
         g.notification(g.ADDON_NAME, g.get_language_string(31524).format(len(show_ids)))
-        g.trigger_widget_refresh()
         self.my_shows_watchlist()
 
     @trakt_auth_guard
@@ -642,7 +641,6 @@ class Menus:
             self.hidden_database.remove_item("dropped", trakt_id)
 
         g.notification(g.ADDON_NAME, g.get_language_string(31484).format(len(show_ids)))
-        g.trigger_widget_refresh()
         self.dropped_shows()
 
     @trakt_auth_guard
