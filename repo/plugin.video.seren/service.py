@@ -69,10 +69,12 @@ try:
         )
 
     xbmc.executebuiltin('RunPlugin("plugin://plugin.video.seren/?action=torrentCacheCleanup")')
-    xbmc.executebuiltin('RunPlugin("plugin://plugin.video.seren/?action=undesirablesStartup")')
-    xbmc.executebuiltin('RunPlugin("plugin://plugin.video.seren/?action=updateAnimeMappings")')
+    if not g.wait_for_abort(15):  # Stagger the startup RunPlugins onto separate ticks so their plugin
+        xbmc.executebuiltin('RunPlugin("plugin://plugin.video.seren/?action=undesirablesStartup")')
+    if not g.wait_for_abort(15):  # interpreters are never created all at once (deadlock risk under RLI)
+        xbmc.executebuiltin('RunPlugin("plugin://plugin.video.seren/?action=updateAnimeMappings")')
 
-    g.wait_for_abort(30)  # Sleep for a half a minute to allow widget loads to complete.
+    g.wait_for_abort(15)  # Let widget loads settle. Trimmed from 30s - the two staggered ticks above now cover the rest.
 
     # Restore any enabled flags Account Manager re-enabled against the user's intent.
     # AM's startup sync runs within the first 30s; this fires after it has finished.
@@ -82,7 +84,9 @@ try:
         xbmc.executebuiltin('RunPlugin("plugin://plugin.video.seren/?action=runMaintenance")')
         if not g.wait_for_abort(15):  # Sleep to make sure tokens refreshed during maintenance
             xbmc.executebuiltin('RunPlugin("plugin://plugin.video.seren/?action=syncTraktActivities")')
+        if not g.wait_for_abort(15):  # Stagger the provider syncs onto separate ticks so their plugin
             xbmc.executebuiltin('RunPlugin("plugin://plugin.video.seren/?action=syncMDBListActivities")')
+        if not g.wait_for_abort(15):  # interpreters are never created all at once (deadlock risk under RLI)
             xbmc.executebuiltin('RunPlugin("plugin://plugin.video.seren/?action=syncSimklActivities")')
         if not g.wait_for_abort(15):  # Sleep to let the provider syncs above actually complete first
             xbmc.executebuiltin('RunPlugin("plugin://plugin.video.seren/?action=bridgeSync")')

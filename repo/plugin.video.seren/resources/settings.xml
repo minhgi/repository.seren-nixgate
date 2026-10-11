@@ -4767,17 +4767,6 @@
 						<heading>31164</heading>
 					</control>
 				</setting>
-				<setting id="anirena.apikey" type="string" label="30912" help="30913">
-					<level>0</level>
-					<default/>
-					<constraints>
-						<allowempty>true</allowempty>
-					</constraints>
-					<control type="edit" format="string">
-						<hidden>true</hidden>
-						<heading>30912</heading>
-					</control>
-				</setting>
 				<setting id="mf.token" type="string" label="30916" help="30917">
 					<level>0</level>
 					<default/>

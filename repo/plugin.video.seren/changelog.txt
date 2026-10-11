@@ -1,3 +1,32 @@
+[B]3.9.18[/B]
+- [CHANGE] torrentdownload removed from Tier 7 - its site accepts the connection but never sends any data (it does not load in a normal browser either), so every scrape waited out its full time slice for nothing. Tier 7 is now kickass, magnetdl, showrss and torrentproject2.
+
+[B]3.9.17[/B]
+- [CHANGE] leet (1337x) removed from Tier 6 - every real 1337x domain now answers with a Cloudflare JavaScript challenge that the scrapers cannot pass, and the only reachable clone (1337xx.to) ignores most search words and returns unrelated torrents. 1337x listings still arrive through Knaben, Torrentio and the other aggregators. Tier 6 is now eztv, kickass2, piratebay and yts.
+
+[B]3.9.16[/B]
+- [CHANGE] torrentz2 removed from Tier 5 - its domain torrentz2.nz no longer resolves and the only live torrentz2.io is a Google-search front page with no torrent index, so nothing could be scraped. Tier 5 is now bitsearch, knaben and Torrents-CSV.
+
+[B]3.9.15[/B]
+- [NEW] Torrents-CSV joins Tier 5 (keyword scrapers) alongside torrentz2, whose torrentz2.nz domain no longer resolves - an open-source torrent index with a public JSON API, no Cloudflare, returns info hash, size and seeders directly. The provider file ships with a4kScrapers 2.99.130 (which also fixes DMM, kickass, kickass2, magnetdl and YTS).
+
+[B]3.9.14[/B]
+- [FIX] Anime scrapers refreshed for AnimeTosho's wind-down. animetosho.org stopped updating on 2026-05-09 and its feed/storage server shuts down this month, so AnimeTosho now searches animetosho.net ("Anime Tosho NEW", a live mirror with the same search and AniDB filtering) first and only falls back to animetosho.org if .net does not answer.
+- [NEW] TsukiHime joins the anime tier (Tier 1) - a free anime release index with a public API and no key needed; it only runs for anime and reports no seeder counts, so seeds are filled in from other scrapers when the same release is found elsewhere.
+- [CHANGE] AniRena removed from the anime tier, together with its optional API Key setting (Advanced > Optional API Keys) and the old tracker-name redirects that pointed AniDex/TokyoTosho/AniRena seed lookups at it. Pair with a4kScrapers 2.99.128.
+
+[B]3.9.13[/B]
+- [CHANGE] Trimmed the service's post-startup "wait for widgets to load" sleep from 30 seconds to 15, to offset the 30 seconds of task staggering 3.9.12 added just before it. The startup flag-protection step (which undoes any service Account Manager re-enabled against your settings) now runs about 15 seconds later than before all the staggering work rather than 30, while widget loads and Account Manager's own startup sync still have well over half a minute to finish first. Service-internal timing only; nothing user-facing changes.
+
+[B]3.9.12[/B]
+- [FIX] Completing the 3.9.10/3.9.11 staggering work: the background service also fired three of its startup tasks (torrent-cache cleanup, undesirables list, anime-mapping update) in the same instant when it first loads. Same pattern - with "reuse language invoker" on that is three plugin interpreters created at once, a deadlock risk against Kodi's interpreter lock. They now run on separate 15-second ticks like the rest of the service loop. Lower-risk than the earlier two sites (nothing is tearing down at first boot to collide with) but closed for consistency. No change when "reuse language invoker" is off.
+
+[B]3.9.11[/B]
+- [FIX] The System.OnWake handler (runs when the machine resumes from sleep) fired the maintenance task and the torrent-cache cleanup in the same instant - the same pattern 3.9.10 fixed in the main service loop. Maintenance is the SQLite-heavy one, so with "reuse language invoker" on, the two plugin interpreters being created at once could deadlock Kodi's interpreter lock and freeze every Seren screen until a force-close. Cleanup now runs on its own 15-second tick after maintenance, matching every other staggered task in that loop. No change when "reuse language invoker" is off.
+
+[B]3.9.10[/B]
+- [FIX] With Kodi's "reuse language invoker" setting on, Seren's background service fired all three provider activity syncs (Trakt, MDBList, Simkl) in the same instant every maintenance cycle. Under that setting each one spins up a fresh plugin interpreter, and creating three at once - on top of the maintenance interpreter still shutting down - could deadlock Kodi's interpreter lock, freezing every Seren screen until a force-close. The list menus that hold an interpreter longest (Watchlist especially) were the visible casualty. The three syncs are now spread across separate 15-second ticks, like every other task in that loop already was. No change when "reuse language invoker" is off.
+
 [B]3.9.9[/B]
 - [FIX] Revisiting a show or movie list screen (Watchlist, Collection, My Shows, etc.) with the same filters could render it completely empty on the second and later visits, with every item logged as missing its info. The short-term list cache added for "reuse language invoker" sessions was storing the exact same data Seren was about to display, but displaying a list also consumes part of that data to build the on-screen listing - so the cached copy got consumed right along with the first visit's display, leaving nothing usable for the next one. The cache now keeps its own separate copy, so a cached list stays intact no matter how many times it's shown.
 

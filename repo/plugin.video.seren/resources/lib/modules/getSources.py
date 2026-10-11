@@ -62,7 +62,7 @@ SCRAPER_TIERS = {
     # Tier 0 — Cloud cache lookup (pre-crawled results from other users, instant if hit)
     'cached': 0,
     # Tier 1 — Anime (dedicated anime trackers, fast, return nothing for non-anime; auto-skipped for non-anime)
-    'animetosho': 1, 'anirena': 1, 'nekobt': 1, 'nyaa': 1, 'subsplease': 1,
+    'animetosho': 1, 'nekobt': 1, 'nyaa': 1, 'subsplease': 1, 'tsukihime': 1,
     # Tier 2 — Meta-indexers (Torrentio, Orionoid — large centralized indexes, fast single API call, pre-aggregated results)
     'oriontorrent': 2, 'torrentio': 2,
     # Tier 3 — Stremio Direct-Alt (Comet, MediaFusion, Meteor — standalone Stremio scrapers)
@@ -70,12 +70,12 @@ SCRAPER_TIERS = {
     # Tier 4 — IMDB Hash Lookup (debrid-optimized IMDB-ID hash lookup, instant JSON APIs)
     'bitmagnet': 4, 'dmm': 4, 'torrentsdb': 4, 'torz': 4, 'zilean': 4,
     # Tier 5 — Keyword Scrapers (title-based text search, broader coverage)
-    'bitsearch': 5, 'knaben': 5, 'torrentz2': 5,
+    'bitsearch': 5, 'knaben': 5, 'torrentscsv': 5,
     # Tier 6 — Reliable public trackers
-    'eztv': 6, 'kickass2': 6, 'leet': 6, 'piratebay': 6, 'yts': 6,
+    'eztv': 6, 'kickass2': 6, 'piratebay': 6, 'yts': 6,
     # Tier 7 — Slow or unreliable
     'kickass': 7, 'magnetdl': 7, 'showrss': 7,
-    'torrentdownload': 7, 'torrentproject2': 7,
+    'torrentproject2': 7,
 }
 
 # Scrapers to skip entirely — these providers are ignored even if installed in the package
@@ -936,20 +936,15 @@ class Sources:
     # Keys are lowercase. Only trackers with working site scrapers are listed.
     TRACKER_TO_SCRAPER = {
         'thepiratebay': 'piratebay', 'tpb': 'piratebay', 'piratebay': 'piratebay',
-        '1337x': 'leet', 'leet': 'leet',
         'yts': 'yts', 'yts.mx': 'yts', 'yify': 'yts',
         'eztv': 'eztv',
         'kickasstorrents': 'kickass2', 'kickass': 'kickass2', 'kat': 'kickass2', 'kickass2': 'kickass2',
         'nyaa': 'nyaa', 'nyaa.si': 'nyaa',
-        'torrentdownload': 'torrentdownload', 'torrentdownloads': 'torrentdownload',
         'magnetdl': 'magnetdl',
-        'torrentz2': 'torrentz2',
         'bitsearch': 'bitsearch',
         'animetosho': 'animetosho', 'animetosho.org': 'animetosho', 'animetosho.xyz': 'animetosho',
-        'anidex': 'anirena', 'anidex.info': 'anirena', 'anidex.moe': 'anirena',  # AniDex removed — redirect to AniRena
-        'anirena': 'anirena', 'anirena.com': 'anirena', 'www.anirena.com': 'anirena',
+        'animetosho.net': 'animetosho',
         'subsplease': 'subsplease', 'subsplease.org': 'subsplease',
-        'tokyotosho': 'anirena', 'tokyotosho.info': 'anirena', 'tokyo toshokan': 'anirena',  # TT removed; redirect seed backfill to AniRena (replacement anime tracker)
         'nekobt': 'nekobt',
         'knaben': 'knaben',
     }
@@ -2297,9 +2292,6 @@ class Sources:
             apikeys['dl'] = g.get_setting('debridlink.token')
         if g.offcloud_enabled():
             apikeys['oc'] = g.get_setting('offcloud.apikey')
-        anirena_key = (g.get_setting('anirena.apikey') or '').strip()
-        if anirena_key:
-            apikeys['anirena'] = anirena_key
         return apikeys
 
     @staticmethod

@@ -4207,8 +4207,8 @@ msgid "Tier 1 — Anime Trackers"
 msgstr "Tier 1 — Anime Trackers"
 
 msgctxt "#30798"
-msgid "Dedicated anime trackers (auto-skipped for non-anime content). Providers: AnimeTosho, AniRena, NekoBT, Nyaa, SubsPlease."
-msgstr "Dedicated anime trackers (auto-skipped for non-anime content). Providers: AnimeTosho, AniRena, NekoBT, Nyaa, SubsPlease."
+msgid "Dedicated anime trackers (auto-skipped for non-anime content). Providers: AnimeTosho, NekoBT, Nyaa, SubsPlease, TsukiHime."
+msgstr "Dedicated anime trackers (auto-skipped for non-anime content). Providers: AnimeTosho, NekoBT, Nyaa, SubsPlease, TsukiHime."
 
 msgctxt "#30799"
 msgid "Tier 2 — Stremio Direct"
@@ -4537,14 +4537,6 @@ msgstr "TheIntroDB API Key (optional)"
 msgctxt "#30910"
 msgid "Optional Bearer token for TheIntroDB. Leave blank for unauthenticated access (lower rate limits but works fine for normal viewing). Get a key at theintrodb.org if you hit rate limits."
 msgstr "Optional Bearer token for TheIntroDB. Leave blank for unauthenticated access (lower rate limits but works fine for normal viewing). Get a key at theintrodb.org if you hit rate limits."
-
-msgctxt "#30912"
-msgid "AniRena API Key"
-msgstr "AniRena API Key"
-
-msgctxt "#30913"
-msgid "Optional API key for AniRena. When set, uses the authenticated JSON API which returns real seeder counts and better results. Get your key at anirena.com > Your Account > API Key."
-msgstr "Optional API key for AniRena. When set, uses the authenticated JSON API which returns real seeder counts and better results. Get your key at anirena.com > Your Account > API Key."
 
 msgctxt "#30914"
 msgid "Scrape All Tiers Within Time Budget"
