@@ -367,6 +367,54 @@ class SimklAPI(ApiBase):
             timeout=timeout,
         )
 
+    def account_info_to_dialog(self):
+        """
+        Shows the signed-in Simkl account (username, account id/type, time zone, join date) in a select dialog.
+        Mirrors Account Manager's Simkl Account Info. Reads only: unlike get_username() it does not cache the
+        account id into settings.
+        """
+        title = f"{g.ADDON_NAME}: Simkl Account"
+        saved_user = g.get_setting(self.username_setting_key)
+
+        def _offline(reason):
+            items = [f"Username:  {saved_user}"] if saved_user else []
+            items.append(f"Status:  Offline ({reason})")
+            xbmcgui.Dialog().select(title, items)
+
+        try:
+            if not self.access_token:
+                xbmcgui.Dialog().ok(g.ADDON_NAME, "Simkl: Not authorized - authorize from settings.")
+                return
+            response = self.post("users/settings")
+            if response is None or response.status_code != 200:
+                status = getattr(response, "status_code", None)
+                g.log(f"Simkl account info unavailable: HTTP {status}", "warning")
+                _offline(f"HTTP {status} from Simkl" if status else "no response from Simkl")
+                return
+            try:
+                data = response.json()
+            except ValueError:
+                data = None
+            if not isinstance(data, dict):
+                _offline("unreadable response from Simkl")
+                return
+            user = data.get("user") or {}
+            account = data.get("account") or {}
+            items = [f"Username:  {user.get('name') or saved_user or 'N/A'}"]
+            if account.get("id"):
+                items.append(f"Account ID:  {account['id']}")
+            if account.get("type"):
+                items.append(f"Account type:  {str(account['type']).capitalize()}")
+            if account.get("timezone"):
+                items.append(f"Timezone:  {account['timezone']}")
+            if user.get("joined_at"):
+                items.append(f"Joined:  {str(user['joined_at'])[:19].replace('T', ' ').replace('Z', '')}")
+            items.append("Status:  Online")
+            xbmcgui.Dialog().select(title, items)
+        except Exception as e:
+            g.log(f"Simkl account_info_to_dialog error: {type(e).__name__}: {e}", "error")
+            _offline("Simkl unreachable")
+
     def get_username(self):
         """
         Fetch current signed in user's username, caching numeric account id as a side effect

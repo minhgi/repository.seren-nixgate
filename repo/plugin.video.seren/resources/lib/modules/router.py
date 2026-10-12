@@ -394,31 +394,49 @@ def dispatch(params):
         from resources.lib.indexers import trakt
 
         trakt.TraktAPI().revoke_auth()
+        g.open_addon_settings(3, 10)
+
+    elif action == "traktAccountInfo":
+        from resources.lib.indexers import trakt
+
+        trakt.TraktAPI().account_info_to_dialog()
         g.open_addon_settings(3, 9)
 
     elif action == "authMDBList":
         from resources.lib.indexers import mdblist
 
         mdblist.MDBListAPI().authorize()
-        g.open_addon_settings(3, 14)
+        g.open_addon_settings(3, 15)
 
     elif action == "revokeMDBList":
         from resources.lib.indexers import mdblist
 
         mdblist.MDBListAPI().revoke_auth()
-        g.open_addon_settings(3, 18)
+        g.open_addon_settings(3, 20)
+
+    elif action == "mdblistAccountInfo":
+        from resources.lib.indexers import mdblist
+
+        mdblist.MDBListAPI().account_info_to_dialog()
+        g.open_addon_settings(3, 19)
 
     elif action == "authSimkl":
         from resources.lib.indexers import simkl
 
         simkl.SimklAPI().auth()
-        g.open_addon_settings(3, 23)
+        g.open_addon_settings(3, 25)
 
     elif action == "revokeSimkl":
         from resources.lib.indexers import simkl
 
         simkl.SimklAPI().revoke_auth()
-        g.open_addon_settings(3, 27)
+        g.open_addon_settings(3, 30)
+
+    elif action == "simklAccountInfo":
+        from resources.lib.indexers import simkl
+
+        simkl.SimklAPI().account_info_to_dialog()
+        g.open_addon_settings(3, 29)
 
     elif action == "getSources":
         from resources.lib.modules.smartPlay import SmartPlay

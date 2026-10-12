@@ -7133,3 +7133,15 @@ msgstr "{} show(s) restored"
 msgctxt "#31550"
 msgid "No dropped shows to restore"
 msgstr "No dropped shows to restore"
+
+msgctxt "#31551"
+msgid "Shows your MDBList daily API request quota: limit, used, remaining and when it resets. Handy when MDBList sync goes quiet because the daily quota is used up."
+msgstr "Shows your MDBList daily API request quota: limit, used, remaining and when it resets. Handy when MDBList sync goes quiet because the daily quota is used up."
+
+msgctxt "#31552"
+msgid "Shows your Trakt account details: username, time zone, join date, private and VIP status, and your ratings/watch statistics when your profile is public."
+msgstr "Shows your Trakt account details: username, time zone, join date, private and VIP status, and your ratings/watch statistics when your profile is public."
+
+msgctxt "#31553"
+msgid "Shows your Simkl account details: username, account ID, account type, time zone and join date."
+msgstr "Shows your Simkl account details: username, account ID, account type, time zone and join date."

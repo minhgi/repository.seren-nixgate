@@ -68,10 +68,13 @@ def _do_request(url, api_key=None):
                 val = resp.headers.get(header)
                 if val:
                     try:
-                        retry = int(val)
+                        parsed = int(val)
                     except ValueError:
-                        pass
-                    break
+                        continue
+                    # a 0 (seen on every non-429 response from this API) would mean "no backoff at all"
+                    if parsed > 0:
+                        retry = parsed
+                        break
             with _lock:
                 _rate_limit_until = time.time() + retry
             g.log(f"TheIntroDB 429 — backoff {retry}s", "warning")

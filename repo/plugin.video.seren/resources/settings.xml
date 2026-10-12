@@ -1074,6 +1074,24 @@
 						<popup>false</popup>
 					</control>
 				</setting>
+				<setting id="trakt.accountInfo" type="action" label="30876" help="31552">
+					<level>0</level>
+					<data>RunPlugin(plugin://plugin.video.seren/?action=traktAccountInfo)</data>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<dependencies>
+						<dependency type="visible">
+							<and>
+								<condition operator="is" setting="trakt.enabled">true</condition>
+								<condition operator="!is" setting="trakt.username"/>
+							</and>
+						</dependency>
+					</dependencies>
+					<control type="button" format="action">
+						<close>true</close>
+					</control>
+				</setting>
 				<setting id="trakt.revokeTrakt" type="action" label="30133" help="31298">
 					<level>0</level>
 					<data>RunPlugin(plugin://plugin.video.seren/?action=revokeTrakt)</data>
@@ -1179,6 +1197,24 @@
 					</dependencies>
 					<control type="slider" format="integer">
 						<popup>false</popup>
+					</control>
+				</setting>
+				<setting id="mdblist.accountInfo" type="action" label="30876" help="31551">
+					<level>0</level>
+					<data>RunPlugin(plugin://plugin.video.seren/?action=mdblistAccountInfo)</data>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<dependencies>
+						<dependency type="visible">
+							<and>
+								<condition operator="is" setting="mdblist.enabled">true</condition>
+								<condition operator="!is" setting="mdblist.username"/>
+							</and>
+						</dependency>
+					</dependencies>
+					<control type="button" format="action">
+						<close>true</close>
 					</control>
 				</setting>
 				<setting id="mdblist.revokeMDBList" type="action" label="30949" help="31305">
@@ -1291,6 +1327,24 @@
 					</dependencies>
 					<control type="slider" format="integer">
 						<popup>false</popup>
+					</control>
+				</setting>
+				<setting id="simkl.accountInfo" type="action" label="30876" help="31553">
+					<level>0</level>
+					<data>RunPlugin(plugin://plugin.video.seren/?action=simklAccountInfo)</data>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<dependencies>
+						<dependency type="visible">
+							<and>
+								<condition operator="is" setting="simkl.enabled">true</condition>
+								<condition operator="!is" setting="simkl.username"/>
+							</and>
+						</dependency>
+					</dependencies>
+					<control type="button" format="action">
+						<close>true</close>
 					</control>
 				</setting>
 				<setting id="simkl.revokeSimkl" type="action" label="31071" help="31312">

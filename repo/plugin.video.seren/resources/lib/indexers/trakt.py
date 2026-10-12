@@ -786,6 +786,77 @@ class TraktAPI(ApiBase):
         """
         return self.session.delete(parse.urljoin(self.ApiUrl, url), headers=self._get_headers(), timeout=10)
 
+    def account_info_to_dialog(self):
+        """
+        Shows the signed-in Trakt account (username, time zone, join date, private/VIP flags and, when the profile
+        is public, ratings/movie/show/episode stats) in a select dialog. Mirrors Account Manager's Trakt Account Info.
+        A private profile returns HTTP 204 (no body) for the stats call, so the stats rows are simply left out.
+        """
+        title = f"{g.ADDON_NAME}: Trakt Account"
+        saved_user = g.get_setting(self.username_setting_key)
+
+        def _fetch(path):
+            response = self.get(path)
+            if response is None:
+                return None, "no response from Trakt"
+            if response.status_code != 200:
+                return None, f"HTTP {response.status_code} from Trakt"
+            try:
+                return response.json(), None
+            except ValueError:
+                return None, "unreadable response from Trakt"
+
+        def _offline(reason):
+            items = [f"Username:  {saved_user}"] if saved_user else []
+            items.append(f"Status:  Offline ({reason})")
+            xbmcgui.Dialog().select(title, items)
+
+        def _duration(minutes):
+            days, rest = divmod(int(minutes or 0), 1440)
+            hours, mins = divmod(rest, 60)
+            return f"{days} days {hours:02d} hours {mins:02d} minutes"
+
+        try:
+            if not self.access_token:
+                xbmcgui.Dialog().ok(g.ADDON_NAME, "Trakt: Not authorized - authorize from settings.")
+                return
+            settings, error = _fetch("users/settings")
+            if not isinstance(settings, dict) or not isinstance(settings.get("user"), dict):
+                g.log(f"Trakt account info unavailable: {error}", "warning")
+                _offline(error or "unexpected response from Trakt")
+                return
+            user = settings["user"]
+            joined = str(user.get("joined_at") or "N/A")[:19].replace("T", " ")
+            vip = f"Yes ({user.get('vip_years')} years)" if user.get("vip") and user.get("vip_years") else (
+                "Yes" if user.get("vip") else "No"
+            )
+            items = [
+                f"Username:  {user.get('username') or saved_user or 'N/A'}",
+                f"Timezone:  {(settings.get('account') or {}).get('timezone') or 'N/A'}",
+                f"Joined:  {joined}",
+                f"Private:  {'Yes' if user.get('private') else 'No'}",
+                f"VIP:  {vip}",
+            ]
+            stats, stats_error = _fetch("users/me/stats")
+            if isinstance(stats, dict):
+                movies = stats.get("movies") or {}
+                shows = stats.get("shows") or {}
+                episodes = stats.get("episodes") or {}
+                items += [
+                    f"Ratings given:  {(stats.get('ratings') or {}).get('total', 0):,}",
+                    f"Movies:  {movies.get('collected', 0):,} collected, {movies.get('watched', 0):,} watched "
+                    f"for {_duration(movies.get('minutes'))}",
+                    f"Shows:  {shows.get('collected', 0):,} collected, {shows.get('watched', 0):,} watched",
+                    f"Episodes:  {episodes.get('watched', 0):,} watched for {_duration(episodes.get('minutes'))}",
+                ]
+            else:
+                g.log(f"Trakt stats unavailable: {stats_error}", "info")
+            items.append("Status:  Online")
+            xbmcgui.Dialog().select(title, items)
+        except Exception as e:
+            g.log(f"Trakt account_info_to_dialog error: {type(e).__name__}: {e}", "error")
+            _offline("Trakt unreachable")
+
     def get_username(self):
         """
         Fetch current signed in users username

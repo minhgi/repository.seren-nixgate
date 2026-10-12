@@ -184,9 +184,17 @@ class SkipHandler:
         try:
             from resources.lib.modules.skip.theintrodb import query_segments
 
-            tmdb_id = self._info.get("tmdb_id") or self._info.get("tmdb_show_id")
-            imdb_id = self._info.get("imdb_id")
-            tvdb_id = self._info.get("tvdb_id")
+            if self.is_movie:
+                tmdb_id = self._info.get("tmdb_id")
+                imdb_id = self._info.get("imdb_id")
+                tvdb_id = self._info.get("tvdb_id")
+            else:
+                # An episode's own tmdb_id/imdb_id/tvdb_id identify the EPISODE, but TheIntroDB wants the SHOW's id
+                # plus season/episode (the episode id returns 404, or worse another show's segments), so use the
+                # show-level ids only and never fall back to the episode-level ones.
+                tmdb_id = self._info.get("tmdb_show_id") or self._info.get("tvshow.tmdb_id")
+                imdb_id = self._info.get("tvshow.imdb_id")
+                tvdb_id = self._info.get("tvdb_show_id") or self._info.get("tvshow.tvdb_id")
             season = self._info.get("season") if not self.is_movie else None
             episode = self.episode_number if not self.is_movie else None
 

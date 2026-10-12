@@ -124,7 +124,7 @@
 			Rework for Seren 2.0
 		</news>
 	</extension>
-</addon><addon id="plugin.video.seren" version="3.9.18" name="Seren" provider-name="Nixgates">
+</addon><addon id="plugin.video.seren" version="3.9.26" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -191,6 +191,22 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.26
+            [FIX] Skip Intro / Skip Credits lookups for TV episodes (TheIntroDB) were sent the episode's own TMDB/IMDb/TVDB id, but TheIntroDB wants the show's id together with the season and episode number, so the lookup found nothing (or could match a different show). Seren now sends the show's ids for episodes; movies are unchanged. Also, when TheIntroDB reports its request limit has been reached, Seren now ignores a zero 'reset in' value and backs off for the next reported time (or 5 minutes) instead of retrying immediately.
+            Changelog 3.9.25
+            [NEW] Account Info screens for Trakt and Simkl, next to the existing one for MDBList (Settings &gt; Watch Accounts, shown once you are signed in). Trakt shows your username, time zone, join date, private/VIP status and - when your profile is public - ratings given and movie/show/episode watch statistics (a private profile has none, so those rows are left out). Simkl shows your username, account ID and type, time zone and join date. All three Account Info buttons now sit directly above their Revoke button, and the settings window re-opens on the button after you close the popup.
+            Changelog 3.9.24
+            [NEW] Seren now has an Account Info screen for MDBList (Settings &gt; Watch Accounts &gt; MDBList &gt; Account Info, shown once you are signed in). It shows your plan, daily API request limit, how many requests you have used today, how many remain, and when the quota resets (midnight UTC, shown in your local time). MDBList limits every account to a daily number of requests; once it is used up, sync and list loading quietly stop until the reset, and this screen now tells you why. It also works when the daily limit is already reached.
+            Changelog 3.9.23
+            [NEW] Seren now writes a warning to the Kodi log when AllDebrid marks an API endpoint as deprecated (AllDebrid adds a deprecated flag to the responses of endpoint versions it is retiring), once per endpoint. Nothing is deprecated for Seren today - magnet/status already uses the newer v4.1 - so this is only an early warning for a future change.
+            Changelog 3.9.22
+            [FIX] The playback watchdog (the stall monitor used with auto-play) had the same problem 3.9.21 fixed for normal playback: the item it hands to Kodi carried no tmdb/imdb/tvdb ids because they were read from metadata already stripped of every *_id field. It now carries the same ids the list row has (the show's ids for episodes and seasons).
+            Changelog 3.9.21
+            [FIX] The item Seren hands to Kodi when playback starts carried no tmdb/imdb/tvdb ids: the ids were read from metadata that had already been stripped of every *_id field, so the playing item ended up with an empty id list. It now carries the same ids the list row has (the show's ids for episodes and seasons), so addons and skins that read the playing item's ids (subtitle and scrobbler addons, VideoPlayer.UniqueID) can see them.
+            Changelog 3.9.20
+            [CHANGE] Cast, ids, per-source ratings and the video-stream flag on list items and playback items are now set through Kodi's InfoTagVideo (Actor, setUniqueIDs, setRating, addVideoStream) instead of the ListItem.setCast, setUniqueIDs, setRating and addStreamInfo calls Kodi has deprecated and warns about on every item. What shows in lists, Info dialogs and the player is unchanged; Kodi 19 keeps the old calls, and a value Kodi rejects is logged and falls back to the old call instead of losing the item's metadata.
+            Changelog 3.9.19
+            [CHANGE] Video metadata (title, plot, rating, genres, dates, runtime and so on) is now applied to list items and playback items through Kodi's InfoTagVideo setters instead of ListItem.setInfo(), which Kodi has deprecated and logs a warning for on every item. What shows in lists and the player is unchanged; Kodi 19, which has no setters, keeps using setInfo, and a value Kodi rejects is now logged and skipped instead of dropping that item's metadata.
             Changelog 3.9.18
             [CHANGE] torrentdownload removed from Tier 7 - its site accepts the connection but never sends any data (it does not load in a normal browser either), so every scrape waited out its full time slice for nothing. Tier 7 is now kickass, magnetdl, showrss and torrentproject2.
             Changelog 3.9.17

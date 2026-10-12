@@ -231,6 +231,94 @@ info_dates = {
     "dateadded",
 }
 
+# ListItem.setInfo("video", ...) is deprecated in favour of the InfoTagVideo setters. setInfo stringified every
+# value and parsed it with strtol/strtod/ReturnDigits, so it never raised; the helpers below keep that leniency.
+_INT_PREFIX = re.compile(r"\s*[+-]?\d+")
+_FLOAT_PREFIX = re.compile(r"\s*[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?")
+_VIDEO_ITEM_SEPARATOR = " / "
+
+
+def _tag_str(value):
+    return "" if isinstance(value, (list, tuple, set, dict)) else str(value)
+
+
+def _tag_int(value):
+    if isinstance(value, (int, float)):
+        return int(value)
+    match = _INT_PREFIX.match(_tag_str(value))
+    return int(match.group()) if match else 0
+
+
+def _tag_float(value):
+    if isinstance(value, (int, float)):
+        return float(value)
+    match = _FLOAT_PREFIX.match(_tag_str(value))
+    return float(match.group()) if match else 0.0
+
+
+def _tag_votes(value):
+    digits = "".join(c for c in _tag_str(value) if c.isdigit())
+    return int(digits) if digits else 0
+
+
+def _tag_list(value):
+    if isinstance(value, (list, tuple, set)):
+        return [str(i) for i in value if isinstance(i, (str, int, float))]
+    return [i for i in _tag_str(value).split(_VIDEO_ITEM_SEPARATOR) if i]
+
+
+# setInfo key -> (InfoTagVideo setter, value converter). Keys absent here (overlay, castandrole) have no setter
+# and still go through setInfo.
+_VIDEO_INFOTAG_SETTERS = {
+    "dbid": ("setDbId", _tag_int),
+    "year": ("setYear", _tag_int),
+    "episode": ("setEpisode", _tag_int),
+    "season": ("setSeason", _tag_int),
+    "sortepisode": ("setSortEpisode", _tag_int),
+    "sortseason": ("setSortSeason", _tag_int),
+    "episodeguide": ("setEpisodeGuide", _tag_str),
+    "showlink": ("setShowLinks", _tag_list),
+    "top250": ("setTop250", _tag_int),
+    "setid": ("setSetId", _tag_int),
+    "tracknumber": ("setTrackNumber", _tag_int),
+    "rating": ("setRating", _tag_float),
+    "userrating": ("setUserRating", _tag_int),
+    "watched": ("setPlaycount", _tag_int),
+    "playcount": ("setPlaycount", _tag_int),
+    "artist": ("setArtists", _tag_list),
+    "genre": ("setGenres", _tag_list),
+    "country": ("setCountries", _tag_list),
+    "director": ("setDirectors", _tag_list),
+    "mpaa": ("setMpaa", _tag_str),
+    "plot": ("setPlot", _tag_str),
+    "plotoutline": ("setPlotOutline", _tag_str),
+    "title": ("setTitle", _tag_str),
+    "originaltitle": ("setOriginalTitle", _tag_str),
+    "sorttitle": ("setSortTitle", _tag_str),
+    "duration": ("setDuration", _tag_int),
+    "studio": ("setStudios", _tag_list),
+    "tagline": ("setTagLine", _tag_str),
+    "writer": ("setWriters", _tag_list),
+    "credits": ("setWriters", _tag_list),
+    "tvshowtitle": ("setTvShowTitle", _tag_str),
+    "premiered": ("setPremiered", _tag_str),
+    "status": ("setTvShowStatus", _tag_str),
+    "set": ("setSet", _tag_str),
+    "setoverview": ("setSetOverview", _tag_str),
+    "tag": ("setTags", _tag_list),
+    "imdbnumber": ("setIMDBNumber", _tag_str),
+    "code": ("setProductionCode", _tag_str),
+    "aired": ("setFirstAired", _tag_str),
+    "lastplayed": ("setLastPlayed", _tag_str),
+    "album": ("setAlbum", _tag_str),
+    "votes": ("setVotes", _tag_votes),
+    "trailer": ("setTrailer", _tag_str),
+    "path": ("setPath", _tag_str),
+    "filenameandpath": ("setFilenameAndPath", _tag_str),
+    "dateadded": ("setDateAdded", _tag_str),
+    "mediatype": ("setMediaType", _tag_str),
+}
+
 listitem_properties = [
     (("awards",), "Awards"),
     (("oscar_wins",), "Oscar_Wins"),
@@ -1524,9 +1612,10 @@ class GlobalVariables:
 
         item = xbmcgui.ListItem(label=name, offscreen=True)
         item.setContentLookup(False)
+        tag = self._video_tag(item)
 
         info = menu_item.pop("info", {})
-        item.addStreamInfo("video", {})
+        self.add_empty_video_stream(item, tag)
 
         if info is None or not isinstance(info, dict):
             info = {}
@@ -1596,7 +1685,7 @@ class GlobalVariables:
         cast = menu_item.get("cast", [])
         if cast is None or not isinstance(cast, (set, list)):
             cast = []
-        item.setCast(cast)
+        self.set_video_cast(item, cast, tag)
 
         for key, value in info.items():
             if key.endswith("_id"):
@@ -1604,17 +1693,21 @@ class GlobalVariables:
 
         media_type = info.get("mediatype", None)
         is_child_type = media_type in self._EPISODE_SEASON_TYPES
-        item.setUniqueIDs(
+        self.set_video_unique_ids(
+            item,
             {
                 unique_id_key: info[f"tvshow.{id_key}" if is_child_type else id_key]
                 for id_key, unique_id_key in self._ID_KEYS.items()
                 if info.get(f"tvshow.{id_key}" if is_child_type else id_key)
-            }
+            },
+            tag,
         )
 
         for i in info:
             if i.startswith("rating."):
-                item.setRating(i.split(".")[1], float(info[i].get("rating", 0.0)), int(info[i].get("votes", 0)), False)
+                self.set_video_rating(
+                    item, i.split(".")[1], float(info[i].get("rating", 0.0)), int(info[i].get("votes", 0)), tag
+                )
 
         cm = params.pop("cm", [])
         if cm is None or not isinstance(cm, (set, list)):
@@ -1642,7 +1735,7 @@ class GlobalVariables:
         # Convert dates to localtime for display
         self.convert_info_dates(info)
 
-        item.setInfo("video", info)
+        self.set_video_info(item, info, tag)
 
         bulk_add = params.pop("bulk_add", False)
         url = self.create_url(self.BASE_URL, params)
@@ -1677,6 +1770,114 @@ class GlobalVariables:
         info_dict.update(converted_dates)
 
         return info_dict
+
+    @staticmethod
+    def _video_tag(item):
+        """The item's InfoTagVideo, or None where the tag has no setters (Kodi 19)."""
+        tag = None
+        with contextlib.suppress(Exception):
+            tag = item.getVideoInfoTag()
+        return tag if tag is not None and hasattr(tag, "setTitle") else None
+
+    def set_video_info(self, item, info, tag=None):
+        """Apply an info dict to a ListItem through the InfoTagVideo setters instead of the deprecated setInfo.
+
+        Keys are applied in sorted order, as setInfo's std::map did, which matters for rating before votes.
+        Keys without a setter (overlay, castandrole), and every key when the tag has no setters (Kodi 19),
+        still go through setInfo. One rejected value is logged and skipped, not allowed to fail the whole item.
+        """
+        if tag is None:
+            tag = self._video_tag(item)
+        if tag is None:
+            item.setInfo("video", info)
+            return
+
+        leftover = {}
+        for key in sorted(info):
+            value = info[key]
+            setter_name, convert = _VIDEO_INFOTAG_SETTERS.get(key.lower(), (None, None))
+            setter = getattr(tag, setter_name, None) if setter_name else None
+            if setter is None:
+                leftover[key] = value
+            elif value is not None:
+                try:
+                    setter(convert(value))
+                except Exception as exc:  # pylint: disable=broad-except
+                    self.log(f"InfoTagVideo.{setter_name} rejected {key}={value!r}: {exc}", "warning")
+
+        if leftover:
+            try:
+                item.setInfo("video", leftover)
+            except Exception as exc:  # pylint: disable=broad-except
+                self.log(f"ListItem.setInfo rejected {sorted(leftover)}: {exc}", "warning")
+
+    def set_video_cast(self, item, cast, tag=None):
+        """Set cast through InfoTagVideo.setCast; ListItem.setCast is deprecated. Falls back to it on Kodi 19."""
+        if tag is None:
+            tag = self._video_tag(item)
+        actor_class = getattr(xbmc, "Actor", None)
+        if tag is not None and actor_class is not None and hasattr(tag, "setCast"):
+            try:
+                actors = []
+                for entry in cast:
+                    # Actor() rejects an empty name, so nameless entries are skipped
+                    name = entry.get("name") if isinstance(entry, dict) else None
+                    if name is None or not (name := str(name)):
+                        continue
+                    role = entry.get("role")
+                    order = entry.get("order")
+                    thumbnail = entry.get("thumbnail")
+                    actors.append(
+                        actor_class(
+                            name,
+                            "" if role is None else str(role),
+                            -1 if order is None else _tag_int(order),
+                            "" if thumbnail is None else str(thumbnail),
+                        )
+                    )
+                tag.setCast(actors)
+                return
+            except Exception as exc:  # pylint: disable=broad-except
+                self.log(f"InfoTagVideo.setCast failed: {exc}", "warning")
+        item.setCast(cast)
+
+    def set_video_unique_ids(self, item, unique_ids, tag=None):
+        """Set unique ids through InfoTagVideo.setUniqueIDs; ListItem.setUniqueIDs is deprecated."""
+        if tag is None:
+            tag = self._video_tag(item)
+        if tag is not None and hasattr(tag, "setUniqueIDs"):
+            try:
+                tag.setUniqueIDs({str(k): str(v) for k, v in unique_ids.items() if v is not None})
+                return
+            except Exception as exc:  # pylint: disable=broad-except
+                self.log(f"InfoTagVideo.setUniqueIDs failed: {exc}", "warning")
+        item.setUniqueIDs(unique_ids)
+
+    def set_video_rating(self, item, rating_type, rating, votes, tag=None):
+        """Add a typed rating through InfoTagVideo.setRating; ListItem.setRating is deprecated."""
+        if tag is None:
+            tag = self._video_tag(item)
+        if tag is not None and hasattr(tag, "setRating"):
+            try:
+                # InfoTagVideo.setRating takes (rating, votes, type, isDefault), not ListItem.setRating's order
+                tag.setRating(rating, votes, rating_type, False)
+                return
+            except Exception as exc:  # pylint: disable=broad-except
+                self.log(f"InfoTagVideo.setRating failed: {exc}", "warning")
+        item.setRating(rating_type, rating, votes, False)
+
+    def add_empty_video_stream(self, item, tag=None):
+        """Mark the item as having a video stream; ListItem.addStreamInfo is deprecated."""
+        if tag is None:
+            tag = self._video_tag(item)
+        stream_class = getattr(xbmc, "VideoStreamDetail", None)
+        if tag is not None and stream_class is not None and hasattr(tag, "addVideoStream"):
+            try:
+                tag.addVideoStream(stream_class())
+                return
+            except Exception as exc:  # pylint: disable=broad-except
+                self.log(f"InfoTagVideo.addVideoStream failed: {exc}", "warning")
+        item.addStreamInfo("video", {})
 
     def close_directory(self, content_type, sort=False, cache=False):
         if sort == "title":

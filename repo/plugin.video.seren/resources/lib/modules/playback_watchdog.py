@@ -512,18 +512,27 @@ class PlaybackWatchdog(xbmc.Player):
             ):
                 provider_module = provider_module.sources()
             item = provider_module.get_listitem(stream_link)
-            item.setInfo("video", info)
+            g.set_video_info(item, info)
         else:
             item = xbmcgui.ListItem(path=stream_link)
             info["FileNameAndPath"] = stream_link
-            item.setInfo("video", info)
+            g.set_video_info(item, info)
             item.setProperty("IsPlayable", "true")
 
         art = item_information.get("art", {})
         item.setArt(art if isinstance(art, dict) else {})
         cast = item_information.get("cast", [])
-        item.setCast(cast if isinstance(cast, list) else [])
-        item.setUniqueIDs(
-            {i.split("_")[0]: info[i] for i in info if i.endswith("id")},
+        g.set_video_cast(item, cast if isinstance(cast, list) else [])
+        # Same ids as add_directory_item gives the list row: the show's ids for episodes and seasons. Read from the
+        # uncleaned info, since clean_info_keys drops every *_id key.
+        raw_info = item_information.get("info", {})
+        id_prefix = "tvshow." if raw_info.get("mediatype") in g._EPISODE_SEASON_TYPES else ""
+        g.set_video_unique_ids(
+            item,
+            {
+                unique_id_key: raw_info[f"{id_prefix}{id_key}"]
+                for id_key, unique_id_key in g._ID_KEYS.items()
+                if raw_info.get(f"{id_prefix}{id_key}")
+            },
         )
         return item

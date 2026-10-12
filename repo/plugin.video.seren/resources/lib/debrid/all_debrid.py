@@ -57,6 +57,7 @@ def alldebrid_guard_response(func):
 
 class AllDebrid:
     base_url = "https://api.alldebrid.com/v4/"
+    _deprecated_logged = set()
 
     http_codes = {
         200: "Success",
@@ -115,7 +116,7 @@ class AllDebrid:
         response = self.get(url, **params)
         if not response:
             return {}
-        return self._extract_data(response.json())
+        return self._extract_data(response.json(), url)
 
     @alldebrid_guard_response
     def post(self, url, post_data=None, **params):
@@ -130,9 +131,18 @@ class AllDebrid:
         response = self.post(url, post_data, **params)
         if not response:
             return {}
-        return self._extract_data(response.json())
+        return self._extract_data(response.json(), url)
 
-    def _extract_data(self, response):
+    def _extract_data(self, response, endpoint=None):
+        # AllDebrid adds a top-level "deprecated": true to every response from an endpoint version it has retired
+        # in favour of a newer one (observed on /v4/magnet/status, absent on /v4.1/). Log it once per endpoint.
+        if isinstance(response, dict) and response.get("deprecated") and endpoint not in AllDebrid._deprecated_logged:
+            AllDebrid._deprecated_logged.add(endpoint)
+            g.log(
+                f"AllDebrid reports the '{endpoint or 'unknown'}' endpoint as deprecated "
+                f"(deprecated={response['deprecated']!r}); Seren should move to the newer API version for it",
+                "warning",
+            )
         if isinstance(response, dict) and response.get("status") == "error":
             err = response.get("error", {})
             code = err.get("code", "UNKNOWN") if isinstance(err, dict) else str(err)
@@ -451,7 +461,7 @@ class AllDebrid:
             if not (resp and resp.ok):
                 xbmcgui.Dialog().ok(g.ADDON_NAME, "AllDebrid: Could not retrieve account information.")
                 return
-            data = self._extract_data(resp.json())
+            data = self._extract_data(resp.json(), "user")
             user_info = data.get("user", {}) if isinstance(data, dict) else {}
             if not isinstance(user_info, dict) or not user_info:
                 xbmcgui.Dialog().ok(g.ADDON_NAME, "AllDebrid: Could not retrieve account information.")
