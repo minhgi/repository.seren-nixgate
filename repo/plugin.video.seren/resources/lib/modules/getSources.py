@@ -72,7 +72,7 @@ SCRAPER_TIERS = {
     # Tier 5 — Keyword Scrapers (title-based text search, broader coverage)
     'bitsearch': 5, 'knaben': 5, 'torrentscsv': 5,
     # Tier 6 — Reliable public trackers
-    'eztv': 6, 'kickass2': 6, 'piratebay': 6, 'yts': 6,
+    'eztv': 6, 'kickass2': 6, 'leet': 6, 'piratebay': 6, 'yts': 6,
     # Tier 7 — Slow or unreliable
     'kickass': 7, 'magnetdl': 7, 'showrss': 7,
     'torrentproject2': 7,
@@ -939,6 +939,7 @@ class Sources:
         'yts': 'yts', 'yts.mx': 'yts', 'yify': 'yts',
         'eztv': 'eztv',
         'kickasstorrents': 'kickass2', 'kickass': 'kickass2', 'kat': 'kickass2', 'kickass2': 'kickass2',
+        '1337x': 'leet', '1337x.to': 'leet', 'leet': 'leet',
         'nyaa': 'nyaa', 'nyaa.si': 'nyaa',
         'magnetdl': 'magnetdl',
         'bitsearch': 'bitsearch',

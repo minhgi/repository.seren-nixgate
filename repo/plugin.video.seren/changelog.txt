@@ -1,3 +1,6 @@
+[B]3.9.27[/B]
+- [FIX] The 1337x (leet) scraper is back in Tier 6 (reliable public trackers) and 1337x results from other sources are mapped to it again for seed-count backfill. Note that 1337x sits behind a Cloudflare challenge, so it may return no results unless the a4kScrapers package can get past it.
+
 [B]3.9.26[/B]
 - [FIX] Skip Intro / Skip Credits lookups for TV episodes (TheIntroDB) were sent the episode's own TMDB/IMDb/TVDB id, but TheIntroDB wants the show's id together with the season and episode number, so the lookup found nothing (or could match a different show). Seren now sends the show's ids for episodes; movies are unchanged. Also, when TheIntroDB reports its request limit has been reached, Seren now ignores a zero 'reset in' value and backs off for the next reported time (or 5 minutes) instead of retrying immediately.
 
