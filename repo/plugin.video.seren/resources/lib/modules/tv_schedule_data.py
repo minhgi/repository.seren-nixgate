@@ -359,7 +359,7 @@ def _annotate(episode):
 def _is_released(released):
     if not released:
         return False
-    return released < g.datetime_to_string(datetime.datetime.utcnow())
+    return released < g.datetime_to_string(datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None))
 
 
 @lru_cache(maxsize=1)

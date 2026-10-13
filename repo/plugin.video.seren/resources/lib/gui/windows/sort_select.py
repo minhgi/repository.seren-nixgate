@@ -8,8 +8,8 @@ SORT_OPTIONS = {
     "resolution": [],
     "sourcetypesort": [30581, 30249, 30470, 30057, 30058, 30631],
     # Other, Cloud, Adaptive, Torrents, Hosters, Direct
-    "debridsort": [30513, 30134, 30135, 30333, 30660, 30680],
-    # None, Premiumize, Real-Debrid, AllDebrid, TorBox, Debrid-Link
+    "debridsort": [30513, 30134, 30135, 30333, 30660, 30680, 30940],
+    # None, Premiumize, Real-Debrid, AllDebrid, TorBox, Debrid-Link, Offcloud
     "size": [],
     "cam": [],
     "hevc": [],
@@ -75,7 +75,7 @@ class SortSelect(BaseWindow):
 
     def _reset_properties(self):
         for i in range(len(SORT_OPTIONS['sortmethod'])):
-            for j in range(6):
+            for j in range(7):
                 self.clearProperty(f'general.sortmethod.{i}.label.{j}')
                 self.clearProperty(f'general.sortmethod.{i}.label.{j}.last')
 

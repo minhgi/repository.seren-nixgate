@@ -260,7 +260,7 @@ class ListBuilder:
         if self.date_delay:
             air_date += datetime.timedelta(days=1)
 
-        return air_date < datetime.datetime.utcnow()
+        return air_date < datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 
     def _post_process_list(self, item_list, prepend_date=False, mixed_list=False):
         filler_detection_enabled = g.get_bool_setting("anime.fillerDetection")

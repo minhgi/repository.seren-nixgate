@@ -373,7 +373,7 @@ class MetadataHandler:
         if (
             self.lang_based_movie_releases
             and tools.parse_datetime(country_release.get("release_date", "9999-12-31T00:00:00"), date_only=False)
-            > datetime.datetime.utcnow()
+            > datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
         ):
             lang_releases = [
                 self._get_best_release(releases[c])

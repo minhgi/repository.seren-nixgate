@@ -430,7 +430,7 @@ def _classify_and_annotate(movie, released):
 def _is_released(released):
     if not released:
         return False
-    return released < g.datetime_to_string(datetime.datetime.utcnow())
+    return released < g.datetime_to_string(datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None))
 
 
 def _format_countdown(released):

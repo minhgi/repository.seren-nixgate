@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.video.seren" version="3.9.27" name="Seren" provider-name="Nixgates">
+<addon id="plugin.video.seren" version="3.9.30" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -66,6 +66,12 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.30
+            [FIX] Offcloud was missing from Settings > Sorting > Sorting Configuration: the Debrid Provider row could only be set to Premiumize, Real-Debrid, AllDebrid, TorBox or Debrid-Link, and only five of the six priority slots were shown, even though the sorter and the settings spinners already supported Offcloud. Offcloud can now be picked for any debrid priority slot, and the sixth slot is shown. Also fixes the window failing to open when a priority slot had been set to Offcloud through the settings spinner.
+            Changelog 3.9.29
+            [FIX] The TV calendar (My Shows > My Watch List Calendar) opened empty with an error when 'hide watched' or 'hide specials' removed one of the episodes it was about to show; it now just leaves those episodes out. [FIX] The Trakt watched-episode sync no longer stops with 'UNIQUE constraint failed: episodes.trakt_id' when Trakt renumbers a show's episodes (for example specials moving up by one) - the affected episodes are now updated to their new ids. [FIX] Trakt movie-calendar items no longer log a flood of 'Error detecting trakt item type' errors; they were handled correctly already.
+            Changelog 3.9.28
+            [FIX] Housekeeping: Seren no longer calls Python's deprecated datetime.utcnow() (ten places - Trakt and MDBList sync, the calendars, release-date checks and metadata handling). Python, which Kodi 22 ships, has marked it for removal in a future version. The times Seren computes are exactly the same as before, so nothing changes in use.
             Changelog 3.9.27
             [FIX] The 1337x (leet) scraper is back in Tier 6 (reliable public trackers) and 1337x results from other sources are mapped to it again for seed-count backfill. Note that 1337x sits behind a Cloudflare challenge, so it may return no results unless the a4kScrapers package can get past it.
             Changelog 3.9.26

@@ -383,7 +383,7 @@ class Menus:
 
         from resources.lib.modules.calendar_data import get_air_date
 
-        now = g.datetime_to_string(datetime.datetime.utcnow())
+        now = g.datetime_to_string(datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None))
         for episode in episodes:
             season = episode.get("db_season")
             number = episode.get("db_number")

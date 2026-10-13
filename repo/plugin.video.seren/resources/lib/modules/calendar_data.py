@@ -84,6 +84,10 @@ def get_calendar_episodes():
 
     shows_db = ShowsDatabase()
     trakt_items = shows_db.get_mixed_episode_list(raw_calendar_items, hide_unaired=False) if raw_calendar_items else []
+    # get_mixed_episode_list() applies the user's hide-watched / hide-specials settings and returns None
+    # for every calendar item those filters drop (MetadataHandler.sort_list_items) - same guard as
+    # tv_schedule_data.py; without it the sort below raises on the first dropped episode.
+    trakt_items = [i for i in trakt_items if i is not None]
 
     candidate_tmdb_ids = {}  # dict (not set) purely to preserve first-seen order for the cap
     simkl_id_by_tmdb = {}
@@ -261,7 +265,7 @@ def _pick_relevant_episode(episodes):
     """Picks whichever of 'next unaired' or 'most recently aired' falls
     nearest today from a show's full episode list - matching what a single
     calendar row for this show should show."""
-    now = g.datetime_to_string(datetime.datetime.utcnow())
+    now = g.datetime_to_string(datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None))
     dated = [(e, get_air_date(e)) for e in episodes]
     dated = [(e, d) for e, d in dated if d]
     upcoming = [(e, d) for e, d in dated if d >= now]

@@ -190,7 +190,7 @@ class MDBListSyncDatabase(Database):
 
     @staticmethod
     def _get_datetime_now():
-        return g.datetime_to_string(datetime.datetime.utcnow())
+        return g.datetime_to_string(datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None))
 
     @staticmethod
     def requires_update(new_date, old_date):

@@ -1029,7 +1029,11 @@ class TraktAPI(ApiBase):
                 item.update({"type": item_type[0]})
                 break
         if "type" not in item:
-            g.log(f"Error detecting trakt item type for: {item}", "error")
+            # A single wrapped meta object (e.g. {"movie": {...}, "released": ...} from calendars/all/movies) gets its
+            # type from _try_flatten_if_single_type() right after this, so it is not an unrecognised item.
+            wrapped = [meta for meta in self.MetaNormalization if meta in item]
+            if not (len(wrapped) == 1 and isinstance(item[wrapped[0]], dict)):
+                g.log(f"Error detecting trakt item type for: {item}", "error")
         return item
 
     # Asian drama countries for alias inclusion (Sessions 38-47 added JP for anime;

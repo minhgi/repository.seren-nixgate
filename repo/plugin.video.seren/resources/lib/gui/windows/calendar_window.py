@@ -46,7 +46,7 @@ class CalendarWindow(BaseWindow):
         air_date = get_air_date(episode)
         list_item.setProperty("air_date_label", CalendarWindow._format_air_date(air_date))
         list_item.setProperty(
-            "is_upcoming", str(bool(air_date and air_date >= g.datetime_to_string(datetime.datetime.utcnow())))
+            "is_upcoming", str(bool(air_date and air_date >= g.datetime_to_string(datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None))))
         )
 
         # _calendar_rating_override (Simkl/MDBList's own score for a

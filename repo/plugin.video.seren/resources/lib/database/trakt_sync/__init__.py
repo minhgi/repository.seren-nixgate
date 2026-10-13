@@ -493,10 +493,10 @@ class TraktSyncDatabase(Database):
 
     @staticmethod
     def _get_datetime_now():
-        return g.datetime_to_string(datetime.datetime.utcnow())
+        return g.datetime_to_string(datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None))
 
     def _get_aired_cutoff(self):
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
         if self.date_delay:
             now -= datetime.timedelta(days=1)
         return g.datetime_to_string(now)
@@ -780,6 +780,41 @@ class TraktSyncDatabase(Database):
         self.save_to_meta_table(to_insert, "shows", "trakt", "trakt_id")
         self._set_needs_update(shows, "shows")
 
+    def _park_renumbered_episode_ids(self, to_insert):
+        """
+        Trakt can renumber a show's episodes (e.g. specials S0E1-E6 swapping ids). The upsert below is keyed on
+        (trakt_show_id, season, number) and rewrites trakt_id in place, so a row that has to take over an id which is
+        still held by another row would trip UNIQUE(trakt_id) and abort the whole sync. Rows holding an incoming id at
+        a different (show, season, number) are moved aside with a negative id; the upsert then reclaims their keys and
+        the caller deletes whatever is left parked (or restores them if the upsert fails).
+        """
+        incoming = {}
+        for i in to_insert:
+            trakt_id = i.get("trakt_id")
+            if isinstance(trakt_id, int):
+                incoming[trakt_id] = (
+                    i.get("trakt_show_id"),
+                    MetadataHandler.get_trakt_info(i, "season"),
+                    MetadataHandler.get_trakt_info(i, "episode"),
+                )
+        if not incoming:
+            return False
+
+        ids = list(incoming)
+        to_park = []
+        for offset in range(0, len(ids), 500):
+            chunk = ids[offset : offset + 500]
+            rows = self.fetchall(f"SELECT trakt_id, trakt_show_id, season, number FROM episodes WHERE trakt_id IN ({','.join(str(x) for x in chunk)})")
+            to_park.extend(
+                r["trakt_id"] for r in rows if (r["trakt_show_id"], r["season"], r["number"]) != incoming[r["trakt_id"]]
+            )
+        if not to_park:
+            return False
+
+        g.log(f"Moving {len(to_park)} renumbered episode ids aside before the episode upsert", "debug")
+        self.execute_sql([f"UPDATE episodes SET trakt_id = -trakt_id WHERE trakt_id IN ({','.join(str(x) for x in to_park[offset:offset + 500])})" for offset in range(0, len(to_park), 500)])
+        return True
+
     def insert_trakt_episodes(self, episodes):
         if not episodes:
             return
@@ -800,34 +835,46 @@ class TraktSyncDatabase(Database):
             for i in to_insert:
                 i["trakt_season_id"] = season_ids.get(f"{get(i, 'trakt_show_id')}-{get(i, 'season')}")
 
-        self.execute_sql(
-            self.upsert_episode_query,
-            (
+        parked = self._park_renumbered_episode_ids(to_insert)
+        try:
+            self.execute_sql(
+                self.upsert_episode_query,
                 (
-                    i.get("trakt_id"),
-                    i.get("trakt_show_id"),
-                    i.get("trakt_season_id"),
-                    get(i, "playcount"),
-                    get(i, "collected"),
-                    g.validate_date(get(i, "aired")),
-                    g.validate_date(get(i, "dateadded")),
-                    get(i, "season"),
-                    get(i, "episode"),
-                    get(i, "tmdb_id"),
-                    get(i, "tvdb_id"),
-                    get(i, "imdb_id"),
-                    None,
-                    None,
-                    None,
-                    self._create_args(i),
-                    g.validate_date(get(i, "last_watched_at")),
-                    g.validate_date(get(i, "collected_at")),
-                    get(i, "user_rating"),
-                    self.trakt_api.meta_hash,
-                )
-                for i in to_insert
-            ),
-        )
+                    (
+                        i.get("trakt_id"),
+                        i.get("trakt_show_id"),
+                        i.get("trakt_season_id"),
+                        get(i, "playcount"),
+                        get(i, "collected"),
+                        g.validate_date(get(i, "aired")),
+                        g.validate_date(get(i, "dateadded")),
+                        get(i, "season"),
+                        get(i, "episode"),
+                        get(i, "tmdb_id"),
+                        get(i, "tvdb_id"),
+                        get(i, "imdb_id"),
+                        None,
+                        None,
+                        None,
+                        self._create_args(i),
+                        g.validate_date(get(i, "last_watched_at")),
+                        g.validate_date(get(i, "collected_at")),
+                        get(i, "user_rating"),
+                        self.trakt_api.meta_hash,
+                    )
+                    for i in to_insert
+                ),
+            )
+        except Exception:
+            if parked:
+                # the upsert is a single transaction that has rolled back, so the parked rows are untouched: restore them
+                try:
+                    self.execute_sql("UPDATE episodes SET trakt_id = -trakt_id WHERE trakt_id < 0")
+                except Exception as restore_error:
+                    g.log(f"Could not restore parked episode ids: {restore_error!r}", "error")
+            raise
+        if parked:
+            self.execute_sql("DELETE FROM episodes WHERE trakt_id < 0")
         self.save_to_meta_table(to_insert, "episodes", "trakt", "trakt_id")
         self._set_needs_update(episodes, "episodes")
 
