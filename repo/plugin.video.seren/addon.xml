@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.video.seren" version="3.9.30" name="Seren" provider-name="Nixgates">
+<addon id="plugin.video.seren" version="3.9.32" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -66,6 +66,10 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.32
+            [FIX] The background Cross-Service Sync no longer re-sends, on every pass, the episodes MDBList reports it cannot match. MDBList names those episodes in its reply, so Seren now notes them once and moves on; the episodes that MDBList can match are unaffected, and the unmatched ones still sync to the other services.
+            Changelog 3.9.31
+            [NEW] The background Cross-Service Sync (Settings > Watch Accounts > Enable Cross-Service Sync) now behaves exactly like the Trakt/MDBList/Simkl bridge in TMDb Helper. Watched episodes and watchlists now sync between all three services, not only watched movies (Simkl takes watchlist items as Plan to Watch and never has an item that is already in another status overwritten; anime episodes, specials and shows marked Not Interested on Simkl are left alone, and only episodes you actually recorded on Simkl are sent on to Trakt). Every service is now read live, and a service that cannot be read is skipped for that pass instead of being treated as empty, so a failed read can no longer cause your library to be re-sent to another service. Trakt and Simkl history pushes carry the original watch date, are limited per pass, and Simkl writes are spaced out to respect its rate limit. Overlapping passes are prevented.
             Changelog 3.9.30
             [FIX] Offcloud was missing from Settings > Sorting > Sorting Configuration: the Debrid Provider row could only be set to Premiumize, Real-Debrid, AllDebrid, TorBox or Debrid-Link, and only five of the six priority slots were shown, even though the sorter and the settings spinners already supported Offcloud. Offcloud can now be picked for any debrid priority slot, and the sixth slot is shown. Also fixes the window failing to open when a priority slot had been set to Offcloud through the settings spinner.
             Changelog 3.9.29

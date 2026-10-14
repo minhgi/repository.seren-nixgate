@@ -1,6 +1,10 @@
 import collections
+import json
+import os
 
 from resources.lib.database import Database
+from resources.lib.database import _evict_thread_connection
+from resources.lib.database import _get_thread_connection
 from resources.lib.modules.globals import g
 
 schema = {
@@ -64,3 +68,54 @@ class BridgeSyncDatabase(Database):
                 "INSERT INTO snapshot (domain, service, media_type, tmdb_id, item_key) VALUES (?, ?, ?, ?, ?)",
                 rows,
             )
+
+    def replace_snapshots(self, snapshots):
+        """Overwrites several snapshots at once - {(domain, service, media_type): {item_key: tmdb_id}} - in ONE
+        transaction. A crash between a DELETE and its INSERT would leave a snapshot empty, and an empty snapshot
+        makes every item on that service look new on the next run, so nothing here may be applied piecemeal.
+        Each snapshot is still a full replacement, never a partial update (see replace_snapshot)."""
+        connection = _get_thread_connection(self._db_file)
+        try:
+            with connection.transaction() as cursor:
+                for (domain, service, media_type), current_items in snapshots.items():
+                    cursor.execute(
+                        "DELETE FROM snapshot WHERE domain=? AND service=? AND media_type=?",
+                        (domain, service, media_type),
+                    )
+                    if current_items:
+                        cursor.executemany(
+                            "INSERT INTO snapshot (domain, service, media_type, tmdb_id, item_key) VALUES (?, ?, ?, ?, ?)",
+                            [
+                                (domain, service, media_type, int(tmdb_id), str(item_key))
+                                for item_key, tmdb_id in current_items.items()
+                            ],
+                        )
+        except Exception:
+            _evict_thread_connection(self._db_file)
+            raise
+
+    # Bridge state that is not a set of items (Simkl's last-seen activity stamp and its saved library views) is
+    # kept in a JSON file beside the database, not in a table here: this class's schema is checksummed and any
+    # change to it rebuilds - i.e. wipes - the whole database, snapshots included, and an empty snapshot makes
+    # every item look new on every service.
+
+    @property
+    def _meta_path(self):
+        return os.path.join(os.path.dirname(self._db_file), "bridgeSyncMeta.json")
+
+    def get_meta(self):
+        """Returns the saved meta dict ({} when there is none yet). A corrupt file raises - the caller decides."""
+        try:
+            with open(self._meta_path, encoding="utf-8") as f:
+                data = json.load(f)
+        except FileNotFoundError:
+            return {}
+        return data if isinstance(data, dict) else {}
+
+    def set_meta(self, meta):
+        """Writes the meta dict atomically (temp file + replace), so an interrupted write cannot leave a
+        truncated file behind."""
+        path = self._meta_path
+        with open(path + ".tmp", "w", encoding="utf-8") as f:
+            json.dump(meta, f)
+        os.replace(path + ".tmp", path)

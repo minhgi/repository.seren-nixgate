@@ -13,9 +13,9 @@ class Menus:
     recent_movies/recent_shows/in_progress_* read local simklSync.db rows (built
     Phase 3) keyed by tmdb_id. _status_movies()/_status_shows() instead call Simkl's
     sync/all-items/{movies,shows}/{status} live, per menu-open - deliberately not
-    synced into simklSync.db, since that table's movies.watched=1 rows are read
-    directly by bridgeSync._read_simkl_watched_movies() for the cross-service push
-    (see _status_movies' own docstring; _status_shows() is lower-risk still, since
+    synced into simklSync.db, since that table's movies.watched=1 rows are what
+    recent_movies() shows as watched (bridgeSync used to read them for the cross-service
+    push; since 3.9.31 it reads Simkl live) (see _status_movies' own docstring; _status_shows() is lower-risk still, since
     trakt_sync.shows has no watched/collected column at all to corrupt). Either way,
     each item is resolved to a Trakt object via TraktAPI.search_by_tmdb_id (Trakt's
     ID lookup - no personal OAuth needed) before being handed to the existing,
@@ -219,10 +219,9 @@ class Menus:
         """Live Simkl status-bucket fetch for My Movies (Plan to Watch/Completed/
         Dropped) - resolves via Trakt and renders through list_builder same as
         recent_movies()/in_progress_movies(), rather than writing into the local
-        simklSync.db movies table. That table's watched=1 rows are read directly by
-        bridgeSync._read_simkl_watched_movies() for the cross-service watched-movies
-        push - seeding plantowatch/dropped (i.e. unwatched) rows into it would risk
-        those being pushed to Trakt/MDBList as watched.
+        simklSync.db movies table. That table's watched=1 rows are what recent_movies()
+        shows as watched (bridgeSync used to read them too, before 3.9.31) - seeding
+        plantowatch/dropped (i.e. unwatched) rows into it would show them as watched.
 
         sync/all-items has no server-side pagination - one call always returns the
         whole bucket - so the tmdb_id list is sliced to the current page *before*
