@@ -103,6 +103,9 @@ _SIMKL_LOCK_SECONDS = 21
 _PAGE_CAP = 200  # safety cap on Trakt pages per read
 _READ_TIMEOUT = 30  # seconds: a full-library page is far bigger than the 10 s default request budget was sized for
 _TARGET_NAMES = {"mdblist": "MDBList", "simkl": "Simkl", "trakt": "Trakt"}
+# Simkl names the Dropped status per app: a token of Seren's app reads back "dropped", an app with the older
+# vocabulary (TMDb Helper's) reads back "notinteresting" - live-probed 2026-10-14. Both mean the user dropped it.
+_SIMKL_DROPPED = ("dropped", "notinteresting")
 _STAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}")
 _RUNNING_KEY = "seren.bridgeSync.running"
 _RUNNING_STALE_SECONDS = 60 * 60
@@ -800,19 +803,19 @@ class _Bridge:
             return {
                 k
                 for k, v in missing.items()
-                if str(v) in anime or (views.get("shows") or {}).get(str(v), [None])[0] == "notinteresting"
+                if str(v) in anime or (views.get("shows") or {}).get(str(v), [None])[0] in _SIMKL_DROPPED
             }
         if source == "simkl" and target == "trakt":
             return {k for k in missing if k not in (views.get("ep_real") or {})}
         return set()
 
     def _skip_movies(self, missing, source, target):
-        """A watched mark moves a Simkl movie out of its status: leave a movie the user marked "not interested"
+        """A watched mark moves a Simkl movie out of its status: leave a movie the user dropped
         alone."""
         if target != "simkl":
             return set()
         movies = (self._simkl or {}).get("movies") or {}
-        return {k for k in missing if (movies.get(k) or [None])[0] == "notinteresting"}
+        return {k for k in missing if (movies.get(k) or [None])[0] in _SIMKL_DROPPED}
 
     def _skip_watchlist(self, missing, source, target):
         """Plan-to-watch adds move an item's status: never overwrite one Simkl has in another status."""

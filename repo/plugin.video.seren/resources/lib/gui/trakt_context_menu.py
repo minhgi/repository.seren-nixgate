@@ -238,23 +238,29 @@ class TraktContextMenu:
             # Ratings scoped to movie/tvshow only - Simkl's rating UI (like Trakt's
             # own watchlist/favorites options) has no season/episode precedent, and
             # neither the docs nor either reference addon showed per-episode ratings.
+            # Rate is only offered for an item Simkl already has (a watched movie, a show with a synced
+            # row): rating an item that is not in the library adds it - an unwatched movie becomes
+            # "completed", which the cross-service sync would then carry to Trakt and MDBList as a watched
+            # movie. Gated on local data only, like the watched toggle above. Clear Rating stays available.
             if item_type in ("movie", "tvshow"):
-                self.dialog_list += [
-                    g.get_language_string(31088),
-                    g.get_language_string(31089),
-                ]
-                options.update(
-                    {
-                        g.get_language_string(31088): {
-                            "method": self._simkl_rate,
-                            "info_key": "info",
-                        },
-                        g.get_language_string(31089): {
-                            "method": self._simkl_clear_rating,
-                            "info_key": "info",
-                        },
+                from resources.lib.database.simkl_sync import SimklSyncDatabase
+
+                tmdb_id = item_information["info"].get("tmdb_id")
+                if item_type == "movie":
+                    can_rate = SimklSyncDatabase().is_movie_watched(tmdb_id)
+                else:
+                    can_rate = SimklSyncDatabase().is_show_in_library(tmdb_id)
+                if can_rate:
+                    self.dialog_list.append(g.get_language_string(31088))
+                    options[g.get_language_string(31088)] = {
+                        "method": self._simkl_rate,
+                        "info_key": "info",
                     }
-                )
+                self.dialog_list.append(g.get_language_string(31089))
+                options[g.get_language_string(31089)] = {
+                    "method": self._simkl_clear_rating,
+                    "info_key": "info",
+                }
             # Mirrors MDBList's identical item_type gate on Clear Progress above -
             # playback/resume state is a movie/episode concept, not show/season. Also
             # mirrors Trakt's own _handle_progress_option: only show when a local
@@ -1618,8 +1624,8 @@ class TraktContextMenu:
         cross_sync.mirror_rating_clear_from_simkl(item_information)
 
     # Movies skip "watching"/"hold": simkl.apib documents movies as atomic - a
-    # "watching" write is silently rewritten to "completed" server-side, and "hold"
-    # has no defined behavior for movies.
+    # "watching" write is silently rewritten to "completed" server-side. ("hold" is
+    # accepted for movies - live-probed 2026-10-14, 201 - but is not offered here.)
     _SHOW_STATUSES = [
         ("watching", 31099),
         ("plantowatch", 31100),
@@ -1640,6 +1646,18 @@ class TraktContextMenu:
             return
         to_status = statuses[selection][0]
 
+        if mediatype == "movie" and to_status in ("plantowatch", "dropped"):
+            # Simkl marks a movie as unwatched the moment it goes to Plan to Watch or Dropped (live-probed
+            # 2026-10-14: last_watched_at becomes null), so a watched movie asks first. Shows keep their
+            # history through a status change. Local synced data only: no extra Simkl request.
+            from resources.lib.database.simkl_sync import SimklSyncDatabase
+
+            if SimklSyncDatabase().is_movie_watched(item_information["tmdb_id"]) and not xbmcgui.Dialog().yesno(
+                f"{g.ADDON_NAME}: {g.get_language_string(31090)}",
+                g.get_language_string(31554),
+            ):
+                return
+
         # A watch-status bucket is a whole-item property in Simkl, not a per-season/
         # episode one - season/episode force-resolve to their parent show's tmdb id,
         # mirroring _info_to_mdblist_list_object's identical force-resolve above.
@@ -1654,6 +1672,11 @@ class TraktContextMenu:
             key = "shows"
 
         response = self.simkl_api.post_json("sync/add-to-list", payload)
+        if to_status == "dropped" and not (response and (response.get("added") or {}).get(key)):
+            # Simkl names Dropped per app: this addon's login takes "dropped", a login from an older Simkl app
+            # takes "notinteresting" and answers "dropped" with a 400 (live-probed 2026-10-14).
+            payload[key][0]["to"] = "notinteresting"
+            response = self.simkl_api.post_json("sync/add-to-list", payload)
         # sync/add-to-list's added.<type> is an array of echoed items, not a count
         # (verified in simkl.apib - different from sync/history/sync/ratings' shape,
         # see _confirm_simkl_write), so length is the success check here.
@@ -1664,6 +1687,13 @@ class TraktContextMenu:
             )
             g.log(f"Failed to set Simkl status\nResponse: {response}")
             return
+
+        if mediatype == "movie" and to_status in ("plantowatch", "dropped"):
+            # Write-through: Simkl just marked it unwatched, and the periodic sync only ever adds completed
+            # movies, so without this the stale watched flag would keep Rate offered (and the question above).
+            from resources.lib.database.simkl_sync import SimklSyncDatabase
+
+            SimklSyncDatabase().mark_movie_unwatched_locally(item_information["tmdb_id"])
 
         g.notification(
             f"{g.ADDON_NAME}: {self.header_text}",

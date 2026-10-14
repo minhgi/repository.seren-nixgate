@@ -7145,3 +7145,7 @@ msgstr "Shows your Trakt account details: username, time zone, join date, privat
 msgctxt "#31553"
 msgid "Shows your Simkl account details: username, account ID, account type, time zone and join date."
 msgstr "Shows your Simkl account details: username, account ID, account type, time zone and join date."
+
+msgctxt "#31554"
+msgid "This movie is marked as watched on Simkl. Moving it to this list marks it as unwatched there. Continue?"
+msgstr "This movie is marked as watched on Simkl. Moving it to this list marks it as unwatched there. Continue?"

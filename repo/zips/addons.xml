@@ -124,7 +124,7 @@
 			Rework for Seren 2.0
 		</news>
 	</extension>
-</addon><addon id="plugin.video.seren" version="3.9.32" name="Seren" provider-name="Nixgates">
+</addon><addon id="plugin.video.seren" version="3.9.37" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -191,6 +191,14 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.37
+            [FIX] Simkl marks a movie as unwatched as soon as it is set to Plan to Watch or Dropped, so Set Status now asks first when the movie is one you have watched; answering No changes nothing. The Cross-Service Sync also no longer copies a Trakt watchlist add of a movie you have already watched to Simkl as Plan to Watch, which had the same effect (the movie stayed watched on Trakt but lost its watched mark on Simkl). Shows keep their watch history when they change status and are not affected.
+            Changelog 3.9.36
+            [FIX] On Simkl items, the Rate option is now only offered for a movie you have watched and a show that is already in your Simkl library. Rating anything else quietly added it to Simkl (an unwatched movie became Completed, which the Cross-Service Sync could then pass on to Trakt and MDBList as a watched movie); Clear Rating is unchanged. Set Status &gt; Dropped now retries with the older Simkl name "notinteresting" if Simkl refuses "dropped", so it also works for a Simkl login that uses the older naming.
+            Changelog 3.9.35
+            [FIX] The background Cross-Service Sync was meant to leave alone movies and shows you have set to Dropped on Simkl (a watched mark moves an item out of its status), but it only recognised the older status name "notinteresting" - Seren's own Simkl login reports "dropped" - so the protection never applied and a Dropped movie or show could be moved to Completed by a watched mark from Trakt or MDBList. It now recognises both names, so Dropped movies and shows are left alone.
+            Changelog 3.9.33
+            [FIX] Seren no longer erases its MDBList login when Account Manager has renewed it in the background. Account Manager now renews the MDBList login a few days before it expires, and a Seren process that still held the previous login could try to refresh it, be refused, and wipe the whole login (including the API key). Seren now checks the saved login first and uses it when it is newer, and never clears a login that someone else rotated while its own refresh was in flight.
             Changelog 3.9.32
             [FIX] The background Cross-Service Sync no longer re-sends, on every pass, the episodes MDBList reports it cannot match. MDBList names those episodes in its reply, so Seren now notes them once and moves on; the episodes that MDBList can match are unaffected, and the unmatched ones still sync to the other services.
             Changelog 3.9.31

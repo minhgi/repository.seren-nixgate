@@ -268,6 +268,13 @@ class SimklSyncDatabase(Database):
         total = row["total_episodes_count"] or 0
         return bool(total) and row["watched_episodes_count"] >= total
 
+    def is_show_in_library(self, tmdb_id):
+        """True when the show has a synced row (Simkl completed/watching, see activities._sync_shows_status).
+        Gate for the context-menu Rate entry: rating a show Simkl does not have yet adds it to the library."""
+        if not tmdb_id:
+            return False
+        return bool(self.fetchone("SELECT 1 FROM shows WHERE tmdb_id=?", (tmdb_id,)))
+
     def mark_movie_watched_locally(self, tmdb_id):
         """Write-through so the toggle flips immediately instead of waiting on the next
         periodic activities sync. UPDATE-only, keyed by the tmdb_id index rather than

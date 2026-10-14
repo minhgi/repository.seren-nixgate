@@ -119,6 +119,16 @@ def _simkl_status_payload(item_information, to_status):
     return None
 
 
+def _simkl_movie_watched(item_information):
+    """True when Simkl's synced data has this movie as watched. Simkl marks a movie as unwatched when it is
+    set to Plan to Watch, so a watchlist mirror must leave such a movie alone (local data, no request)."""
+    from resources.lib.database.simkl_sync import SimklSyncDatabase
+
+    return item_information["mediatype"] == "movie" and SimklSyncDatabase().is_movie_watched(
+        item_information.get("tmdb_id")
+    )
+
+
 def _resolve_trakt_id(item_information):
     """Resolves this item's tmdb_id to a Trakt object via Trakt's ID lookup
     search (no personal OAuth required - works even when Trakt is only
@@ -231,6 +241,13 @@ def mirror_watchlist_add_from_trakt(item_information):
             elif target == "simkl":
                 from resources.lib.indexers.simkl import SimklAPI
 
+                if _simkl_movie_watched(item_information):
+                    g.log(
+                        f"cross_sync: movie {item_information.get('tmdb_id')} is watched on Simkl - "
+                        "not moved to Plan to Watch",
+                        "info",
+                    )
+                    continue
                 payload = _simkl_status_payload(item_information, "plantowatch")
                 if payload is not None:
                     SimklAPI().post_json("sync/add-to-list", payload)

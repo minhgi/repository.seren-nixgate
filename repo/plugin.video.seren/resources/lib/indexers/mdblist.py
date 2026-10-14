@@ -4,6 +4,7 @@ from functools import cached_property
 from urllib import parse
 
 import xbmc
+import xbmcaddon
 import xbmcgui
 
 from resources.lib.common import tools
@@ -191,6 +192,15 @@ class MDBListAPI(ApiBase):
             return True
         try:
             with GlobalLock(self.__class__.__name__, True, self.access_token):
+                # Account Manager renews this login ahead of expiry, from another process. This instance may still hold the
+                # login it loaded earlier, whose refresh token MDBList has already rotated: refreshing with it would fail and
+                # wipe the whole login. If the saved login differs from the one in hand, use the saved one instead.
+                stored = self._stored_login()
+                if stored[0] and stored[0] != self.access_token:
+                    g.log("MDBList login was renewed elsewhere - using the saved one")
+                    self._adopt_stored_login(stored)
+                    return True
+                sent_refresh_token = self.refresh_token
                 g.log("MDBList Token requires refreshing...")
                 response = self._oauth_post(
                     "token/",
@@ -204,13 +214,41 @@ class MDBListAPI(ApiBase):
                     self._save_oauth_settings(response.json())
                     g.log("Refreshed MDBList Token")
                     return True
+                stored = self._stored_login()
+                if stored[1] and stored[1] != sent_refresh_token:
+                    # the login was rotated by someone else while this refresh was in flight - theirs is the live one, keep it
+                    g.log("MDBList login was renewed elsewhere during the refresh - using the saved one")
+                    self._adopt_stored_login(stored)
+                    return bool(self.access_token)
                 g.log("MDBList token refresh failed, clearing auth", "error")
                 self._clear_auth_settings()
                 xbmcgui.Dialog().notification(g.ADDON_NAME, g.get_language_string(31163))
                 return False
         except RanOnceAlready:
-            self._load_settings()
+            stored = self._stored_login()
+            if stored[0] and stored[0] != self.access_token:
+                self._adopt_stored_login(stored)
+            else:
+                self._load_settings()
             return bool(self.access_token)
+
+    @staticmethod
+    def _stored_login():
+        """The MDBList login saved in Kodi right now - (access token, refresh token, expiry) - read straight from the
+        add-on, not through Seren's settings cache, because Account Manager writes it from another process."""
+        addon = xbmcaddon.Addon("plugin.video.seren")
+        return (
+            addon.getSetting("mdblist.auth") or None,
+            addon.getSetting("mdblist.refresh") or None,
+            addon.getSetting("mdblist.expires"),
+        )
+
+    def _adopt_stored_login(self, stored):
+        self.access_token, self.refresh_token = stored[0], stored[1]
+        try:
+            self.token_expires = float(stored[2] or 0)
+        except ValueError:
+            self.token_expires = 0.0
 
     def revoke_auth(self):
         """
