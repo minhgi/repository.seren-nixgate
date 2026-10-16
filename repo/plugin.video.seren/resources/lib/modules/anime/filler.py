@@ -14,8 +14,13 @@ from resources.lib.modules.globals import g
 
 FILLER_LIST_URL = "https://www.animefillerlist.com/shows"
 
-# Session-level cache: {slug: [list of episode type strings]}
+# Process-level cache: {slug: [list of episode type strings]}. Every plugin call is a fresh interpreter, so the lists
+# are also kept in Seren's cache database (a list of 7 anime episodes used to cost 7 sequential HTTP requests each time).
 _filler_cache = {}
+
+FOUND_CACHE_HOURS = 24  # a list for a show on the site (new episodes are added as they air)
+MISSING_CACHE_HOURS = 24  # the site answered "no such show" (404)
+ERROR_CACHE_MINUTES = 10  # timeout / 5xx / 429: try again soon, but not on every list open
 
 
 class _EpisodeListParser(HTMLParser):
@@ -75,6 +80,60 @@ def _title_to_slug(title):
     return slug
 
 
+def _cache_key(slug):
+    return f"animefillerlist.{slug}"
+
+
+def _lookup(slug):
+    """The cached list for this slug (memory, then the cache database), or None if it is not cached."""
+    if slug in _filler_cache:
+        return _filler_cache[slug]
+    from resources.lib.database.cache import CacheBase
+
+    try:
+        cached = g.CACHE.get(_cache_key(slug))
+    except Exception as e:  # a cache problem must never break a list
+        g.log(f"Filler list: cache read failed: {e}", "debug")
+        return None
+    if cached == CacheBase.NOT_CACHED or not isinstance(cached, list):
+        return None
+    _filler_cache[slug] = cached
+    return cached
+
+
+def _store(slug, results, expiration):
+    _filler_cache[slug] = results
+    try:
+        g.CACHE.set(_cache_key(slug), results, expiration=expiration)
+    except Exception as e:
+        g.log(f"Filler list: cache write failed: {e}", "debug")
+
+
+def prefetch(show_titles):
+    """Fetch the lists that are not cached yet in parallel, before a list of episodes is built one episode at a time."""
+    missing = {}
+    for title in show_titles:
+        slug = _title_to_slug(title) if title else ""
+        if slug and slug not in missing and _lookup(slug) is None:
+            missing[slug] = title
+    if not missing:
+        return
+    if len(missing) == 1:
+        get_filler_list(next(iter(missing.values())))
+        return
+    from resources.lib.common.thread_pool import ThreadPool
+
+    pool = ThreadPool()
+    try:
+        for title in missing.values():
+            pool.put(get_filler_list, title)
+        pool.wait_completion()
+    except Exception as e:
+        g.log(f"Filler list: prefetch failed: {e}", "debug")
+    finally:
+        pool.close()
+
+
 def get_filler_list(show_title):
     """Get filler episode list for a show by title.
 
@@ -93,8 +152,11 @@ def get_filler_list(show_title):
     slug = _title_to_slug(show_title)
 
     # Check cache
-    if slug in _filler_cache:
-        return _filler_cache[slug]
+    cached = _lookup(slug)
+    if cached is not None:
+        return cached
+
+    import datetime
 
     try:
         url = f"{FILLER_LIST_URL}/{slug}"
@@ -102,13 +164,16 @@ def get_filler_list(show_title):
 
         if not response.ok:
             g.log(f"Filler list: no data for '{show_title}' (slug={slug}, status={response.status_code})", "debug")
-            _filler_cache[slug] = []
+            if response.status_code == 404:
+                _store(slug, [], datetime.timedelta(hours=MISSING_CACHE_HOURS))
+            else:
+                _store(slug, [], datetime.timedelta(minutes=ERROR_CACHE_MINUTES))
             return []
 
         parser = _EpisodeListParser()
         parser.feed(response.text)
 
-        _filler_cache[slug] = parser.results
+        _store(slug, parser.results, datetime.timedelta(hours=FOUND_CACHE_HOURS))
         if parser.results:
             filler_count = sum(1 for ep in parser.results if "filler" in ep.lower() and "canon" not in ep.lower())
             g.log(
@@ -119,7 +184,7 @@ def get_filler_list(show_title):
 
     except requests.RequestException as e:
         g.log(f"Filler list error for '{show_title}': {e}", "warning")
-        _filler_cache[slug] = []
+        _store(slug, [], datetime.timedelta(minutes=ERROR_CACHE_MINUTES))
         return []
 
 
@@ -161,6 +226,6 @@ def get_episode_type(show_title, episode_number):
 
 
 def invalidate_cache():
-    """Clear the session-level filler cache."""
+    """Clear the process-level filler cache (the cache database copies expire on their own)."""
     global _filler_cache
     _filler_cache = {}

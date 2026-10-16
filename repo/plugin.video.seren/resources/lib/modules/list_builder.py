@@ -264,6 +264,8 @@ class ListBuilder:
 
     def _post_process_list(self, item_list, prepend_date=False, mixed_list=False):
         filler_detection_enabled = g.get_bool_setting("anime.fillerDetection")
+        if filler_detection_enabled:
+            self._prefetch_fillers(item_list)
         return [
             self._post_process(item, prepend_date, mixed_list, filler_detection_enabled) for item in item_list
         ]
@@ -326,26 +328,51 @@ class ListBuilder:
         return name
 
     @staticmethod
+    def _filler_candidate(item):
+        """(show title, episode number) if this is an episode of an anime show that can have filler, else None."""
+        genres = item.get("info", {}).get("genre", [])
+        if not isinstance(genres, list):
+            genres = [genres] if genres else []
+
+        is_anime = any("anime" in genre.lower() for genre in genres)
+        if not is_anime:
+            country = item.get("info", {}).get("country_origin", "")
+            has_animation = any("animation" in genre.lower() for genre in genres)
+            if not (has_animation and str(country).upper() in ("JP", "JPN", "JAPAN")):
+                return None
+
+        show_title = item.get("info", {}).get("tvshowtitle", "")
+        episode_number = item.get("info", {}).get("episode")
+        if not show_title or not episode_number:
+            return None
+        return show_title, episode_number
+
+    def _prefetch_fillers(self, item_list):
+        """Fetch the filler lists of all the anime shows in this list at once (they were fetched one episode at a time)."""
+        try:
+            titles = []
+            for item in item_list:
+                if item and item.get("info", {}).get("mediatype") == "episode":
+                    candidate = self._filler_candidate(item)
+                    if candidate and candidate[0] not in titles:
+                        titles.append(candidate[0])
+            if titles:
+                from resources.lib.modules.anime.filler import prefetch
+
+                prefetch(titles)
+        except Exception as e:
+            g.log(f"Filler prefetch error: {e}", "debug")
+
+    @staticmethod
     def _handle_filler_tag(name, item, filler_detection_enabled):
         """Tag filler episodes for anime content with a colored FILLER label."""
         if not filler_detection_enabled:
             return name
         try:
-            genres = item.get("info", {}).get("genre", [])
-            if not isinstance(genres, list):
-                genres = [genres] if genres else []
-
-            is_anime = any("anime" in genre.lower() for genre in genres)
-            if not is_anime:
-                country = item.get("info", {}).get("country_origin", "")
-                has_animation = any("animation" in genre.lower() for genre in genres)
-                if not (has_animation and str(country).upper() in ("JP", "JPN", "JAPAN")):
-                    return name
-
-            show_title = item.get("info", {}).get("tvshowtitle", "")
-            episode_number = item.get("info", {}).get("episode")
-            if not show_title or not episode_number:
+            candidate = ListBuilder._filler_candidate(item)
+            if not candidate:
                 return name
+            show_title, episode_number = candidate
 
             from resources.lib.modules.anime.filler import get_episode_type
             ep_type = get_episode_type(show_title, int(episode_number))

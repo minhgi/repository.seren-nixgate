@@ -128,7 +128,7 @@ def _loads(value):
         return value
 
 
-PICKLE_TYPES = {"list", "set", "dict", "tuple", "Response"}
+PICKLE_TYPES = {"list", "set", "dict", "tuple", "Response", "_CachedResponse"}
 
 
 class Database:

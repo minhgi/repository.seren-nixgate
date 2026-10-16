@@ -124,7 +124,7 @@
 			Rework for Seren 2.0
 		</news>
 	</extension>
-</addon><addon id="plugin.video.seren" version="3.9.40" name="Seren" provider-name="Nixgates">
+</addon><addon id="plugin.video.seren" version="3.9.41" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -191,6 +191,9 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.41
+            [NEW] Lists of anime episodes (Next Up, Recent Episodes, ...) open faster when Tag Filler Episodes is on: the animefillerlist.com pages of all the shows in a list are now fetched together instead of one episode at a time, and are remembered for 24 hours (a show the site does not know is also remembered for 24 hours, a failed request for 10 minutes), so opening the list again does not download them again.
+            [NEW] Trakt pages that are already cached are loaded in a lighter form (only the status, headers and data that Seren reads), so a list built from a cached Trakt page no longer has to load the full web-request library just to read it. Pages cached by the previous version keep working until they expire.
             Changelog 3.9.40
             [NEW] The browse rows that had no description now have one: Debrid Services (Cache Assist History, the current transfers of each debrid service, Clear All Debrid Transfers, Clear All Debrid Cloud Files, Clear Non Active), the MDBList Discover rows (Top Lists, Search Lists, Lists by Username) and the genre Multi Select rows.
             Changelog 3.9.39

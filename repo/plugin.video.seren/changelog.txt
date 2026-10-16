@@ -1,3 +1,7 @@
+[B]3.9.41[/B]
+- [NEW] Lists of anime episodes (Next Up, Recent Episodes, ...) open faster when Tag Filler Episodes is on: the animefillerlist.com pages of all the shows in a list are now fetched together instead of one episode at a time, and are remembered for 24 hours (a show the site does not know is also remembered for 24 hours, a failed request for 10 minutes), so opening the list again does not download them again.
+- [NEW] Trakt pages that are already cached are loaded in a lighter form (only the status, headers and data that Seren reads), so a list built from a cached Trakt page no longer has to load the full web-request library just to read it. Pages cached by the previous version keep working until they expire.
+
 [B]3.9.40[/B]
 - [NEW] The browse rows that had no description now have one: Debrid Services (Cache Assist History, the current transfers of each debrid service, Clear All Debrid Transfers, Clear All Debrid Cloud Files, Clear Non Active), the MDBList Discover rows (Top Lists, Search Lists, Lists by Username) and the genre Multi Select rows.
 

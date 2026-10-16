@@ -20,6 +20,50 @@ from resources.lib.modules.globals import g
 
 CLOUDFLARE_ERROR_MSG = "Service Unavailable - Cloudflare error"
 
+
+class _Headers(dict):
+    """Case-insensitive read access to the response headers (keys are stored lower case)."""
+
+    def __getitem__(self, key):
+        return super().__getitem__(str(key).lower())
+
+    def __contains__(self, key):
+        return super().__contains__(str(key).lower())
+
+    def get(self, key, default=None):
+        return super().get(str(key).lower(), default)
+
+
+class _CachedResponse:
+    """What Seren reads from a cached Trakt page (status, headers, body) without holding a requests.Response:
+    loading a cached requests.Response imports `requests` (and urllib3), a large share of the time a cached list took."""
+
+    __slots__ = ("status_code", "headers", "content", "url")
+
+    def __init__(self, status_code, headers, content, url):
+        self.status_code = status_code
+        self.headers = _Headers((str(k).lower(), v) for k, v in dict(headers).items())
+        self.content = content
+        self.url = url
+
+    @classmethod
+    def from_response(cls, response):
+        if response is None:
+            return None
+        return cls(response.status_code, response.headers, response.content, response.url)
+
+    @property
+    def ok(self):
+        return self.status_code < 400
+
+    def __bool__(self):
+        return self.ok
+
+    def json(self):
+        import json
+
+        return json.loads(self.content)
+
 TRAKT_STATUS_CODES = {
     200: "Success",
     201: "Success - new resource created (POST)",
@@ -643,9 +687,9 @@ class TraktAPI(ApiBase):
         Performs a GET request to specified endpoint, caches and returns response
         :param url: endpoint to perform request against
         :param params: URL params for request
-        :return: request response
+        :return: request response (a _CachedResponse: status, headers, json())
         """
-        return self.get(url, **params)
+        return _CachedResponse.from_response(self.get(url, **params))
 
     @handle_single_item_or_list
     def _handle_response(self, item):
