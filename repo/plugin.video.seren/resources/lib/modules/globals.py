@@ -1942,6 +1942,14 @@ class GlobalVariables:
         dialogue.notification(heading, message, time=time, sound=sound)
         del dialogue
 
+    def notification_unless_playing(self, heading, message, time=5000, sound=True):
+        """For pop-ups raised by background work (the scheduled provider syncs): skip it while a video is playing
+        so it can't appear over what the user is watching. The work itself is unaffected."""
+        if xbmc.Player().isPlayingVideo():
+            self.log(f"Skipped pop-up while a video is playing: {message}", "debug")
+            return
+        self.notification(heading, message, time=time, sound=sound)
+
     def get_keyboard_input(self, heading=None, default=None, hidden=False):
         k = xbmc.Keyboard(default, heading, hidden)
         k.doModal()

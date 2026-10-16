@@ -7149,3 +7149,51 @@ msgstr "Shows your Simkl account details: username, account ID, account type, ti
 msgctxt "#31554"
 msgid "This movie is marked as watched on Simkl. Moving it to this list marks it as unwatched there. Continue?"
 msgstr "This movie is marked as watched on Simkl. Moving it to this list marks it as unwatched there. Continue?"
+
+msgctxt "#31555"
+msgid "Menu behavior, search history, hiding watched or unaired items, Trakt menu options and download settings."
+msgstr "Menu behavior, search history, hiding watched or unaired items, Trakt menu options and download settings."
+
+msgctxt "#31556"
+msgid "Choose Seren's colors and window theme."
+msgstr "Choose Seren's colors and window theme."
+
+msgctxt "#31557"
+msgid "Choose where metadata and artwork come from for movies and TV shows."
+msgstr "Choose where metadata and artwork come from for movies and TV shows."
+
+msgctxt "#31558"
+msgid "Sign in to Trakt, MDBList and Simkl, set up the Cross-Service Sync, choose which menu items show and set the calendar region."
+msgstr "Sign in to Trakt, MDBList and Simkl, set up the Cross-Service Sync, choose which menu items show and set the calendar region."
+
+msgctxt "#31559"
+msgid "Sign in to and manage your debrid services: Premiumize, Real-Debrid, AllDebrid, TorBox, Debrid-Link and Offcloud."
+msgstr "Sign in to and manage your debrid services: Premiumize, Real-Debrid, AllDebrid, TorBox, Debrid-Link and Offcloud."
+
+msgctxt "#31560"
+msgid "Manage provider packages, Orion, Easynews, local files and which provider tiers are used."
+msgstr "Manage provider packages, Orion, Easynews, local files and which provider tiers are used."
+
+msgctxt "#31561"
+msgid "Control how sources are searched: cloud scraping, the Auto Caching Assistant and early termination of a search."
+msgstr "Control how sources are searched: cloud scraping, the Auto Caching Assistant and early termination of a search."
+
+msgctxt "#31562"
+msgid "Filter sources and set resolution and internet speed limits, and choose how the results are sorted."
+msgstr "Filter sources and set resolution and internet speed limits, and choose how the results are sorted."
+
+msgctxt "#31563"
+msgid "Resume, resolving, Smart Play, the playback watchdog and audio and subtitle language."
+msgstr "Resume, resolving, Smart Play, the playback watchdog and audio and subtitle language."
+
+msgctxt "#31564"
+msgid "Smart search, title substitutions, skip segments, anime filler detection, episode metadata and dub / sub preference."
+msgstr "Smart search, title substitutions, skip segments, anime filler detection, episode metadata and dub / sub preference."
+
+msgctxt "#31565"
+msgid "Shortcuts for clearing the cache, the Trakt sync tools and the window tests."
+msgstr "Shortcuts for clearing the cache, the Trakt sync tools and the window tests."
+
+msgctxt "#31566"
+msgid "Menus, optional API keys, time zone and performance settings."
+msgstr "Menus, optional API keys, time zone and performance settings."

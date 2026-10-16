@@ -1,3 +1,9 @@
+[B]3.9.39[/B]
+- [FIX] The "Simkl Sync: ... synced" and "MDBList Sync: ... synced" pop-ups that appear after a background sync are no longer shown while a video is playing, so they can't show up in the middle of watching. The sync itself still runs; only the pop-up is skipped.
+
+[B]3.9.38[/B]
+- [NEW] Every category in the settings window (General, Themes, Metadata & Artwork, Watch Accounts, Debrid Accounts, Providers, Scraping, Sort & Filter, Playback, Search & Titles, Shortcuts, Advanced) now shows a short description at the bottom of the window when you highlight it in the left-hand list.
+
 [B]3.9.37[/B]
 - [FIX] Simkl marks a movie as unwatched as soon as it is set to Plan to Watch or Dropped, so Set Status now asks first when the movie is one you have watched; answering No changes nothing. The Cross-Service Sync also no longer copies a Trakt watchlist add of a movie you have already watched to Simkl as Plan to Watch, which had the same effect (the movie stayed watched on Trakt but lost its watched mark on Simkl). Shows keep their watch history when they change status and are not affected.
 

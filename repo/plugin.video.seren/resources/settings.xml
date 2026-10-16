@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <settings version="1">
 	<section id="plugin.video.seren">
-		<category id="general" label="30084" help="">
+		<category id="general" label="30084" help="31555">
 			<group id="1" label="30591">
 				<setting id="searchHistory" type="boolean" label="30161" help="31216">
 					<level>0</level>
@@ -482,7 +482,7 @@
 				</setting>
 			</group>
 		</category>
-		<category id="themes" label="30199" help="">
+		<category id="themes" label="30199" help="31556">
 			<group id="1" label="30595">
 				<setting id="general.displayColor" type="string" label="30103" help="31240">
 					<level>0</level>
@@ -551,7 +551,7 @@
 				</setting>
 			</group>
 		</category>
-		<category id="metadata &amp; artwork" label="30596" help="">
+		<category id="metadata &amp; artwork" label="30596" help="31557">
 			<group id="1" label="30597">
 				<setting id="general.metalocation" type="integer" label="30091" help="31353">
 					<level>0</level>
@@ -973,7 +973,7 @@
 
 
 		</category>
-		<category id="watch_accounts" label="30941" help="">
+		<category id="watch_accounts" label="30941" help="31558">
 			<group id="1" label="30084">
 				<setting id="general.watchAccountNotifications" type="boolean" label="30942" help="31291">
 					<level>0</level>
@@ -1457,7 +1457,7 @@
 				</setting>
 			</group>
 		</category>
-		<category id="accounts" label="30127" help="">
+		<category id="accounts" label="30127" help="31559">
 			<group id="1" label="30084">
 				<setting id="general.accountNotifications" type="boolean" label="30128" help="31443">
 					<level>0</level>
@@ -2659,7 +2659,7 @@
 				</setting>
 			</group>
 		</category>
-		<category id="providers" label="30136" help="">
+		<category id="providers" label="30136" help="31560">
 			<group id="1" label="30084">
 				<setting id="providers.autoupdates" type="boolean" label="30138" help="31251">
 					<level>0</level>
@@ -2793,7 +2793,7 @@
 				</setting>
 			</group>
 		</category>
-		<category id="scraping" label="30110" help="">
+		<category id="scraping" label="30110" help="31561">
 			<group id="1" label="30084">
 				<setting id="general.scrapedisplay" type="integer" label="30174" help="31315">
 					<level>0</level>
@@ -3099,7 +3099,7 @@
 				</setting>
 			</group>
 		</category>
-		<category id="sort &amp; filter" label="30148" help="">
+		<category id="sort &amp; filter" label="30148" help="31562">
 			<group id="1" label="30117">
 				<setting id="general.chooseFilters" type="action" label="30617" help="31337">
 					<level>0</level>
@@ -3743,7 +3743,7 @@
 				</setting>
 			</group>
 		</category>
-		<category id="playback" label="30258" help="">
+		<category id="playback" label="30258" help="31563">
 			<group id="1" label="30084">
 				<setting id="general.playstyleMovie" type="integer" label="30191" help="31257">
 					<level>0</level>
@@ -4136,7 +4136,7 @@
 				</setting>
 			</group>
 		</category>
-		<category id="anime_titles" label="30763" help="">
+		<category id="anime_titles" label="30763" help="31564">
 			<group id="1" label="30786">
 				<setting id="general.smartSearch" type="boolean" label="30786" help="30787">
 					<level>0</level>
@@ -4372,7 +4372,7 @@
 				</setting>
 			</group>
 		</category>
-		<category id="shortcuts" label="30142" help="">
+		<category id="shortcuts" label="30142" help="31565">
 			<group id="1" label="30028">
 				<setting id="cache.clear" type="action" label="30028" help="31276">
 					<level>0</level>
@@ -4502,7 +4502,7 @@
 				</setting>
 			</group>
 		</category>
-		<category id="advanced" label="30260" help="">
+		<category id="advanced" label="30260" help="31566">
 			<group id="1" label="30605">
 				<setting id="general.menucaching" type="boolean" label="30193" help="31444">
 					<level>0</level>

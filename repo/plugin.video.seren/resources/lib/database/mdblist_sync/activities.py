@@ -94,7 +94,7 @@ class MDBListSyncDatabase(mdblist_sync.MDBListSyncDatabase):
                 g.log(f"Failed to sync MDBList list items: {e}", "error")
 
             if watched_count or playback_count:
-                g.notification(g.ADDON_NAME, g.get_language_string(30953).format(watched_count, playback_count))
+                g.notification_unless_playing(g.ADDON_NAME, g.get_language_string(30953).format(watched_count, playback_count))
                 xbmc.executebuiltin('RunPlugin("plugin://plugin.video.seren/?action=widgetRefresh&playing=False")')
 
     def _sync_watched(self):

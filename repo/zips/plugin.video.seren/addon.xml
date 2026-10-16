@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.video.seren" version="3.9.37" name="Seren" provider-name="Nixgates">
+<addon id="plugin.video.seren" version="3.9.39" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -66,6 +66,10 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.39
+            [FIX] The "Simkl Sync: ... synced" and "MDBList Sync: ... synced" pop-ups that appear after a background sync are no longer shown while a video is playing, so they can't show up in the middle of watching. The sync itself still runs; only the pop-up is skipped.
+            Changelog 3.9.38
+            [NEW] Every category in the settings window (General, Themes, Metadata &amp; Artwork, Watch Accounts, Debrid Accounts, Providers, Scraping, Sort &amp; Filter, Playback, Search &amp; Titles, Shortcuts, Advanced) now shows a short description at the bottom of the window when you highlight it in the left-hand list.
             Changelog 3.9.37
             [FIX] Simkl marks a movie as unwatched as soon as it is set to Plan to Watch or Dropped, so Set Status now asks first when the movie is one you have watched; answering No changes nothing. The Cross-Service Sync also no longer copies a Trakt watchlist add of a movie you have already watched to Simkl as Plan to Watch, which had the same effect (the movie stayed watched on Trakt but lost its watched mark on Simkl). Shows keep their watch history when they change status and are not affected.
             Changelog 3.9.36

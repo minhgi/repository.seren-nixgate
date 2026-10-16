@@ -208,7 +208,7 @@ class SimklSyncDatabase(simkl_sync.SimklSyncDatabase):
                 self._update_activity_record("all_at", remote_all)
 
             if movies_count or shows_count or playback_count:
-                g.notification(
+                g.notification_unless_playing(
                     g.ADDON_NAME,
                     g.get_language_string(31084).format(movies_count + shows_count, playback_count),
                 )
