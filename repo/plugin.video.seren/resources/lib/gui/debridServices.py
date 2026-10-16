@@ -18,58 +18,71 @@ class Menus:
         g.add_directory_item(
             g.get_language_string(30219),
             action='cacheAssistStatus',
+            description=g.get_language_string(31567),
             menu_item=g.create_icon_dict("cloud_files", g.ICONS_PATH),
         )
         if g.get_bool_setting('premiumize.enabled'):
             g.add_directory_item(
                 g.get_language_string(30220),
                 action='premiumize_transfers',
+                description=g.get_language_string(31568),
                 menu_item=g.create_icon_dict("premiumize", g.ICONS_PATH),
             )
         if g.get_bool_setting('realdebrid.enabled'):
             g.add_directory_item(
                 g.get_language_string(30221),
                 action='realdebridTransfers',
+                description=g.get_language_string(31569),
                 menu_item=g.create_icon_dict("real_debrid", g.ICONS_PATH),
             )
         if g.get_bool_setting('alldebrid.enabled'):
             g.add_directory_item(
                 "Current AllDebrid Transfers",
                 action='alldebridTransfers',
+                description=g.get_language_string(31570),
                 menu_item=g.create_icon_dict("all_debrid", g.ICONS_PATH),
             )
         if g.get_bool_setting('torbox.enabled'):
             g.add_directory_item(
                 "Current TorBox Transfers",
                 action='torboxTransfers',
+                description=g.get_language_string(31571),
                 menu_item=g.create_icon_dict("torbox", g.ICONS_PATH),
             )
         if g.get_bool_setting('debridlink.enabled'):
             g.add_directory_item(
                 "Current Debrid-Link Transfers",
                 action='debridlinkTransfers',
+                description=g.get_language_string(31572),
                 menu_item=g.create_icon_dict("cloud", g.ICONS_PATH),
             )
         if g.get_bool_setting('offcloud.enabled'):
             g.add_directory_item(
                 "Current Offcloud Transfers",
                 action='offcloudTransfers',
+                description=g.get_language_string(31573),
                 menu_item=g.create_icon_dict("offcloud", g.ICONS_PATH),
             )
         g.add_directory_item(
             "Clear All Debrid Transfers",
             action='clearAllDebridTransfers',
+            description=g.get_language_string(31574),
             menu_item=g.create_icon_dict("clear", g.ICONS_PATH),
         )
         g.add_directory_item(
             "Clear All Debrid Cloud Files",
             action='clearAllDebridCloudFiles',
+            description=g.get_language_string(31575),
             menu_item=g.create_icon_dict("clear", g.ICONS_PATH),
         )
         g.close_directory(self.view_type)
 
     def get_assist_torrents(self):
-        g.add_directory_item(g.get_language_string(30222), action='nonActiveAssistClear')
+        g.add_directory_item(
+            g.get_language_string(30222),
+            action='nonActiveAssistClear',
+            description=g.get_language_string(31576),
+        )
         torrent_list = self.torrent_assist.get_assist_torrents()
         if torrent_list is not None:
 

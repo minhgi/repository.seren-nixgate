@@ -802,18 +802,21 @@ class Menus:
         g.add_directory_item(
             g.get_language_string(31065),
             action="mdblistTopLists",
+            description=g.get_language_string(31577),
             mediatype=media_type,
             menu_item=g.create_icon_dict("list", g.ICONS_PATH),
         )
         g.add_directory_item(
             g.get_language_string(31066),
             action="mdblistListSearch",
+            description=g.get_language_string(31578),
             action_args={"media_type": media_type},
             menu_item=g.create_icon_dict("movies_search", g.ICONS_PATH),
         )
         g.add_directory_item(
             g.get_language_string(31067),
             action="mdblistUserLists",
+            description=g.get_language_string(31579),
             action_args={"media_type": media_type},
             menu_item=g.create_icon_dict("list", g.ICONS_PATH),
         )

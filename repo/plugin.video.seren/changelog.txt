@@ -1,3 +1,6 @@
+[B]3.9.40[/B]
+- [NEW] The browse rows that had no description now have one: Debrid Services (Cache Assist History, the current transfers of each debrid service, Clear All Debrid Transfers, Clear All Debrid Cloud Files, Clear Non Active), the MDBList Discover rows (Top Lists, Search Lists, Lists by Username) and the genre Multi Select rows.
+
 [B]3.9.39[/B]
 - [FIX] The "Simkl Sync: ... synced" and "MDBList Sync: ... synced" pop-ups that appear after a background sync are no longer shown while a video is playing, so they can't show up in the middle of watching. The sync itself still runs; only the pop-up is skipped.
 

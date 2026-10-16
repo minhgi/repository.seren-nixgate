@@ -569,6 +569,7 @@ class Menus:
         g.add_directory_item(
             g.get_language_string(30045),
             action="movieGenresGet",
+            description=g.get_language_string(31580),
             menu_item=g.create_icon_dict("list", g.ICONS_PATH),
         )
         genres = self.trakt_api.get_json_cached("genres/movies")

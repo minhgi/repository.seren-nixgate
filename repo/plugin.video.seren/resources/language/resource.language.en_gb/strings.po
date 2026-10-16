@@ -7197,3 +7197,63 @@ msgstr "Shortcuts for clearing the cache, the Trakt sync tools and the window te
 msgctxt "#31566"
 msgid "Menus, optional API keys, time zone and performance settings."
 msgstr "Menus, optional API keys, time zone and performance settings."
+
+msgctxt "#31567"
+msgid "Torrents that Cache Assist sent to your debrid service, with their status and progress."
+msgstr "Torrents that Cache Assist sent to your debrid service, with their status and progress."
+
+msgctxt "#31568"
+msgid "Transfers currently running on your Premiumize account."
+msgstr "Transfers currently running on your Premiumize account."
+
+msgctxt "#31569"
+msgid "Transfers currently running on your Real-Debrid account."
+msgstr "Transfers currently running on your Real-Debrid account."
+
+msgctxt "#31570"
+msgid "Transfers currently running on your AllDebrid account."
+msgstr "Transfers currently running on your AllDebrid account."
+
+msgctxt "#31571"
+msgid "Transfers currently running on your TorBox account."
+msgstr "Transfers currently running on your TorBox account."
+
+msgctxt "#31572"
+msgid "Transfers currently running on your Debrid-Link account."
+msgstr "Transfers currently running on your Debrid-Link account."
+
+msgctxt "#31573"
+msgid "Transfers currently running on your Offcloud account."
+msgstr "Transfers currently running on your Offcloud account."
+
+msgctxt "#31574"
+msgid "Delete all transfers from every enabled debrid service. Asks you to confirm first."
+msgstr "Delete all transfers from every enabled debrid service. Asks you to confirm first."
+
+msgctxt "#31575"
+msgid "Delete all torrents, downloads and saved links from every enabled debrid service. Asks you to confirm first."
+msgstr "Delete all torrents, downloads and saved links from every enabled debrid service. Asks you to confirm first."
+
+msgctxt "#31576"
+msgid "Remove the Cache Assist records of transfers that have finished or failed."
+msgstr "Remove the Cache Assist records of transfers that have finished or failed."
+
+msgctxt "#31577"
+msgid "The top lists on MDBList."
+msgstr "The top lists on MDBList."
+
+msgctxt "#31578"
+msgid "Search MDBList for public lists by name."
+msgstr "Search MDBList for public lists by name."
+
+msgctxt "#31579"
+msgid "Type an MDBList username to browse that person's public lists."
+msgstr "Type an MDBList username to browse that person's public lists."
+
+msgctxt "#31580"
+msgid "Pick several genres at once and list the movies that match them."
+msgstr "Pick several genres at once and list the movies that match them."
+
+msgctxt "#31581"
+msgid "Pick several genres at once and list the TV shows that match them."
+msgstr "Pick several genres at once and list the TV shows that match them."
