@@ -46,7 +46,7 @@ _fetch_locks = {}  # week_start (YYYY-MM-DD) -> threading.Lock, created on first
 
 def _fetch_lock(week_start_str):
     """Per-week lock so a background rolling-prefetch timer (see
-    tv_schedule_window.py) and a foreground navigation to the same week can't
+    show_calendar_window.py) and a foreground navigation to the same week can't
     both see a cache miss and both fetch Trakt live. The second caller blocks
     here, then re-checks TvScheduleDatabase after acquiring - the existing
     `cached is None` branches in _get_global_layer() already do the right
@@ -62,7 +62,7 @@ def _fetch_lock(week_start_str):
 
 def prefetch_schedule_week(week_start):
     """Background-safe entry point for the rolling-prefetch timer (see
-    tv_schedule_window.py) - warms TvScheduleDatabase's bookkeeping for
+    show_calendar_window.py) - warms TvScheduleDatabase's bookkeeping for
     week_start via the same self-contained _get_global_layer()
     get_schedule_week() itself uses, without ever touching
     _get_watchlist_layer()'s SimklMenus()._resolve() call. That call is never
@@ -139,7 +139,7 @@ def retention_cutoff():
     older than this.
 
     Widened from -2 to -3 weeks alongside the rolling-prefetch timer (see
-    tv_schedule_window.py's _schedule_prefetch()): once landing on any week W
+    show_calendar_window.py's _schedule_prefetch()): once landing on any week W
     triggers a background prefetch of W-1, a user just 2 real weeks back from
     today (still inside the old -2 retention edge) would have that backward
     prefetch reach 3 weeks back - one week past the old cutoff, and
@@ -205,7 +205,7 @@ def _get_global_layer(week_start_str, week_end_str):
         else:
             trakt_items = [{"trakt_id": r["trakt_episode_id"], "trakt_show_id": r["trakt_show_id"]} for r in cached]
 
-        hydrated = shows_db.get_mixed_episode_list(trakt_items, hide_unaired=False) if trakt_items else []
+        hydrated = shows_db.get_mixed_episode_list(trakt_items, hide_unaired=False, hide_watched=False) if trakt_items else []
         hydrated = [i for i in hydrated if i is not None]
 
         if cached is None:
@@ -253,7 +253,7 @@ def _get_watchlist_layer(week_start_str, week_end_str):
     covered_show_ids = {i["trakt_show_id"] for i in raw if i.get("trakt_show_id")}
 
     shows_db = ShowsDatabase()
-    trakt_items = shows_db.get_mixed_episode_list(raw, hide_unaired=False) if raw else []
+    trakt_items = shows_db.get_mixed_episode_list(raw, hide_unaired=False, hide_watched=False) if raw else []
     trakt_items = [i for i in trakt_items if i is not None]
 
     candidate_tmdb_ids = {}  # dict (not set) purely to preserve first-seen order for the cap

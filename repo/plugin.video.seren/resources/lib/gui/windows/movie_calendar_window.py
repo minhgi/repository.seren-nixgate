@@ -48,21 +48,11 @@ class MovieCalendarWindow(BaseWindow):
         self.grid_control = self.getControlList(GRID_ID)
         try:
             self._populate_grid()
-            self.set_default_focus(self.grid_control, CLOSE_BUTTON_ID, control_list_reset=True)
+            # an empty grid cannot take focus: land on Next, so an empty month can be paged straight away
+            self.set_default_focus(self.grid_control, NEXT_BUTTON_ID, control_list_reset=True)
         finally:
-            # closes any busy dialog - must run even if population raises, matching CalendarWindow
+            # closes any busy dialog - must run even if population raises, matching ShowCalendarWindow
             super().onInit()
-
-        if not self.movies:
-            # Region and language filters compose as AND on Trakt's side (confirmed live:
-            # countries=jp&languages=en alone returns 0 over a 30-day window) - a mismatched
-            # pair reads as a broken calendar without this distinct message.
-            if g.get_setting("calendar.region") and g.get_setting("calendar.language"):
-                g.notification(g.ADDON_NAME, g.get_language_string(31538))
-            else:
-                g.notification(g.ADDON_NAME, g.get_language_string(31518))
-            self.close()
-            return
 
         self._schedule_prefetch()
 
@@ -105,6 +95,16 @@ class MovieCalendarWindow(BaseWindow):
         self.movies = get_movie_calendar_month(self.year, self.month)
         for movie in self.movies:
             self.grid_control.addItem(self._build_tile_item(movie))
+        if self.movies:
+            self.clearProperty("empty_text")
+        else:
+            # Region and language filters compose as AND on Trakt's side (confirmed live:
+            # countries=jp&languages=en alone returns 0 over a 30-day window) - a mismatched
+            # pair reads as a broken calendar without this distinct message.
+            if g.get_setting("calendar.region") and g.get_setting("calendar.language"):
+                self.setProperty("empty_text", g.get_language_string(31538))
+            else:
+                self.setProperty("empty_text", g.get_language_string(31518))
 
     @staticmethod
     def _build_tile_item(movie):
@@ -124,7 +124,7 @@ class MovieCalendarWindow(BaseWindow):
         try:
             self.year, self.month = shift_month(self.year, self.month, delta)
             self._populate_grid()
-            self.set_default_focus(self.grid_control, CLOSE_BUTTON_ID, control_list_reset=True)
+            self.set_default_focus(self.grid_control, NEXT_BUTTON_ID, control_list_reset=True)
         finally:
             g.close_busy_dialog()
         # After the busy dialog closes, not before - the 3s/8s clock should start
@@ -134,7 +134,12 @@ class MovieCalendarWindow(BaseWindow):
     def handle_action(self, action_id, control_id=None):
         # movie_calendar.xml redirects the grid's onleft/onright to these same button ids
         # at a genuine row boundary (see its comment) - Left/Right paging here is what
-        # actually happens, matching TvScheduleWindow's own Left/Right-pages-week precedent.
+        # actually happens, matching ShowCalendarWindow's own Left/Right-pages-day precedent.
+        # An empty month has no grid to focus, so there Left/Right page the month from whichever
+        # control has the focus.
+        if not self.movies and action_id in (ACTION_MOVE_LEFT, ACTION_MOVE_RIGHT):
+            self._navigate_month(-1 if action_id == ACTION_MOVE_LEFT else 1)
+            return
         if action_id == ACTION_MOVE_LEFT and control_id == PREV_BUTTON_ID:
             self._navigate_month(-1)
             return

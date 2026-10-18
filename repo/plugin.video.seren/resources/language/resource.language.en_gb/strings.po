@@ -7080,8 +7080,8 @@ msgid "No movies matched your region and language filter this month. Try clearin
 msgstr "No movies matched your region and language filter this month. Try clearing one in settings."
 
 msgctxt "#31539"
-msgid "TV Shows Weekly Calendar"
-msgstr "TV Shows Weekly Calendar"
+msgid "TV Shows Daily Calendar"
+msgstr "TV Shows Daily Calendar"
 
 msgctxt "#31540"
 msgid "No episodes found for this week"
@@ -7092,12 +7092,12 @@ msgid "No episodes"
 msgstr "No episodes"
 
 msgctxt "#31542"
-msgid "Browse every TV show airing this week across Trakt, Simkl, and MDBList, filtered by the region/language settings above. Your watchlisted and currently-watching shows always appear regardless of the filter."
-msgstr "Browse every TV show airing this week across Trakt, Simkl, and MDBList, filtered by the region/language settings above. Your watchlisted and currently-watching shows always appear regardless of the filter."
+msgid "Browse every TV show airing on a given day across Trakt, Simkl, and MDBList, one day at a time, filtered by the region/language settings above. Your watchlisted and currently-watching shows always appear regardless of the filter."
+msgstr "Browse every TV show airing on a given day across Trakt, Simkl, and MDBList, one day at a time, filtered by the region/language settings above. Your watchlisted and currently-watching shows always appear regardless of the filter."
 
 msgctxt "#31543"
-msgid "No shows matched your region and language filter this week. Try clearing one in settings."
-msgstr "No shows matched your region and language filter this week. Try clearing one in settings."
+msgid "No shows matched your region and language filter on this day. Try clearing one in settings."
+msgstr "No shows matched your region and language filter on this day. Try clearing one in settings."
 
 #: /resources/lib/gui/trakt_context_menu.py
 msgctxt "#31544"
@@ -7257,3 +7257,75 @@ msgstr "Pick several genres at once and list the movies that match them."
 msgctxt "#31581"
 msgid "Pick several genres at once and list the TV shows that match them."
 msgstr "Pick several genres at once and list the TV shows that match them."
+
+msgctxt "#31582"
+msgid "Today"
+msgstr "Today"
+
+msgctxt "#31583"
+msgid "Back"
+msgstr "Back"
+
+msgctxt "#31584"
+msgid "No episodes on this day"
+msgstr "No episodes on this day"
+
+msgctxt "#31585"
+msgid "No unwatched episodes"
+msgstr "No unwatched episodes"
+
+msgctxt "#31586"
+msgid "Unwatched"
+msgstr "Unwatched"
+
+msgctxt "#31587"
+msgid "Watched"
+msgstr "Watched"
+
+msgctxt "#31588"
+msgid "Aired"
+msgstr "Aired"
+
+msgctxt "#31589"
+msgid "Tomorrow"
+msgstr "Tomorrow"
+
+msgctxt "#31590"
+msgid "In %d days"
+msgstr "In %d days"
+
+msgctxt "#31591"
+msgid "No air date"
+msgstr "No air date"
+
+msgctxt "#31592"
+msgid "New show"
+msgstr "New show"
+
+msgctxt "#31593"
+msgid "Premiere"
+msgstr "Premiere"
+
+msgctxt "#31595"
+msgid "%d episode"
+msgstr "%d episode"
+
+msgctxt "#31596"
+msgid "%d episodes"
+msgstr "%d episodes"
+
+msgctxt "#31597"
+msgid "%d not aired yet"
+msgstr "%d not aired yet"
+
+msgctxt "#31598"
+msgid "%d to watch"
+msgstr "%d to watch"
+
+msgctxt "#31599"
+msgid "(today)"
+msgstr "(today)"
+
+msgctxt "#31600"
+msgid "Sources"
+msgstr "Sources"

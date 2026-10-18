@@ -23,6 +23,16 @@ def do_version_change():
     except Exception as e:
         g.log(f"Version change: Failed to clear __pycache__: {e}", "warning")
 
+    # 3.9.42: the TV Shows calendar now keeps watched episodes (it ticks them). A week fetched by an earlier version while
+    # Hide Watched was on was bookkept without them, so forget the fetched weeks - bookkeeping only, the episode data
+    # itself stays in the sync tables - and let the next view fetch them again.
+    try:
+        from resources.lib.database.tvSchedule import TvScheduleDatabase
+
+        TvScheduleDatabase().clear_all()
+    except Exception as e:
+        g.log(f"Version change: Failed to clear TV Schedule bookkeeping: {e}", "warning")
+
     if g.get_bool_setting("cache.clearOnUpgrade", False):
         g.log("Clearing all caches on Seren version change", "info")
 

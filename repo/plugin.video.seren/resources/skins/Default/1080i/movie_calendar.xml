@@ -48,9 +48,9 @@
 			</control>
 		</control>
 
-		<!-- Month/year label, centered across the full window -->
+		<!-- Month/year label, centered on the second row, under the title -->
 		<control type="label">
-			<top>25</top>
+			<top>78</top>
 			<left>0</left>
 			<width>1920</width>
 			<height>50</height>
@@ -58,6 +58,20 @@
 			<textcolor>66FFFFFF</textcolor>
 			<align>center</align>
 			<label>[B]$INFO[Window().Property(month_year_label)][/B]</label>
+		</control>
+
+		<!-- Empty month: shown instead of closing the window, so Left/Right can keep paging -->
+		<control type="label">
+			<top>480</top>
+			<left>0</left>
+			<width>1920</width>
+			<height>60</height>
+			<font>font37</font>
+			<textcolor>99FFFFFF</textcolor>
+			<align>center</align>
+			<aligny>center</aligny>
+			<label>$INFO[Window().Property(empty_text)]</label>
+			<visible>!String.IsEmpty(Window().Property(empty_text))</visible>
 		</control>
 
 		<control type="group">

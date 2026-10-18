@@ -528,6 +528,17 @@
                         <visible>String.IsEmpty(Window().Property(item.info.season))</visible>
                         <label>$ADDON[plugin.video.seren 30557]: [COLOR $INFO[Window().Property(settings.color)]]$INFO[Window().Property(item.info.year)] [/COLOR] | $ADDON[plugin.video.seren 30558]: [COLOR $INFO[Window().Property(settings.color)]]$INFO[Window().Property(item.info.mpaa)][/COLOR]</label>
                     </control>
+
+					<!-- Number of sources listed -->
+                    <control type="label">
+                        <top>95</top>
+                        <height>25</height>
+                        <font>font12</font>
+                        <textcolor>FFFFFFFF</textcolor>
+                        <align>right</align>
+                        <visible>!String.IsEmpty(Window().Property(sources.count))</visible>
+                        <label>$ADDON[plugin.video.seren 31600]: [COLOR $INFO[Window().Property(settings.color)]]$INFO[Window().Property(sources.count)][/COLOR]</label>
+                    </control>
                 </control>
             </control>
 

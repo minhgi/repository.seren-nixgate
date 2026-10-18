@@ -62,7 +62,7 @@ _ROUTE_TABLE = {
     "movieGenresGet":       _menu("resources.lib.gui.movieMenus", "movies_genre_list", "action_args"),
     "movieYears":           _menu("resources.lib.gui.movieMenus", "movies_years"),
     "movieCalendarBrowse":  _func("resources.lib.gui.windows.movie_calendar_window", "open_movie_calendar"),
-    "tvScheduleBrowse":     _func("resources.lib.gui.windows.tv_schedule_window", "open_tv_schedule"),
+    "tvScheduleBrowse":     _func("resources.lib.gui.windows.show_calendar_window", "open_tv_schedule"),
     "movieYearsMovies":     _menu("resources.lib.gui.movieMenus", "movie_years_results", "action_args"),
     "movieByActor":         _menu("resources.lib.gui.movieMenus", "movies_by_actor", "action_args"),
     "myWatchedMovies":      _menu("resources.lib.gui.movieMenus", "my_watched_movies"),
@@ -1623,16 +1623,9 @@ def dispatch(params):
             del window
 
     elif action == "calendarBrowse":
-        from resources.lib.gui.windows.calendar_window import CalendarWindow
-        from resources.lib.database.skinManager import SkinManager
+        from resources.lib.gui.windows.show_calendar_window import open_watchlist_calendar
 
-        g.show_busy_dialog()
-        try:
-            window = CalendarWindow(*SkinManager().confirm_skin_path("calendar.xml"))
-            window.doModal()
-        finally:
-            g.close_busy_dialog()
-            del window
+        open_watchlist_calendar()
 
     elif action == "longLifeServiceManager":
         from resources.lib.modules.providers.service_manager import (

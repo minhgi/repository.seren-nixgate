@@ -83,7 +83,7 @@ def get_calendar_episodes():
     covered_show_ids = {i["trakt_show_id"] for i in raw_calendar_items if i.get("trakt_show_id")}
 
     shows_db = ShowsDatabase()
-    trakt_items = shows_db.get_mixed_episode_list(raw_calendar_items, hide_unaired=False) if raw_calendar_items else []
+    trakt_items = shows_db.get_mixed_episode_list(raw_calendar_items, hide_unaired=False, hide_watched=False) if raw_calendar_items else []
     # get_mixed_episode_list() applies the user's hide-watched / hide-specials settings and returns None
     # for every calendar item those filters drop (MetadataHandler.sort_list_items) - same guard as
     # tv_schedule_data.py; without it the sort below raises on the first dropped episode.
@@ -120,7 +120,7 @@ def _annotate_union_ratings(extra_items, capped_ids, simkl_id_by_tmdb, providers
     """Attaches _calendar_rating_override onto each Simkl/MDBList-union episode
     (never onto Trakt-sourced rows - that set never goes through
     _resolve_extra_shows(), so it never carries a _source_tmdb_id tag to
-    match against). calendar_window.py prefers this over info["rating"] when
+    match against). calendar_view.rating_text() prefers this over info["rating"] when
     present; mutating info["rating"] directly instead would have corrupted a
     cached, shared episode object used by unrelated features."""
     if not extra_items:

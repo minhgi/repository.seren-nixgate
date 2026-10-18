@@ -116,6 +116,18 @@ class SourceWindow(BaseWindow):
             set_info_properties(display_info, menu_item)
             self.display_list.addItem(menu_item)
 
+        self._update_source_count()
+
+    def _update_source_count(self):
+        """Set the "sources.count" window property: how many sources are listed ("10"), or "3 / 10" while a filter
+        hides some of them (same n/m form as the Filter button)."""
+        shown = len(self.sources)
+        if self._filter_applied and self._all_sources is not None:
+            count = f"{shown} / {len(self._all_sources)}"
+        else:
+            count = str(shown)
+        self.setProperty("sources.count", count)
+
     # ── Interactive Source Filtering ──────────────────────────────────
 
     def _update_filter_label(self):

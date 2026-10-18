@@ -1,3 +1,13 @@
+[B]3.9.43[/B]
+- [NEW] The source select window shows how many sources the search returned ("Sources: 42") under the title, in the style of the season / year line, and "Sources: 12 / 42" while a filter hides some of them.
+
+[B]3.9.42[/B]
+- [NEW] My Watch List Calendar and the TV Shows calendar (renamed from TV Shows Weekly Calendar to TV Shows Daily Calendar, since it now shows one day at a time) are redesigned after TMDb Helper's calendars: one page with a header row per show and its episodes under it, each with its air time (now in your own time zone), date, a status (Aired / Today / Tomorrow / In N days / Watched), a green tick on episodes you have watched and a Premiere / New show badge. Select on a show lists its unwatched episodes (Back returns to the page); Select on an episode plays it.
+- [NEW] The TV Shows calendar shows one day at a time instead of a 7-day grid: Left / Right or the < > buttons change the day, the Today button jumps back, and Left / Right also work on a day with no episodes. A week is fetched once and the days inside it are shown from that copy, so stepping through the days is instant.
+- [FIX] Air times and days in the TV calendars were UTC: an evening episode in the Americas was filed under the next day with a morning time. Days, times and the Aired / Today status now use your local time, with the daylight-saving rules of the air date itself.
+- [CHANGE] The calendars now list episodes you have already watched (with a tick) even when Hide Watched is on, so the tick can show; the Unwatched view of a show lists only its unwatched episodes.
+- [FIX] Movie Calendar: a month with no movies no longer closes the window - it shows the message and Left / Right keep paging months.
+
 [B]3.9.41[/B]
 - [NEW] Lists of anime episodes (Next Up, Recent Episodes, ...) open faster when Tag Filler Episodes is on: the animefillerlist.com pages of all the shows in a list are now fetched together instead of one episode at a time, and are remembered for 24 hours (a show the site does not know is also remembered for 24 hours, a failed request for 10 minutes), so opening the list again does not download them again.
 - [NEW] Trakt pages that are already cached are loaded in a lighter form (only the status, headers and data that Seren reads), so a list built from a cached Trakt page no longer has to load the full web-request library just to read it. Pages cached by the previous version keep working until they expire.
