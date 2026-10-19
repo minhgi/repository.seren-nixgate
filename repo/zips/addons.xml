@@ -124,7 +124,7 @@
 			Rework for Seren 2.0
 		</news>
 	</extension>
-</addon><addon id="plugin.video.seren" version="3.9.44" name="Seren" provider-name="Nixgates">
+</addon><addon id="plugin.video.seren" version="3.9.45" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -191,6 +191,8 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.45
+            [CHANGE] Maintenance release: a code comment in the skip-segment handler still named the old TheIntroDB v3 API. No functional change.
             Changelog 3.9.44
             [CHANGE] Skip intro / recap / credits lookups use TheIntroDB API v4; the v3 endpoint Seren used is frozen and deprecated. No visible change: the same segments are returned.
             Changelog 3.9.43

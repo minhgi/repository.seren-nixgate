@@ -204,7 +204,7 @@ class SkipHandler:
 
             api_key = (g.get_setting("skip.theIntroDbApiKey") or "").strip() or None
 
-            # duration in info is Kodi seconds; v3 API takes milliseconds
+            # duration in info is Kodi seconds; the API takes milliseconds
             duration_sec = self._info.get("duration")
             try:
                 duration_ms = int(duration_sec) * 1000 if duration_sec else None

@@ -1,3 +1,6 @@
+[B]3.9.45[/B]
+- [CHANGE] Maintenance release: a code comment in the skip-segment handler still named the old TheIntroDB v3 API. No functional change.
+
 [B]3.9.44[/B]
 - [CHANGE] Skip intro / recap / credits lookups use TheIntroDB API v4; the v3 endpoint Seren used is frozen and deprecated. No visible change: the same segments are returned.
 
