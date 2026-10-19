@@ -1,6 +1,6 @@
 """TheIntroDB API client — community-submitted intro/recap/credits/preview timestamps.
 
-API docs: https://api.theintrodb.org/v3
+API docs: https://api.theintrodb.org/v4
 Endpoint: GET /media?tmdb_id={id}[&season={s}&episode={e}][&duration_ms={ms}]
          or GET /media?imdb_id=tt{id}[&season={s}&episode={e}][&duration_ms={ms}]
 
@@ -9,7 +9,7 @@ Returns segments grouped by type:
 - credits / preview: start required; end can be null (means "end of media")
 
 No auth required for low-volume use; optional Bearer API key for higher rate limits.
-duration_ms (v3): media duration in milliseconds; improves segment accuracy.
+duration_ms (v4): media duration in milliseconds; improves segment accuracy.
 """
 
 import time
@@ -19,7 +19,7 @@ import requests
 
 from resources.lib.modules.globals import g
 
-_API_BASE = "https://api.theintrodb.org/v3"
+_API_BASE = "https://api.theintrodb.org/v4"
 _MIN_REQUEST_GAP = 0.4  # seconds between requests
 _REQUEST_TIMEOUT = 8
 

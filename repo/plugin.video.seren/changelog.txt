@@ -1,3 +1,6 @@
+[B]3.9.44[/B]
+- [CHANGE] Skip intro / recap / credits lookups use TheIntroDB API v4; the v3 endpoint Seren used is frozen and deprecated. No visible change: the same segments are returned.
+
 [B]3.9.43[/B]
 - [NEW] The source select window shows how many sources the search returned ("Sources: 42") under the title, in the style of the season / year line, and "Sources: 12 / 42" while a filter hides some of them.
 
