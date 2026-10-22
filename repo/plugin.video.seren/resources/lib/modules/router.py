@@ -195,6 +195,7 @@ _ROUTE_TABLE = {
     "simklRecentShows":          _menu("resources.lib.gui.simklMenus", "recent_shows"),
     "simklInProgressMovies":     _menu("resources.lib.gui.simklMenus", "in_progress_movies"),
     "simklInProgressEpisodes":   _menu("resources.lib.gui.simklMenus", "in_progress_episodes"),
+    "simklNextUp":               _menu("resources.lib.gui.simklMenus", "next_up"),
     "simklPlanToWatchMovies":    _menu("resources.lib.gui.simklMenus", "plan_to_watch_movies"),
     "simklCompletedMovies":      _menu("resources.lib.gui.simklMenus", "completed_movies"),
     "simklDroppedMovies":        _menu("resources.lib.gui.simklMenus", "dropped_movies"),
@@ -241,7 +242,9 @@ _ROUTE_TABLE = {
 
     # --- Maintenance / service ---
     "runMaintenance":       _func("resources.lib.common.maintenance", "run_maintenance"),
-    "cleanInstall":         _func("resources.lib.common.maintenance", "wipe_install"),
+    "startupHousekeeping":  _func("resources.lib.modules.housekeeping", "run_startup"),
+    "cycleHousekeeping":    _func("resources.lib.modules.housekeeping", "run_cycle"),
+    "cleanInstall":        _func("resources.lib.common.maintenance", "wipe_install"),
     "premiumizeCleanup":    _func("resources.lib.common.maintenance", "premiumize_transfer_cleanup"),
     "toggleLanguageInvoker": _func("resources.lib.common.maintenance", "toggle_reuselanguageinvoker"),
     "longLifeServiceManager": _call("resources.lib.modules.providers.service_manager", "ProvidersServiceManager", "run_long_life_manager"),

@@ -1,4 +1,5 @@
 import re
+import time
 from concurrent.futures import as_completed
 from functools import cached_property
 from urllib.parse import quote
@@ -75,7 +76,17 @@ _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 # for "how many shows to cold-bootstrap in one call" - a live report measured ~123s for 20
 # shows on a Trakt-disabled, never-cached account. This caps worst-case latency regardless of
 # item.limit while still respecting a smaller user preference (see next_up()'s min() call).
+# It bounds the number of PICKS (rows shown), not the shows examined: a recently watched show
+# with nothing left to watch yields no pick, and with only the 10 most recent shows examined a
+# Shield account saw 6 rows where mdblist.com's own Up Next had 10 (3.9.54).
 _NEXT_UP_SHOW_CAP = 10
+
+# next_up() walks the shows newest-watched first until it has _NEXT_UP_SHOW_CAP picks, but stops at
+# whichever comes first: this many shows examined, or this many seconds spent (checked before each
+# show, so one cold show can overshoot by its own bootstrap time). The seconds bound is the real
+# protection - per-show cost ranges from a few hundred ms (cached) to several seconds (cold).
+_NEXT_UP_SCAN_CAP = 40
+_NEXT_UP_TIME_BUDGET = 25.0
 
 
 class Menus:
@@ -258,9 +269,12 @@ class Menus:
         as_completed() arrival order. This method needs the original MDBList tmdb_id
         intact on every result, both to look up that show's watched set and to preserve
         recent_shows' own recency order, so it keeps that id in scope directly instead of
-        trusting it to round-trip through Trakt. get_episode_list() self-bootstraps the
-        show row on a cache miss (_try_update_episodes -> _get_single_show_meta ->
-        _update_single_meta), so skipping _resolve()'s own seeding step is safe.
+        trusting it to round-trip through Trakt. get_episode_skeleton() self-bootstraps the
+        show row on a cache miss (_update_mill_format_shows -> _get_single_show_meta ->
+        _update_single_meta), so skipping _resolve()'s own seeding step is safe. It returns
+        only ids, numbering and air dates - get_episode_list() would format and re-save every
+        episode of every show on each open - and only the one picked episode per show is
+        passed on, so mixed_episode_builder formats just those.
 
         hide_watched=False on the final mixed_episode_builder call is load-bearing, not
         cosmetic: get_mixed_episode_list() re-applies TraktSyncDatabase's own hide_watched
@@ -268,17 +282,23 @@ class Menus:
         own flag and not meaningful here. Without the override it can silently empty the
         list for exactly this feature's target users (Trakt disabled, MDBList/Simkl only).
 
-        Capped at _NEXT_UP_SHOW_CAP rather than self.page_limit - see that constant's
-        comment for why a general browse-page-size setting is the wrong bound here.
+        Capped at _NEXT_UP_SHOW_CAP picks rather than self.page_limit - see that constant's
+        comment for why a general browse-page-size setting is the wrong bound here. Shows are
+        examined newest-watched first and shows with nothing left to watch are skipped without
+        using up a pick; the walk ends at that many picks, _NEXT_UP_SCAN_CAP shows examined,
+        or _NEXT_UP_TIME_BUDGET seconds, whichever comes first.
 
-        watched_set is expanded per-show via _expand_bulk_watched before picking the next
-        episode - MDBList's own site/app lets a user bulk mark-watch a whole show or season,
-        which never produces per-episode "episodes" entries (see activities.py's
-        _sync_watched docstring), so without this expansion a bulk-marked show still shows
-        up here (it can have a handful of individually-tracked episodes, e.g. specials,
-        keeping it in get_recent_shows) but with the wrong "next" episode - typically season
-        1 episode 1, since nothing in the real content seasons is locally marked watched."""
-        recent_shows = self.mdblist_database.get_recent_shows(min(self.page_limit, _NEXT_UP_SHOW_CAP))
+        Only individually watched episodes count as watched. The show and season rows that
+        _sync_watched stores in bulk_watched_shows/bulk_watched_seasons are NOT used: MDBList's
+        sync/watched returns one for every show and season with any watch history (a Shield
+        account had all 93 shows in the table, each stamped with its newest episode's time),
+        and crediting them marked every aired episode watched, so Next Up came back empty
+        while mdblist.com's own Up Next listed ten shows with gaps (The Office at S1E2, 1%
+        watched). The cost of ignoring them: a show that was genuinely bulk-marked watched on
+        MDBList and has few individually tracked episodes can show an early episode as its
+        'next' (the stale-row problem the old expansion existed to hide)."""
+        pick_cap = min(self.page_limit, _NEXT_UP_SHOW_CAP)
+        recent_shows = self.mdblist_database.get_recent_shows(_NEXT_UP_SCAN_CAP)
         if not recent_shows:
             g.cancel_directory()
             return
@@ -286,18 +306,28 @@ class Menus:
         watched_by_show = {}
         for row in self.mdblist_database.get_all_watched_episode_tmdb_keys():
             watched_by_show.setdefault(row["show_tmdb_id"], set()).add((row["season"], row["number"]))
-        bulk_watched_shows = self.mdblist_database.get_bulk_watched_shows()
-        bulk_watched_seasons = self.mdblist_database.get_bulk_watched_seasons()
 
         from resources.lib.database.trakt_sync.shows import TraktSyncDatabase as ShowsDatabase
 
         shows_db = ShowsDatabase()
         episodes = []
+        started = time.monotonic()
+        examined = 0
         for row in recent_shows:
+            if len(episodes) >= pick_cap:
+                break
+            if examined and time.monotonic() - started > _NEXT_UP_TIME_BUDGET:
+                g.log(
+                    f"MDBList menus: next-up stopped after {examined} shows ({len(episodes)} picks): "
+                    f"over the {_NEXT_UP_TIME_BUDGET:.0f}s budget",
+                    "debug",
+                )
+                break
             show_tmdb_id = row["tmdb_id"]
             watched_set = watched_by_show.get(show_tmdb_id)
             if not watched_set:
                 continue
+            examined += 1
             trakt_show = self.trakt_api.search_by_tmdb_id(show_tmdb_id, "show")
             if not trakt_show or not trakt_show.get("trakt_id"):
                 g.log(
@@ -306,57 +336,18 @@ class Menus:
                     "debug",
                 )
                 continue
-            show_episodes = (
-                shows_db.get_episode_list(trakt_show["trakt_id"], hide_unaired=False, hide_watched=False) or []
-            )
-            watched_set = self._expand_bulk_watched(
-                show_episodes,
-                watched_set,
-                bulk_watched_shows.get(show_tmdb_id),
-                bulk_watched_seasons.get(show_tmdb_id) or set(),
-            )
+            show_episodes = shows_db.get_episode_skeleton(trakt_show["trakt_id"])
             next_episode = self._pick_next_unwatched(show_episodes, watched_set)
             if next_episode:
-                episodes.append(next_episode)
+                episodes.append(
+                    {"trakt_id": next_episode["trakt_id"], "trakt_show_id": next_episode["trakt_show_id"]}
+                )
 
+        g.log(f"MDBList menus: next-up examined {examined} shows, {len(episodes)} picks", "debug")
         if not episodes:
             g.cancel_directory()
             return
         self.list_builder.mixed_episode_builder(episodes, no_paging=True, hide_watched=False)
-
-    @staticmethod
-    def _expand_bulk_watched(show_episodes, watched_set, bulk_show_last_watched_at, bulk_seasons):
-        """Merges MDBList's whole-show/whole-season bulk mark-watched actions into a copy of
-        watched_set, so _pick_next_unwatched sees them as watched even though MDBList never
-        emitted per-episode "episodes" entries for them (see activities.py's _sync_watched
-        docstring for the two buckets this reads via bulk_show_last_watched_at/bulk_seasons).
-
-        Seasons expand unconditionally - a season mark is a bounded, unambiguous claim
-        (every episode in season N). Whole-show marks expand only episodes aired on or
-        before the mark's own last_watched_at: that timestamp is when the user clicked
-        "mark watched" on MDBList, not how far into the show they'd actually gotten, so
-        gating by air date avoids crediting episodes that aired after the mark (e.g. a
-        still-airing show bulk-marked mid-run). This can make a since-fully-aired show
-        disappear from Next Up entirely once every aired episode is covered by the mark -
-        that's correct, not a bug: there's no real gap left to report."""
-        if not bulk_show_last_watched_at and not bulk_seasons:
-            return watched_set
-
-        from resources.lib.modules.calendar_data import get_air_date
-
-        expanded = set(watched_set)
-        for episode in show_episodes:
-            season = episode.get("db_season")
-            number = episode.get("db_number")
-            if not season or number is None:
-                continue
-            if season in bulk_seasons:
-                expanded.add((season, number))
-            elif bulk_show_last_watched_at:
-                air_date = get_air_date(episode)
-                if air_date and air_date <= bulk_show_last_watched_at:
-                    expanded.add((season, number))
-        return expanded
 
     @staticmethod
     def _pick_next_unwatched(episodes, watched_set):
