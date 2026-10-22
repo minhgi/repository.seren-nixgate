@@ -4247,8 +4247,8 @@ msgid "Tier 6 — Public Trackers"
 msgstr "Tier 6 — Public Trackers"
 
 msgctxt "#30810"
-msgid "Reliable public torrent trackers. Providers: EZTV, Kickass2, 1337x, PirateBay, YTS."
-msgstr "Reliable public torrent trackers. Providers: EZTV, Kickass2, 1337x, PirateBay, YTS."
+msgid "Reliable public torrent trackers. Providers: EZTV, Kickass2, PirateBay, YTS, TorrentFunk, TorrentGalaxy, Torlock."
+msgstr "Reliable public torrent trackers. Providers: EZTV, Kickass2, PirateBay, YTS, TorrentFunk, TorrentGalaxy, Torlock."
 
 msgctxt "#30811"
 msgid "Easynews"

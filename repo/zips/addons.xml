@@ -124,7 +124,7 @@
 			Rework for Seren 2.0
 		</news>
 	</extension>
-</addon><addon id="plugin.video.seren" version="3.9.45" name="Seren" provider-name="Nixgates">
+</addon><addon id="plugin.video.seren" version="3.9.49" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -191,6 +191,14 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.49
+            [CHANGE] The leet (1337x) scraper is removed again (a4kScrapers 2.99.143): 1337xx.to now answers every request with a Cloudflare 403, so it returned nothing. Its Tier 6 entry and its entries in the seed-count lookup table (TRACKER_TO_SCRAPER) are gone, and the Tier 6 description now lists the current providers.
+            Changelog 3.9.48
+            [CHANGE] Restored the 1337x / 1337x.to / leet entries in the seed-count lookup table (TRACKER_TO_SCRAPER): 3.9.47 removed them by mistake, the leet scraper is still installed. The TorrentGalaxy mapping added in 3.9.47 stays.
+            Changelog 3.9.47
+            [CHANGE] The seed-count lookup table (TRACKER_TO_SCRAPER) no longer points 1337x / leet at the removed leet scraper (each lookup failed on a missing module and only logged a warning), and maps the TorrentGalaxy tracker name to the new torrentgalaxy scraper.
+            Changelog 3.9.46
+            [CHANGE] Scraper tiers for four new a4kScrapers providers (a4kScrapers 2.99.142, ported from POV 6.10.20): TorrentFunk, TorrentGalaxy and Torlock run in Tier 6 (public trackers) and TorrentDownload in Tier 7. Without these entries a new provider defaults to Tier 7.
             Changelog 3.9.45
             [CHANGE] Maintenance release: a code comment in the skip-segment handler still named the old TheIntroDB v3 API. No functional change.
             Changelog 3.9.44
