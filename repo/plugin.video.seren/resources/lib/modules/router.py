@@ -173,6 +173,7 @@ _ROUTE_TABLE = {
     "mdblistNextUp":             _menu("resources.lib.gui.mdblistMenus", "next_up"),
     "mdblistInProgressMovies":   _menu("resources.lib.gui.mdblistMenus", "in_progress_movies"),
     "mdblistInProgressEpisodes": _menu("resources.lib.gui.mdblistMenus", "in_progress_episodes"),
+    "mdblistInProgressShows":    _menu("resources.lib.gui.mdblistMenus", "in_progress_shows"),
     "mdblistMyLists":            _menu("resources.lib.gui.mdblistMenus", "my_lists", "mediatype"),
     "mdblistMyListsSort":        _menu("resources.lib.gui.mdblistMenus", "my_lists_sort_picker", "mediatype"),
     "mdblistListItems":          _menu("resources.lib.gui.mdblistMenus", "list_items"),

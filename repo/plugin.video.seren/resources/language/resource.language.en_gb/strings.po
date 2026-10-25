@@ -7339,3 +7339,13 @@ msgstr "Simkl - Next Up"
 msgctxt "#31602"
 msgid "Next episode for each show you're watching on Simkl, most recently watched first"
 msgstr "Next episode for each show you're watching on Simkl, most recently watched first"
+
+#: /resources/lib/gui/tvshowMenus.py
+msgctxt "#31603"
+msgid "MDBList - In Progress Shows"
+msgstr "MDBList - In Progress Shows"
+
+#: /resources/lib/gui/tvshowMenus.py
+msgctxt "#31604"
+msgid "Shows you have started and not finished on MDBList, most recently watched first"
+msgstr "Shows you have started and not finished on MDBList, most recently watched first"

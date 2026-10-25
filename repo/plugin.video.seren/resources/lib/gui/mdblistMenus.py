@@ -88,6 +88,19 @@ _NEXT_UP_SHOW_CAP = 10
 _NEXT_UP_SCAN_CAP = 40
 _NEXT_UP_TIME_BUDGET = 25.0
 
+# in_progress_shows() lists every started, unfinished show, so unlike next_up() it has no 10-pick cap - but it keeps the same
+# scan and time bounds (a cold show costs one episode-catalog bootstrap) and stops after this many rows.
+_IN_PROGRESS_SHOW_CAP = 30
+
+
+def _is_zero_progress(progress):
+    """True for a sync/playback entry sitting at 0% (a player that was only started, nothing watched). MDBList sends the
+    percentage as a string ("17.67"); a missing or non-numeric value is not 0%, so that row is kept."""
+    try:
+        return float(progress) <= 0
+    except (TypeError, ValueError):
+        return False
+
 
 class Menus:
     """MDBList-sourced menus (Recently Watched, In-Progress, Collection, Dropped Shows).
@@ -224,6 +237,8 @@ class Menus:
                 tmdb_id = show.get("ids", {}).get("tmdb")
                 season = episode.get("season")
                 number = episode.get("number")
+                if _is_zero_progress(entry.get("progress")):
+                    continue
                 if tmdb_id and season is not None and number is not None:
                     rows.append(
                         {"tmdb_id": tmdb_id, "season": season, "number": number, "paused_at": paused_at}
@@ -422,6 +437,113 @@ class Menus:
             g.cancel_directory()
             return
         self.list_builder.mixed_episode_builder(episodes, no_paging=True)
+
+    def _get_dropped_tmdb_ids(self):
+        """tmdb ids on MDBList's dropped list (live GET sync/dropped, shows only, looped over has_more like
+        dropped_shows_bulk_restore). A failed call returns what was read so far (possibly nothing): in_progress_shows()
+        then keeps a dropped show rather than emptying the list."""
+        tmdb_ids = set()
+        offset = 0
+        for _ in range(20):
+            response = self.mdblist_api.get_json("sync/dropped", offset=offset, limit=5000)
+            if not isinstance(response, dict):
+                break
+            for entry in response.get("shows") or []:
+                tmdb_id = ((entry.get("show") or {}).get("ids") or {}).get("tmdb")
+                if tmdb_id is not None:
+                    tmdb_ids.add(tmdb_id)
+            if not (response.get("pagination") or {}).get("has_more"):
+                break
+            offset += 5000
+        return tmdb_ids
+
+    def in_progress_shows(self):
+        """MDBList-scoped 'In Progress Shows': every show started and not finished, most recently active first -
+        the show-level counterpart of in_progress_episodes() (which is one row per paused episode and so misses a
+        show followed between episodes), like Trakt's In Progress.
+
+        A show is listed when either (a) it has an individually watched episode (mdblistSync.db, kept in sync with
+        sync/watched) and _pick_next_unwatched finds an aired, non-special episode still unwatched - exactly next_up()'s
+        rule, so bulk show/season marks are ignored for the same reason (see next_up()) - or (b) it has an episode paused
+        part-way (live sync/playback, 0% entries already dropped by _live_playback_rows), which is unfinished by itself
+        and needs no episode catalog. Activity time is the later of the show's newest watch and its newest pause (first 19
+        characters compared: local writes and MDBList's own strings need not share a format). Shows on MDBList's dropped
+        list and shows hidden from progress are left out; a failed dropped lookup keeps them (see
+        _get_dropped_tmdb_ids).
+
+        Shows are resolved one at a time, not through _resolve(): _resolve() returns Trakt objects in completion order
+        and the show's tmdb_id is needed to look up its watched set and to keep the activity order. hide_watched=False
+        on the builder is load-bearing for the same reason as in next_up(): the builder's own default filters on
+        Trakt's watched column, which means nothing for an MDBList-only user and can empty the list.
+
+        Same bounds as next_up() (_NEXT_UP_SCAN_CAP most recently watched shows, _NEXT_UP_TIME_BUDGET seconds, checked
+        before each show) plus _IN_PROGRESS_SHOW_CAP rows."""
+        from resources.lib.database.trakt_sync.shows import TraktSyncDatabase as ShowsDatabase
+
+        activity = {}
+        paused = set()
+        for row in self._live_playback_rows("episode"):
+            paused.add(row["tmdb_id"])
+            ts = str(row.get("paused_at") or "")[:19]
+            if ts > activity.get(row["tmdb_id"], ""):
+                activity[row["tmdb_id"]] = ts
+            activity.setdefault(row["tmdb_id"], ts)
+        for row in self.mdblist_database.get_recent_shows(_NEXT_UP_SCAN_CAP):
+            ts = str(row["last_watched_at"] or "")[:19]
+            if ts > activity.get(row["tmdb_id"], ""):
+                activity[row["tmdb_id"]] = ts
+            activity.setdefault(row["tmdb_id"], ts)
+        if not activity:
+            g.cancel_directory()
+            return
+
+        watched_by_show = {}
+        for row in self.mdblist_database.get_all_watched_episode_tmdb_keys():
+            watched_by_show.setdefault(row["show_tmdb_id"], set()).add((row["season"], row["number"]))
+
+        dropped = self._get_dropped_tmdb_ids()
+        hidden_shows = self.hidden_database.get_hidden_items("progress_watched", "tvshow")
+        shows_db = ShowsDatabase()
+        shows = []
+        started = time.monotonic()
+        examined = 0
+        for tmdb_id, _ in sorted(activity.items(), key=lambda item: item[1], reverse=True):
+            if len(shows) >= _IN_PROGRESS_SHOW_CAP:
+                break
+            if tmdb_id in dropped:
+                continue
+            if examined and time.monotonic() - started > _NEXT_UP_TIME_BUDGET:
+                g.log(
+                    f"MDBList menus: in-progress shows stopped after {examined} shows ({len(shows)} listed): "
+                    f"over the {_NEXT_UP_TIME_BUDGET:.0f}s budget",
+                    "debug",
+                )
+                break
+            examined += 1
+            trakt_show = self.trakt_api.search_by_tmdb_id(tmdb_id, "show")
+            if not trakt_show or not trakt_show.get("trakt_id"):
+                g.log(
+                    f"MDBList menus: no Trakt match for tmdb_id {tmdb_id} (show), skipping in-progress show",
+                    "debug",
+                )
+                continue
+            if trakt_show["trakt_id"] in hidden_shows:
+                continue
+            if tmdb_id not in paused:
+                watched_set = watched_by_show.get(tmdb_id)
+                if not watched_set:
+                    continue
+                show_episodes = shows_db.get_episode_skeleton(trakt_show["trakt_id"])
+                if not self._pick_next_unwatched(show_episodes, watched_set):
+                    continue
+            shows.append(trakt_show)
+
+        g.log(f"MDBList menus: in-progress shows examined {examined} shows, {len(shows)} listed", "debug")
+        if not shows:
+            g.cancel_directory()
+            return
+        self._seed_trakt_sync(shows, "show")
+        self.list_builder.show_list_builder(shows, no_paging=True, hide_watched=False)
 
     @staticmethod
     def _list_context_menu(lst):
