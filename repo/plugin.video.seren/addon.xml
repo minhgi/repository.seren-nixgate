@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.video.seren" version="3.9.56" name="Seren" provider-name="Nixgates">
+<addon id="plugin.video.seren" version="3.9.59" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -66,6 +66,12 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.59
+            [FIX] Playback - Stopping a play within the first 30 seconds no longer starts the next source. The playback watchdog saw the player go idle a moment before Kodi told it the stop was yours, counted the stop as a failed stream, blacklisted the release and started the next one. It now waits briefly for Kodi's stop or error notice before deciding.
+            Changelog 3.9.58
+            [NEW] Playback - Seren now marks each play as its own (a Home property named seren.playback, set before the stream starts and cleared when it ends) so TMDb Helper's optional "Scrobble items played by other add-ons" can tell the play came from Seren and leave MDBList and Simkl to Seren's own scrobbling instead of reporting the same viewing twice. The property carries only the item's TMDb id (the show's for an episode), season and episode; nothing else changes.
+            Changelog 3.9.57
+            [FIX] MDBList - Next Up no longer lists shows you dropped on MDBList. A dropped show that still had an aired episode you had not watched kept coming back as its next episode; shows on your MDBList dropped list are now left out, as they already were in MDBList - In Progress Shows. Opening Next Up makes one extra request to MDBList to read the dropped list; if that read fails the list is shown as before.
             Changelog 3.9.56
             [FIX] MDBList - In Progress Episodes no longer lists an episode whose resume point is at 0% (a player that was only started, nothing watched). The two Merge - In Progress menus read the same MDBList data, so they drop those rows too. [ADD] MDBList - In Progress Shows (TV Shows menu, between In Progress Episodes and Next Up): every show you have started and not finished on MDBList, most recently watched first. A show is listed when it has an individually watched episode and an aired, non-special episode still unwatched (the same rule as MDBList - Next Up), or when it has an episode paused part-way above 0%. Shows on your MDBList dropped list and shows hidden from progress are left out. Like Next Up it stops after 30 shows, 40 recently watched shows examined or 25 seconds, whichever comes first.
             Changelog 3.9.55

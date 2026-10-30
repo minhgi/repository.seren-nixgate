@@ -1417,6 +1417,37 @@ class GlobalVariables:
     def close_ok_dialog(self):
         xbmc.executebuiltin("Dialog.Close(okdialog, true)")
 
+    _PLAYBACK_MARKER_KEY = "seren.playback"
+
+    def set_playback_marker(self, item_information):
+        """Tell other add-ons (TMDb Helper's scrobbling observer) that this play is Seren's.
+
+        Kodi shows no plugin:// origin for a Seren stream, so Seren names itself in a Home property, set before the
+        stream is handed to Kodi on every attempt. Carries the TMDb ids of the item (the show's for an episode) so a
+        reader accepts it only for the item that is actually playing. Returns the value written, for clear_playback_marker.
+        """
+        marker = ""
+        try:
+            info = item_information["info"]
+            if info.get("mediatype") == self.MEDIA_EPISODE:
+                tmdb_id = info.get("tmdb_show_id") or info.get("tvshow.tmdb_id")
+                marker = {"mediatype": "episode", "tmdb_id": str(tmdb_id or ""), "season": info.get("season"), "episode": info.get("episode")}
+            elif info.get("mediatype") == self.MEDIA_MOVIE:
+                marker = {"mediatype": "movie", "tmdb_id": str(info.get("tmdb_id") or "")}
+            marker = json.dumps(marker, sort_keys=True) if marker and marker["tmdb_id"] else ""
+        except (KeyError, TypeError, AttributeError):
+            marker = ""
+        if marker:
+            self.HOME_WINDOW.setProperty(self._PLAYBACK_MARKER_KEY, marker)
+        else:
+            self.HOME_WINDOW.clearProperty(self._PLAYBACK_MARKER_KEY)
+        return marker
+
+    def clear_playback_marker(self, marker):
+        """Clear the marker only if it is still the one this play wrote (a newer play may have replaced it)."""
+        if marker and self.HOME_WINDOW.getProperty(self._PLAYBACK_MARKER_KEY) == marker:
+            self.HOME_WINDOW.clearProperty(self._PLAYBACK_MARKER_KEY)
+
     def close_busy_dialog(self):
         xbmc.executebuiltin("Dialog.Close(busydialog)")
         xbmc.executebuiltin("Dialog.Close(busydialognocancel)")
