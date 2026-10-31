@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.video.seren" version="3.9.59" name="Seren" provider-name="Nixgates">
+<addon id="plugin.video.seren" version="3.9.61" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -66,6 +66,10 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.61
+            [FIX] Playback - An episode or movie with no runtime in its metadata no longer breaks playback: with the source size limit on, the scrape crashed (KeyError: duration) and nothing played; the same missing runtime also crashed the playing-next timer. A missing runtime now falls back to the usual default (90 min movie, 40 min episode) for the size limit and to 0 for the next-episode timer.
+            Changelog 3.9.60
+            [NEW] Playback - Seren now says when a play attempt ended because it found nothing playable, or every source failed, in a Home property named seren.playback_result (the item's TMDb id, season, episode and a time stamp; never written when you back out of a Seren window yourself). OpenInfo's optional "When playback fails, try the fallback player once" reads it to tell Seren giving up from you cancelling. Nothing else changes.
             Changelog 3.9.59
             [FIX] Playback - Stopping a play within the first 30 seconds no longer starts the next source. The playback watchdog saw the player go idle a moment before Kodi told it the stop was yours, counted the stop as a failed stream, blacklisted the release and started the next one. It now waits briefly for Kodi's stop or error notice before deciding.
             Changelog 3.9.58

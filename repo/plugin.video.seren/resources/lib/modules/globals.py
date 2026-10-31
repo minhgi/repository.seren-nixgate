@@ -1448,6 +1448,44 @@ class GlobalVariables:
         if marker and self.HOME_WINDOW.getProperty(self._PLAYBACK_MARKER_KEY) == marker:
             self.HOME_WINDOW.clearProperty(self._PLAYBACK_MARKER_KEY)
 
+    _PLAYBACK_RESULT_KEY = "seren.playback_result"
+    playback_user_canceled = False
+
+    def reset_playback_result(self):
+        """Start of a play attempt: forget the last attempt's outcome and any user cancel."""
+        self.playback_user_canceled = False
+        self.HOME_WINDOW.clearProperty(self._PLAYBACK_RESULT_KEY)
+
+    def note_user_cancel(self):
+        """The user backed out of one of Seren's play windows (scrape, resolver, cache assist, source select)."""
+        self.playback_user_canceled = True
+
+    def set_playback_result(self, item_information, result):
+        """Say in a Home property how a play attempt ended without a stream: "no_sources" (nothing playable was found) or
+        "failed" (every source failed to resolve). Lets another add-on (OpenInfo's playback watchdog) tell Seren giving up from
+        the user backing out, which look the same from outside. Never written once the user cancelled. Carries the item's TMDb
+        id (the show's for an episode), season, episode and a time stamp; nothing else. Returns the value written."""
+        if self.playback_user_canceled:
+            return ""
+        try:
+            info = item_information["info"]
+            if info.get("mediatype") == self.MEDIA_EPISODE:
+                tmdb_id = info.get("tmdb_show_id") or info.get("tvshow.tmdb_id")
+                payload = {"mediatype": "episode", "tmdb_id": str(tmdb_id or ""), "season": info.get("season"), "episode": info.get("episode")}
+            elif info.get("mediatype") == self.MEDIA_MOVIE:
+                payload = {"mediatype": "movie", "tmdb_id": str(info.get("tmdb_id") or "")}
+            else:
+                return ""
+            if not payload["tmdb_id"]:
+                return ""
+            payload["result"] = result
+            payload["ts"] = time.time()
+            value = json.dumps(payload, sort_keys=True)
+        except (KeyError, TypeError, AttributeError):
+            return ""
+        self.HOME_WINDOW.setProperty(self._PLAYBACK_RESULT_KEY, value)
+        return value
+
     def close_busy_dialog(self):
         xbmc.executebuiltin("Dialog.Close(busydialog)")
         xbmc.executebuiltin("Dialog.Close(busydialognocancel)")
