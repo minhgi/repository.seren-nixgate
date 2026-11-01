@@ -127,7 +127,7 @@
 			Rework for Seren 2.0
 		</news>
 	</extension>
-</addon><addon id="plugin.video.seren" version="3.9.61" name="Seren" provider-name="Nixgates">
+</addon><addon id="plugin.video.seren" version="3.9.62" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -194,6 +194,8 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.62
+            [FIX] MDBList - Something you unwatched on MDBList (the website, another device or another add-on) could stay marked watched in Seren until the next time you watched anything. MDBList's change stamps for watched items only move when something is marked watched; removing a watched mark moves a separate history stamp that Seren did not check. Seren now checks it too, so the next sync picks the removal up.
             Changelog 3.9.61
             [FIX] Playback - An episode or movie with no runtime in its metadata no longer breaks playback: with the source size limit on, the scrape crashed (KeyError: duration) and nothing played; the same missing runtime also crashed the playing-next timer. A missing runtime now falls back to the usual default (90 min movie, 40 min episode) for the size limit and to 0 for the next-episode timer.
             Changelog 3.9.60
