@@ -1,3 +1,6 @@
+[B]3.9.63[/B]
+- [NEW] Settings - AIOStreams (Advanced tab, next to the MediaFusion settings). Turn on the AIOStreams Scraper, paste your own AIOStreams manifest URL and a4kScrapers (2.99.146 or newer) lists the streams your AIOStreams instance finds as a separate AIO|service provider. Options: show uncached streams (off), keep AIOStreams order (on) and a timeout (30 s). Off by default; nothing changes until you turn it on. Seren itself only adds the settings.
+
 [B]3.9.62[/B]
 - [FIX] MDBList - Something you unwatched on MDBList (the website, another device or another add-on) could stay marked watched in Seren until the next time you watched anything. MDBList's change stamps for watched items only move when something is marked watched; removing a watched mark moves a separate history stamp that Seren did not check. Seren now checks it too, so the next sync picks the removal up.
 
