@@ -1,3 +1,15 @@
+[B]3.9.67[/B]
+- [FIX] Playback - Pausing the video during the first 30 seconds no longer makes Seren think the stream has stalled. The stall watchdog saw the playback clock stop, waited 10 seconds, then stopped your video and started the next source. A video you paused yourself is now left alone; a stream that freezes or keeps rebuffering is still caught and swapped as before.
+
+[B]3.9.66[/B]
+- [FIX] Playback - Content verification no longer lets a wrong release through just because the show has a non-English alias. An alias written in Thai, Chinese or another non-Latin script was reduced to nothing and so matched every release title, which switched the show-name check off. Such aliases are now matched against the real title, so a release only passes when it contains the show's name or one of its aliases.
+
+[B]3.9.65[/B]
+- [FIX] Playback - Content verification no longer throws out cached packs whose season and episode numbers are written in another language. Beyond the Russian titles fixed in 3.9.64, it now also reads Spanish/Portuguese (Temporada, Capitulo, Episodio), German (Staffel, Folge), French (Saison, Episode), Italian (Stagione, Puntata), Dutch, Swedish, Polish, Turkish, Vietnamese, Arabic, Thai, Chinese (season and episode forms), Japanese and Korean markers from the title and accepts the pack when it covers the episode you asked for. An episode range with no season stated is only trusted for season 1.
+
+[B]3.9.64[/B]
+- [FIX] Playback - Cached torrents with Russian-style titles (season and episode range written in Cyrillic, for example 'Season: 1 / Episodes: 1-10 of 40' in Russian) were thrown out by content verification as the wrong episode, so a show whose only cached sources looked like that never played. Content verification now reads the Cyrillic season and episode range from the title and accepts the pack when it covers the episode you asked for.
+
 [B]3.9.63[/B]
 - [NEW] Settings - AIOStreams (Advanced tab, next to the MediaFusion settings). Turn on the AIOStreams Scraper, paste your own AIOStreams manifest URL and a4kScrapers (2.99.146 or newer) lists the streams your AIOStreams instance finds as a separate AIO|service provider. Options: show uncached streams (off), keep AIOStreams order (on) and a timeout (30 s). Off by default; nothing changes until you turn it on. Seren itself only adds the settings.
 

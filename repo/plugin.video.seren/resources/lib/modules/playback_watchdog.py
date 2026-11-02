@@ -436,6 +436,7 @@ class PlaybackWatchdog(xbmc.Player):
         monitor_start = time.time()
         last_time = -1.0
         stall_start = None
+        paused_logged = False
 
         while not self._monitor.abortRequested():
             if self._playback_error or self._playback_stopped:
@@ -462,6 +463,18 @@ class PlaybackWatchdog(xbmc.Player):
                 last_time = current
                 stall_start = None
             else:
+                # Time not advancing because the user paused the video: that is
+                # not a dead stream, so don't run the stall timer while paused.
+                if self._is_user_paused():
+                    if not paused_logged:
+                        g.log("Watchdog: Paused by user — stall timer held", "info")
+                        paused_logged = True
+                    stall_start = None
+                    if self._monitor.waitForAbort(0.5):
+                        return "error"
+                    continue
+                paused_logged = False
+
                 # Time not advancing — but if subtitle detection is on and
                 # a subtitle service just triggered an AV change, forgive
                 # the brief pause rather than counting it as a stall.
@@ -504,6 +517,13 @@ class PlaybackWatchdog(xbmc.Player):
         while not (self._playback_error or self._playback_stopped):
             if time.time() >= deadline or self._monitor.waitForAbort(0.1):
                 break
+
+    @staticmethod
+    def _is_user_paused():
+        """True while the video is paused, not while Kodi is rebuffering a stalled stream."""
+        return xbmc.getCondVisibility("Player.Paused") and not xbmc.getCondVisibility(
+            "Player.Caching"
+        )
 
     def _safe_stop(self):
         """Stop playback, suppressing errors if already stopped."""
