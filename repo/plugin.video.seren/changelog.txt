@@ -1,3 +1,18 @@
+[B]3.9.72[/B]
+- [FIX] Anime - For anime whose seasons the anime list files as OVA (some whole seasons are), the Skip Intro lookup and the episode details now use that season's entry. Season 1 episodes also no longer use the entry of a later season when the list has no season 1 entry for the show; they get no anime skip time or episode details instead of the wrong ones.
+
+[B]3.9.71[/B]
+- [FIX] Anime - An anime episode now keeps its normal title when the anime source only calls it "Episode 5" (or another number); the description and picture from the source are still used. Episodes whose details Seren saved earlier keep the "Episode 5" title until their metadata is refreshed.
+
+[B]3.9.70[/B]
+- [FIX] Anime - Episode titles, descriptions and thumbnails of anime now come from the season or part the episode belongs to. Before, every episode used the show's first season, so episode 5 of season 2 showed the title, description and picture of episode 5 of season 1. An episode whose part cannot be determined with confidence keeps its normal TMDB title instead of a wrong one. Episodes whose details Seren saved earlier keep them until Seren's metadata cache is cleared.
+
+[B]3.9.69[/B]
+- [FIX] Anime - The Skip Intro / Skip Credits lookup now finds the show for anime episodes. It used the episode's own ids, which the anime list does not know, so no anime was found for the episode. It now uses the show's ids, and for a show split into seasons or cours it asks for the part the episode belongs to and the episode number inside that part (for example season 2 episode 1, or episode 30 of a season whose second cour starts at 27). When the list cannot say which part it is, or the episode's air date does not fit that part, no skip time is requested and nothing is guessed.
+
+[B]3.9.68[/B]
+- [CHANGE] Anime - The offline anime ID list now comes from the Fribb anime-lists project instead of Otaku-Mappings. It refreshes weekly and covers more current-season shows, and the old animeMappings.db file is deleted on the first update. The new list has no Trakt ids or TVDB part numbers, so the "Part N" release check is no longer applied, and the related-anime list finds Trakt ids through a Trakt lookup instead.
+
 [B]3.9.67[/B]
 - [FIX] Playback - Pausing the video during the first 30 seconds no longer makes Seren think the stream has stalled. The stall watchdog saw the playback clock stop, waited 10 seconds, then stopped your video and started the next source. A video you paused yourself is now left alone; a stream that freezes or keeps rebuffering is still caught and swapped as before.
 

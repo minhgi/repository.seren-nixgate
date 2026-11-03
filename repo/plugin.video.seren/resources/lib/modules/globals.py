@@ -611,7 +611,6 @@ class GlobalVariables:
             "SEARCH_HISTORY_DB_PATH": self.SEARCH_HISTORY_DB_PATH,
             "SKINS_DB_PATH": self.SKINS_DB_PATH,
             "ANIME_CACHE_DB_PATH": self.ANIME_CACHE_DB_PATH,
-            "ANIME_MAPPING_DB_PATH": self.ANIME_MAPPING_DB_PATH,
             "DEFAULT_FANART": self.DEFAULT_FANART,
             "DEFAULT_ICON": self.DEFAULT_ICON,
             "DEFAULT_LOGO": self.DEFAULT_LOGO,
@@ -696,7 +695,6 @@ class GlobalVariables:
             self.SEARCH_HISTORY_DB_PATH = state["SEARCH_HISTORY_DB_PATH"]
             self.SKINS_DB_PATH = state["SKINS_DB_PATH"]
             self.ANIME_CACHE_DB_PATH = state["ANIME_CACHE_DB_PATH"]
-            self.ANIME_MAPPING_DB_PATH = state["ANIME_MAPPING_DB_PATH"]
 
             # Assets
             self.DEFAULT_FANART = state["DEFAULT_FANART"]
@@ -986,7 +984,6 @@ class GlobalVariables:
         self.SEARCH_HISTORY_DB_PATH = tools.translate_path(os.path.join(self.ADDON_USERDATA_PATH, "search.db"))
         self.SKINS_DB_PATH = tools.translate_path(os.path.join(self.ADDON_USERDATA_PATH, "skins.db"))
         self.ANIME_CACHE_DB_PATH = tools.translate_path(os.path.join(self.ADDON_USERDATA_PATH, "animeCache.db"))
-        self.ANIME_MAPPING_DB_PATH = tools.translate_path(os.path.join(self.ADDON_USERDATA_PATH, "animeMappings.db"))
 
     def get_kodi_video_db_connection(self):
         config = self.get_kodi_video_db_config()
