@@ -22,7 +22,9 @@ missing it. An item only enters the next snapshot once it's confirmed
 present everywhere (already there, or the push just succeeded) - a failed
 push leaves it out, so it's retried next run instead of silently dropped.
 Items that vanish from current are dropped from the snapshot too, so a later
-genuine re-add is still recognised as new.
+genuine re-add is still recognised as new - unless the vanished item is a
+removal still being confirmed (see "Removals" below), which stays in the
+snapshot until it is resolved.
 
 This is what avoids the reversal bug a raw current-state diff has: if an
 item is removed from service A directly (outside Kodi) while service B still
@@ -31,6 +33,31 @@ has it, a naive `current_B - current_A` diff would treat B's copy as
 removed. Snapshot-gating means B's copy is old news (it was already in
 snapshot_B last run), not new evidence - it only gets pushed if it
 genuinely disappeared from B too and then came back.
+
+Removals (setting crosssync.removals, same options and default as TMDb Helper
+Multiservice's cross_sync_removals): an item that is in a service's snapshot
+and is no longer listed by that service was removed there (unwatched, or taken
+off a list on the website / in an app), and the same removal is carried to the
+other services. Removing is destructive (Trakt history/remove deletes every
+play of the item), so it is cautious:
+  - an item must be missing on two runs in a row before anything is removed
+    (a bad read does not repeat itself);
+  - more than a few items vanishing from one service at once (cap = max(10,
+    40 for episodes, 5 % of the snapshot)) is taken for an incomplete read and
+    removes nothing;
+  - a watched item that was played again on a service that still lists it
+    after the end of the previous run is kept and sent back to the service
+    that lost it (an unwatch followed by a rewatch inside one interval);
+  - what is about to be removed is written to bridge_removals.jsonl first,
+    with the watch dates it held;
+  - a removal the bridge made is remembered for a few days, so a service that
+    is slow to stop listing the item is asked again instead of the item being
+    read as a new addition;
+  - setting values: 0 off, 1 log only, 2 watchlist and collection (default),
+    3 also watched history (opt-in: Trakt's history/remove deletes all plays).
+Simkl: only a real unwatch counts (a movie back on plan-to-watch; an episode
+Simkl really recorded; a watchlist item that is gone from Simkl's library),
+never a move to completed / dropped / on hold.
 
 A service whose read failed is skipped for the cycle - as a source and as a
 target - and its snapshot is left untouched. A failed read is never treated
@@ -59,9 +86,20 @@ Domain coverage:
   interested) is never overwritten - an add-to-list moves its status.
 - Collection/movie+tvshow: trakt + mdblist only. Simkl has no Collection
   endpoint at all (confirmed absent from its API).
-- Progress: one-directional Trakt -> mdblist/simkl, an idempotent re-push of
-  Trakt's current playback rows every run. No snapshot: a resume position
-  changes on every playback anyway, so there's nothing meaningful to delta.
+- Progress: one-directional Trakt -> mdblist/simkl. No snapshot (a resume
+  position changes on every playback anyway), but a resume point is only sent
+  where it would not do harm:
+    * not when MDBList, Simkl (or Trakt itself) recorded the item as watched at
+      or after the time Trakt saved the point - Trakt marks an item watched
+      from 80 % while MDBList and Simkl do from 75 %, so Trakt keeps the
+      resume point of an item the others already count as watched, and sending
+      it on would put the finished item back "in progress" there;
+    * not when the target already holds a resume point for the item that is
+      the same or newer (paused_at) - it would overwrite progress made there;
+    * a target whose resume points cannot be read is skipped for the run;
+    * Simkl keeps one resume point per show, so of a show's episodes only the
+      one Trakt saved last is sent.
+  A post that gets no usable answer is counted and logged.
 - Rating: on-action mirror only (cross_sync.py); it is a value+timestamp, not
   set-membership, so it needs a different mechanism than everything above.
 
@@ -84,8 +122,11 @@ never sent onward from there. Without that a synthetic Simkl episode could be
 laundered into Trakt via MDBList, past the filter applied to Simkl itself.
 """
 
+import json
+import os
 import re
 import time
+from datetime import datetime, timezone
 
 from resources.lib.modules.globals import g
 from resources.lib.modules.syncGateway import configured_providers
@@ -100,6 +141,7 @@ _HISTORY_CAP = 50  # max Trakt history pushes (each one is a new play) per domai
 _MDB_EPISODE_CAP = 250  # max MDBList episode pushes per cycle (API-call budget while the first runs converge)
 _SIMKL_CAP = 300  # max Simkl pushes per domain per cycle (<= 3 calls: Simkl locks writes for 20 s per user)
 _SIMKL_LOCK_SECONDS = 21
+_SIMKL_PROGRESS_CAP = 20  # max Simkl resume posts per cycle (each one waits out the 21 s write lock)
 _PAGE_CAP = 200  # safety cap on Trakt pages per read
 _READ_TIMEOUT = 30  # seconds: a full-library page is far bigger than the 10 s default request budget was sized for
 _TARGET_NAMES = {"mdblist": "MDBList", "simkl": "Simkl", "trakt": "Trakt"}
@@ -109,6 +151,14 @@ _SIMKL_DROPPED = ("dropped", "notinteresting")
 _STAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}")
 _RUNNING_KEY = "seren.bridgeSync.running"
 _RUNNING_STALE_SECONDS = 60 * 60
+_REMOVE_MASS_CAP = 10  # more than this many items (or 5 % of the snapshot) vanishing from one service at once looks like an
+_REMOVE_MASS_CAP_EPISODES = 40  # incomplete read, not the user: nothing is removed from the other services for it
+_REMOVE_CLOCK_MARGIN = 90  # seconds a play must be newer than the end of the last run to count as "played again"
+_REMOVE_RECENT_DAYS = 3  # how long an item the bridge removed is not taken for a new addition if the service still lists it
+_JOURNAL_FILE = "bridge_removals.jsonl"  # addon_data: one line per removal the bridge made (what, where, the dates it held)
+_JOURNAL_LINES = 2000
+_OLD_ACTIVITY_STAMP = "2000-01-01T00:00:00"  # older than any Trakt activity, but not Seren's base date (see _trakt_force_refresh)
+_REMOVALS_DEFAULT = 2  # setting crosssync.removals: 0 off, 1 log only, 2 watchlist + collection, 3 also watched history
 
 
 def _enabled():
@@ -179,13 +229,17 @@ class _Bridge:
         self._simkl = None  # this run's Simkl views (see _simkl_prepare); None = Simkl unreadable
         self._simkl_prepared = False
         self._simkl_last_write = 0.0
-        self._stamps = {}  # {(media, item_key): newest last_watched_at seen on any service}
+        self._stamps = {}  # {(media, item_key): newest last_watched_at seen on any service, Trakt included}
         self._mdb_watched_cache = None  # one MDBList /sync/watched read per run (movies + episodes)
+        self._simkl_prev_real = set()  # episodes Simkl held a real record for at the last cycle (before this run's read)
+        self._run_started = ""  # UTC ISO time this run started
+        self._removed = {}  # {service: count} removed by this run
 
     # region Entry point
 
     def run(self):
         g.log("bridgeSync: starting reconciliation", "info")
+        self._run_started = self._utc_now()
         for fn in (
             self._sync_watched_movies,
             self._sync_watched_episodes,
@@ -200,6 +254,7 @@ class _Bridge:
             except Exception as e:
                 g.log(f"bridgeSync: {fn.__name__} error: {e}", "error")
         self._simkl_finish()
+        self._finish_run()
         g.log("bridgeSync: reconciliation complete", "info")
 
     # endregion
@@ -468,6 +523,8 @@ class _Bridge:
         if "simkl" not in self.services:
             return
         meta = self._meta_data()
+        # what Simkl held a real record for at the end of the last cycle, kept before this run's read replaces it
+        self._simkl_prev_real = set(((meta.get("simkl") or {}).get("ep_real")) or ())
         stamp = self._simkl_activity()
         if stamp is None:
             g.log("bridgeSync: Simkl activity check failed - skipping Simkl this cycle", "info")
@@ -555,8 +612,11 @@ class _Bridge:
             self._ok = False
             g.log(f"bridgeSync: meta not saved ({type(e).__name__}) - no further pushes this cycle", "error")
 
-    def _reconcile(self, domain, media, current, push_fn, caps=None, skip=None):
+    def _reconcile(self, domain, media, current, push_fn, caps=None, skip=None, remove_fn=None, removal_ok=None):
         """current: {service: {item_key: tmdb_id} or None (read failed)} for the services that are configured.
+        remove_fn(items, source, target) -> succeeded keys, removal_ok(source, key) -> bool: carry removals made
+        outside Seren over to the other services (see _removals; the crosssync.removals setting decides whether
+        and what).
         push_fn(items, source, target) -> (succeeded, given_up), both subsets of items.keys():
         succeeded = confirmed present on the target now; given_up = permanently unresolvable there
         (e.g. a tmdb id the target does not know) - counted as reconciled so it is not retried forever.
@@ -586,14 +646,23 @@ class _Bridge:
         budget = dict(caps or {})
         pushed = {}  # {service: {item_key: id}} put there by this run
         touched = set()
+        # Removals run before the additions so a removed item is neither mistaken for "old news" nor for a new
+        # addition. The meta (pending confirmations, what was just removed) is saved inside, before any addition.
+        held = self._removals(domain, media, current, snaps, remove_fn, removal_ok) if remove_fn else {}
+        if not self._ok:
+            return
+        recent = self._meta_data().get("removed_recent") or {}
         for source in list(current):
             cur = current[source]
             if cur is None:
                 continue  # unreadable: snapshot untouched, nothing sourced from it
             label = f"{domain}|{source}|{media}"
             snap = snaps[source]
-            newly = {k: v for k, v in cur.items() if k not in snap and k not in pushed.get(source, {})}
-            carried = {k: v for k, v in snap.items() if k in cur}
+            # an item the bridge removed from this service that it still lists is the removal not showing yet,
+            # not a new addition
+            lagging = {k for k, at in (recent.get(label) or {}).items() if time.time() - at <= _REMOVE_RECENT_DAYS * 86400}
+            newly = {k: v for k, v in cur.items() if k not in snap and k not in pushed.get(source, {}) and k not in lagging}
+            carried = {k: v for k, v in snap.items() if k in cur or k in held.get(source, ())}
             unresolved = set()
             for target in current:
                 if target == source or not newly:
@@ -645,6 +714,324 @@ class _Bridge:
         except Exception as e:
             self._ok = False
             g.log(f"bridgeSync: snapshots not saved ({type(e).__name__}) - no further pushes this cycle", "error")
+
+    # endregion
+
+    # region Removals made outside Seren (see the module docstring)
+
+    @staticmethod
+    def _utc_now():
+        return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+
+    @staticmethod
+    def _removal_mode():
+        try:
+            mode = int(g.get_int_setting("crosssync.removals", _REMOVALS_DEFAULT))
+        except Exception:
+            return _REMOVALS_DEFAULT
+        return mode if 0 <= mode <= 3 else _REMOVALS_DEFAULT
+
+    @staticmethod
+    def _removal_active(domain, mode):
+        return mode in (1, 3) or (mode == 2 and domain in (_WATCHLIST, _COLLECTION))
+
+    def _newer_than(self, media, key, since):
+        """True when an item was played (on any service that still lists it, Trakt included: Seren reads Trakt live,
+        so its last_watched_at is in the same table) after `since`, a UTC ISO time - the end of the last run, since
+        what the bridge itself pushed during that run carries stamps up to then. The margin covers the difference
+        between this computer's clock and the services'."""
+        newest = self._stamps.get((media, key), "")
+        if not since or not newest:
+            return False
+        try:
+            fmt = "%Y-%m-%dT%H:%M:%S"
+            return (datetime.strptime(newest[:19], fmt) - datetime.strptime(since[:19], fmt)).total_seconds() > _REMOVE_CLOCK_MARGIN
+        except ValueError:
+            return False
+
+    def _removal_ok(self, domain, media):
+        """removal_ok(source, key): False for a change that only looks like a removal on that service."""
+
+        def ok(source, key):
+            if source != "simkl":
+                return True
+            views = self._simkl or {}
+            if domain == _WATCHED and media == "movie":
+                entry = (views.get("movies") or {}).get(key)  # unwatched on Simkl = back on plan-to-watch (or gone)
+                return entry is None or entry[0] == "plantowatch"
+            if domain == _WATCHED:
+                # only an episode Simkl really recorded (the rest are synthetic rows); one already waiting for its
+                # second run no longer shows in the views saved after the first
+                pending = (self._meta_data().get("removals") or {}).get("watched|simkl|episode", {})
+                return key in self._simkl_prev_real or key in pending
+            if domain == _WATCHLIST:
+                return self._simkl_status(key) is None  # a move to completed / dropped / hold is not a removal
+            return True
+
+        return ok
+
+    def _journal(self, domain, media, source, target, items):
+        """Writes what is about to be removed to bridge_removals.jsonl (service, item, the date it held) before the call."""
+        try:
+            path = os.path.join(g.ADDON_USERDATA_PATH, _JOURNAL_FILE)
+            with open(path, "a", encoding="utf-8") as f:
+                for key, tmdb_id in sorted(items.items()):
+                    f.write(
+                        json.dumps(
+                            {
+                                "at": self._utc_now(),
+                                "from": source,
+                                "removed_on": target,
+                                "domain": domain,
+                                "media": media,
+                                "key": key,
+                                "tmdb": tmdb_id,
+                                "watched_at": self._stamps.get((media, key)),
+                            }
+                        )
+                        + "\n"
+                    )
+        except Exception as e:
+            g.log(f"bridgeSync: removal journal not written: {e}", "warning")
+
+    def _journal_trim(self):
+        try:
+            path = os.path.join(g.ADDON_USERDATA_PATH, _JOURNAL_FILE)
+            with open(path, encoding="utf-8") as f:
+                lines = f.readlines()
+            if len(lines) > _JOURNAL_LINES:
+                with open(path, "w", encoding="utf-8") as f:
+                    f.writelines(lines[-_JOURNAL_LINES:])
+        except FileNotFoundError:
+            pass
+        except Exception as e:
+            g.log(f"bridgeSync: removal journal not trimmed: {e}", "warning")
+
+    def _finish_run(self):
+        """Remembers when this run ended (the baseline for "played again since") and keeps the journal short."""
+        if not self._ok:
+            return
+        self._meta_data()["last_run_utc"] = self._utc_now()  # the END of the run: its own pushes are not "played again"
+        self._journal_trim()
+        self._meta_save()
+
+    def _removed_done(self, domain, media, source, target, done, current, snaps):
+        """Bookkeeping for items just removed from `target`: out of this run's view and its snapshot, and noted so a
+        service that is slow to stop listing them does not make them look like new additions."""
+        label = f"{domain}|{target}|{media}"
+        recent = self._meta_data().setdefault("removed_recent", {}).setdefault(label, {})
+        for key in done:
+            current[target].pop(key, None)
+            snaps.get(target, {}).pop(key, None)
+            recent[key] = time.time()
+        if done:
+            self._removed[target] = self._removed.get(target, 0) + len(done)
+            origin = f" - removed on {_TARGET_NAMES[source]}" if source in _TARGET_NAMES else ""
+            g.log(f"bridgeSync x{_TARGET_NAMES[target]}: removed {len(done)} {media} ({domain}){origin}", "info")
+
+    def _removals(self, domain, media, current, snaps, remove_fn, removal_ok):
+        """Carries removals over to the other services. Returns {source: keys that must stay in its snapshot until the
+        removal is resolved}. Runs before the additions so a removed item is not mistaken for "old news" or "new"."""
+        mode = self._removal_mode()
+        if not self._removal_active(domain, mode):
+            return {}
+        meta = self._meta_data()
+        pending = meta.setdefault("removals", {})
+        recent = meta.setdefault("removed_recent", {})
+        before = json.dumps([pending, recent], sort_keys=True)
+        prev_run = meta.get("last_run_utc") or self._run_started
+        held = {}
+        if mode >= 2:
+            # an item the bridge removed that its service still lists: ask again, for a few days
+            for target, cur in current.items():
+                label = f"{domain}|{target}|{media}"
+                rec = recent.get(label)
+                if not rec or cur is None:
+                    continue
+                for key, at in list(rec.items()):
+                    if key not in cur or time.time() - at > _REMOVE_RECENT_DAYS * 86400:
+                        rec.pop(key, None)
+                again = {k: cur[k] for k in rec if k in cur}
+                if again:
+                    self._journal(domain, media, "retry", target, again)
+                    try:
+                        done = remove_fn(again, "retry", target)
+                    except Exception as e:
+                        done = set()
+                        g.log(f"bridgeSync: {label} removal retry error: {e}", "error")
+                    self._removed_done(domain, media, "retry", target, done, current, snaps)
+        for source, cur in current.items():
+            if cur is None:
+                continue  # unreadable: nothing is concluded from it
+            label = f"{domain}|{source}|{media}"
+            snap = snaps.get(source) or {}
+            pend = pending.setdefault(label, {})
+            gone = {k for k in snap if k not in cur}
+            if removal_ok:
+                gone = {k for k in gone if removal_ok(source, k)}
+            for key in [k for k in pend if k not in gone]:
+                del pend[key]  # listed again, or only a status move: not a removal
+            if not gone:
+                continue
+            cap = max(_REMOVE_MASS_CAP_EPISODES if media == "episode" else _REMOVE_MASS_CAP, len(snap) // 20)
+            if len(gone) > cap:
+                g.log(
+                    f"bridgeSync: {label}: {len(gone)} items vanished at once - looks like an incomplete read, "
+                    "nothing removed from the other services for it",
+                    "warning",
+                )
+                pend.clear()
+                continue
+            confirmed = {k for k in gone if k in pend}
+            for key in gone:
+                pend.setdefault(key, prev_run)
+            held[source] = set(gone)
+            if not confirmed:
+                g.log(
+                    f"bridgeSync: {label}: {len(gone)} item(s) no longer listed - removed elsewhere only if still missing next run",
+                    "info",
+                )
+                continue
+            if mode == 1:
+                g.log(
+                    f"bridgeSync (log only): {label}: would remove {len(confirmed)} from the other services: "
+                    f"{', '.join(sorted(confirmed)[:10])}",
+                    "info",
+                )
+                continue
+            unresolved = self._apply_removals(domain, media, source, confirmed, pend, current, snaps, remove_fn)
+            for key in confirmed - unresolved:
+                pend.pop(key, None)
+                held[source].discard(key)
+        if json.dumps([pending, recent], sort_keys=True) != before:
+            self._meta_save()  # before any addition, so a removal and its bookkeeping are never saved apart
+        return held
+
+    def _apply_removals(self, domain, media, source, confirmed, pend, current, snaps, remove_fn):
+        """Removes the confirmed items from every other service that still lists them. Returns the keys not finished."""
+        unresolved = set()
+        for target, cur in current.items():
+            if target == source:
+                continue
+            if cur is None:
+                # unreadable this run: if it may still hold the item the removal is not finished, so it stays pending
+                held_there = snaps.get(target) or {}
+                unresolved.update(k for k in confirmed if k in held_there)
+                continue
+            items = {k: cur[k] for k in confirmed if k in cur}
+            if domain == _WATCHED:
+                newer = {k for k in items if self._newer_than(media, k, pend.get(k))}
+                if newer:
+                    g.log(
+                        f"bridgeSync: {domain}|{target}|{media}: {len(newer)} item(s) played again on {_TARGET_NAMES[target]} "
+                        f"since they were removed on {_TARGET_NAMES[source]} - kept, and sent back",
+                        "info",
+                    )
+                    snap_target = snaps.setdefault(target, {})
+                    for key in newer:
+                        snap_target.pop(key, None)  # new on the target again: the additions pass sends it back
+                        del items[key]
+            if not items:
+                continue
+            self._journal(domain, media, source, target, items)
+            try:
+                done = set(remove_fn(items, source, target) or ())
+            except Exception as e:
+                done = set()
+                g.log(f"bridgeSync: {domain}|{target}|{media} removal error: {e}", "error")
+            self._removed_done(domain, media, source, target, done, current, snaps)
+            unresolved.update(set(items) - done)
+        return unresolved
+
+    def _forget_in_views(self, domain, media, keys):
+        """After removing from Simkl: keeps the views saved for the next cycle in step with it."""
+        views = self._simkl
+        if views is None:
+            return
+        for key in keys:
+            if domain == _WATCHED and media == "movie":
+                views["movies"].pop(key, None)
+            elif domain == _WATCHED:
+                views["ep_yes"].pop(key, None)
+                views["ep_real"].pop(key, None)
+            else:
+                kind, _, tmdb_id = key.partition(":")
+                views["movies" if kind == "movie" else "shows"].pop(tmdb_id, None)
+
+    def _trakt_force_refresh(self, domain, media):
+        """Seren's own Trakt sync re-reads a category only when Trakt's activity stamp moved, and a removal may not
+        move it: reset the local stamps so the next sync pass re-reads what the bridge just removed. The old date
+        must not be Seren's base date (1970-01-01): all_activities holding that exact value is how Seren tells a
+        first-ever sync, which would turn this into a full first-run resync with a progress dialog."""
+        columns = {
+            (_WATCHED, "movie"): ("movies_watched",),
+            (_WATCHED, "episode"): ("shows_watched",),
+            (_WATCHLIST, "movie_or_show"): ("movies_watchlisted", "shows_watchlisted"),
+            (_COLLECTION, "movie_or_show"): ("movies_collected", "shows_collected"),
+        }.get((domain, media), ())
+        if not columns:
+            return
+        try:
+            from resources.lib.database.trakt_sync.activities import TraktSyncDatabase
+
+            db = TraktSyncDatabase()
+            for column in (*columns, "all_activities"):
+                db._update_activity_record(column, _OLD_ACTIVITY_STAMP)
+        except Exception as e:
+            g.log(f"bridgeSync: could not reset the Trakt activity stamps: {e}", "warning")
+
+    def _remove_watched(self, media, items, source, target):
+        """Unwatches items {key: tmdb_id} on `target`. Returns the keys that went through."""
+        succeeded = set()
+        path = "sync/watched/remove" if target == "mdblist" else "sync/history/remove"
+        for chunk in self._chunks(items, _MDB_CHUNK if target == "mdblist" else _BATCH_SIZE):
+            if media == "movie":
+                payload = {"movies": [{"ids": {"tmdb": int(v)}} for _, v in sorted(chunk.items())]}
+            else:
+                shows = []
+                for key, show_id in sorted(chunk.items()):
+                    _, season, number = key.split(":")
+                    shows.append(
+                        {"ids": {"tmdb": int(show_id)}, "seasons": [{"number": int(season), "episodes": [{"number": int(number)}]}]}
+                    )
+                payload = {"shows": shows}
+            ok, _data = self._post(target, path, payload)
+            if not ok:
+                break
+            succeeded |= set(chunk)
+            if target == "simkl":
+                self._forget_in_views(_WATCHED, media, chunk)
+        if succeeded and target == "trakt":
+            self._trakt_force_refresh(_WATCHED, media)
+        return succeeded
+
+    def _remove_set(self, domain, items, source, target):
+        """Takes items {'movie:<id>' / 'show:<id>': tmdb_id} off the watchlist / collection of `target`."""
+        succeeded = set()
+        if target == "simkl":
+            path = "sync/history/remove"  # clears every status, so only an item still on plan-to-watch goes
+            done_already = {k for k in items if self._simkl_status(k) != "plantowatch"}
+            succeeded |= done_already
+            items = {k: v for k, v in items.items() if k not in done_already}
+        elif target == "trakt":
+            path = f"sync/{domain}/remove"
+        else:
+            path = "watchlist/items/remove" if domain == _WATCHLIST else "sync/collection/remove"
+        for chunk in self._chunks(items, _MDB_CHUNK if target == "mdblist" else _BATCH_SIZE):
+            payload = {}
+            for key, tmdb_id in sorted(chunk.items()):
+                kind = "movies" if key.startswith("movie:") else "shows"
+                entry = {"tmdb": int(tmdb_id)} if (target == "mdblist" and domain == _WATCHLIST) else {"ids": {"tmdb": int(tmdb_id)}}
+                payload.setdefault(kind, []).append(entry)
+            ok, _data = self._post(target, path, payload)
+            if not ok:
+                break
+            succeeded |= set(chunk)
+            if target == "simkl":
+                self._forget_in_views(domain, "movie_or_show", chunk)
+        if succeeded and target == "trakt":
+            self._trakt_force_refresh(domain, "movie_or_show")
+        return succeeded
 
     # endregion
 
@@ -941,6 +1328,8 @@ class _Bridge:
             self._push_watched_movies,
             caps={"trakt": _HISTORY_CAP, "simkl": _SIMKL_CAP},
             skip=self._skip_movies,
+            remove_fn=lambda i, s, t: self._remove_watched("movie", i, s, t),
+            removal_ok=self._removal_ok(_WATCHED, "movie"),
         )
         self._simkl_record_movies(current.get("simkl"))
 
@@ -953,6 +1342,8 @@ class _Bridge:
             self._push_watched_episodes,
             caps={"trakt": _HISTORY_CAP, "mdblist": _MDB_EPISODE_CAP, "simkl": _SIMKL_CAP},
             skip=self._skip_episodes,
+            remove_fn=lambda i, s, t: self._remove_watched("episode", i, s, t),
+            removal_ok=self._removal_ok(_WATCHED, "episode"),
         )
         if self._simkl is not None and current.get("simkl") is not None:
             self._simkl["ep_yes"].update({k: str(v) for k, v in current["simkl"].items()})
@@ -977,6 +1368,8 @@ class _Bridge:
             lambda i, s, t: self._push_set(_WATCHLIST, i, s, t),
             caps={"simkl": _SIMKL_CAP},
             skip=self._skip_watchlist,
+            remove_fn=lambda i, s, t: self._remove_set(_WATCHLIST, i, s, t),
+            removal_ok=self._removal_ok(_WATCHLIST, "movie_or_show"),
         )
         if self._simkl is not None and current.get("simkl") is not None:
             for key in current["simkl"]:
@@ -987,7 +1380,14 @@ class _Bridge:
     def _sync_collection(self):
         """Trakt <-> MDBList only - Simkl has no collection endpoint."""
         current = self._current(lambda: self._trakt_set(_COLLECTION), lambda: self._mdb_list_ids("sync/collection"))
-        self._reconcile(_COLLECTION, "movie_or_show", current, lambda i, s, t: self._push_set(_COLLECTION, i, s, t))
+        self._reconcile(
+            _COLLECTION,
+            "movie_or_show",
+            current,
+            lambda i, s, t: self._push_set(_COLLECTION, i, s, t),
+            remove_fn=lambda i, s, t: self._remove_set(_COLLECTION, i, s, t),
+            removal_ok=self._removal_ok(_COLLECTION, "movie_or_show"),
+        )
 
     # endregion
 
@@ -1007,50 +1407,208 @@ class _Bridge:
             g.log(f"bridgeSync: failed to parse raw Trakt JSON for {url}: {e}", "error")
             return None
 
+    def _trakt_playback(self, kind):
+        """Trakt's resume points ('movies' / 'episodes') as a list of raw rows, or None when the read failed (an
+        error body, not a list, must not look like 'no resume points')."""
+        data = self._get_raw_json(f"sync/playback/{kind}")
+        return data if isinstance(data, list) else None
+
+    @staticmethod
+    def _resume_due(have, paused_at):
+        """Whether a Trakt resume point should go to a target. `have` is the paused_at of the target's resume point for
+        the item (None = it has none, False = it has one without a time)."""
+        if have is None:
+            return True  # the target holds none (or it expired): send
+        if have is False or not isinstance(paused_at, str) or not _STAMP_RE.match(paused_at):
+            return False  # cannot tell which is newer: leave what the target holds
+        return paused_at[:19] > str(have)[:19]
+
+    @staticmethod
+    def _note_have(have, key, at):
+        if not key[1] or key[1] == "None":
+            return
+        if isinstance(at, str) and _STAMP_RE.match(at):
+            prev = have.get(key)
+            if not isinstance(prev, str) or at > prev:
+                have[key] = at
+        else:
+            have.setdefault(key, False)
+
+    def _mdb_playback(self):
+        """MDBList's resume points as {('movie', tmdb) / ('episode', show_tmdb, season, number): paused_at}, or None."""
+        try:
+            data = self._api("mdblist").get_json("sync/playback", timeout=_READ_TIMEOUT)
+        except Exception as e:
+            g.log(f"bridgeSync: mdblist sync/playback read failed: {e}", "warning")
+            return None
+        if isinstance(data, dict):
+            data = data.get("items")
+        if not isinstance(data, list):
+            return None
+        have = {}
+        for item in data:
+            if not isinstance(item, dict):
+                continue
+            at = item.get("paused_at") or item.get("updated_at")
+            if item.get("type") == "episode" or item.get("episode"):
+                episode = item.get("episode") or {}
+                tmdb_id = ((item.get("show") or {}).get("ids") or {}).get("tmdb")
+                season, number = episode.get("season"), episode.get("number")
+                if season is None or number is None:
+                    continue
+                self._note_have(have, ("episode", str(tmdb_id), int(season), int(number)), at)
+            else:
+                self._note_have(have, ("movie", str(((item.get("movie") or {}).get("ids") or {}).get("tmdb"))), at)
+        return have
+
+    def _simkl_playback(self):
+        """Simkl's resume points as {('movie', tmdb) / ('show', tmdb): paused_at} (Simkl keeps one per show), or None."""
+        ok, data = self._simkl_get_ok("sync/playback")
+        if not ok:
+            return None
+        data = [] if data is None else data
+        if isinstance(data, dict):
+            data = data.get("items")
+        if not isinstance(data, list):
+            return None
+        have = {}
+        for item in data:
+            if not isinstance(item, dict):
+                continue
+            at = item.get("paused_at")
+            if item.get("movie") or item.get("type") == "movie":
+                self._note_have(have, ("movie", str(((item.get("movie") or {}).get("ids") or {}).get("tmdb"))), at)
+            else:
+                media = item.get("show") or item.get("anime") or {}
+                self._note_have(have, ("show", str((media.get("ids") or {}).get("tmdb"))), at)
+        return have
+
+    def _progress_row(self, media_type, entry):
+        """One Trakt resume point as a dict (the two payloads plus what the checks below need), or None."""
+        built = self._progress_payloads(media_type, entry)
+        if not built:
+            return None
+        mdb_payload, simkl_payload = built
+        paused_at = entry.get("paused_at")
+        if media_type == "movie":
+            tmdb_id = str(((entry.get("movie") or {}).get("ids") or {}).get("tmdb"))
+            return {
+                "media": "movie",
+                "key": tmdb_id,
+                "show": None,
+                "mdb_have": ("movie", tmdb_id),
+                "simkl_have": ("movie", tmdb_id),
+                "paused_at": paused_at,
+                "progress": simkl_payload["progress"],
+                "mdblist": mdb_payload,
+                "simkl": simkl_payload,
+            }
+        show_id = str(((entry.get("show") or {}).get("ids") or {}).get("tmdb"))
+        season, number = int(entry["episode"]["season"]), int(entry["episode"]["number"])
+        return {
+            "media": "episode",
+            "key": f"{show_id}:{season}:{number}",
+            "show": show_id,
+            "mdb_have": ("episode", show_id, season, number),
+            "simkl_have": ("show", show_id),
+            "paused_at": paused_at,
+            "progress": simkl_payload["progress"],
+            "mdblist": mdb_payload,
+            "simkl": simkl_payload,
+        }
+
+    def _finished_elsewhere(self, row, threshold):
+        """True when the item is already watched on a service (any, Trakt included) and the resume point is either
+        no older than that watch, or at or beyond the target's own watched threshold. Trakt marks an item watched
+        from 80 % while a target may do so from less, so Trakt keeps the resume point of an item the target already
+        counts as watched; sent on, it would put the finished item back "in progress" there. An item watched only
+        before the Trakt point (a rewatch under way) keeps its resume point."""
+        stamp = self._stamps.get((row["media"], row["key"]))
+        if not stamp:
+            return False
+        paused_at = row["paused_at"]
+        if isinstance(paused_at, str) and _STAMP_RE.match(paused_at) and stamp[:19] >= paused_at[:19]:
+            return True
+        try:
+            return float(row["progress"]) >= threshold
+        except (TypeError, ValueError):
+            return False
+
     def _sync_progress(self):
+        """Trakt resume points -> MDBList and Simkl (the reverse is not possible: Trakt's playback is read-only)."""
         if "trakt" not in self.services or not (g.get_setting("trakt.auth") and g.get_bool_setting("trakt.enabled", False)):
             return
         if "mdblist" not in self.services and "simkl" not in self.services:
             return
         try:
-            movies = self._get_raw_json("sync/playback/movies") or []
-            episodes = self._get_raw_json("sync/playback/episodes") or []
-            if movies:
-                g.log(f"bridgeSync: trakt playback movie entry keys: {sorted(movies[0].keys())}", "debug")
-            if episodes:
-                g.log(f"bridgeSync: trakt playback episode entry keys: {sorted(episodes[0].keys())}", "debug")
+            movies = self._trakt_playback("movies")
+            episodes = self._trakt_playback("episodes")
         except Exception as e:
             g.log(f"bridgeSync: progress read failed: {e}", "error")
             return
+        if movies is None or episodes is None:
+            g.log("bridgeSync: Trakt resume points could not be read - none sent this cycle", "info")
+            return
+        if movies:
+            g.log(f"bridgeSync: trakt playback movie entry keys: {sorted(movies[0].keys())}", "debug")
+        if episodes:
+            g.log(f"bridgeSync: trakt playback episode entry keys: {sorted(episodes[0].keys())}", "debug")
 
-        payloads = []
+        rows = []
         for media_type, entries in (("movie", movies), ("episode", episodes)):
             for entry in entries:
-                built = self._progress_payloads(media_type, entry)
-                if built:
-                    payloads.append(built)
+                if isinstance(entry, dict):
+                    row = self._progress_row(media_type, entry)
+                    if row:
+                        rows.append(row)
 
+        # A resume point the target already holds, or holds newer, is left alone: sending it again would overwrite
+        # progress made there since. A target whose resume points cannot be read is skipped this run.
+        failed = {"mdblist": 0, "simkl": 0}  # a post that got no usable answer: counted and logged, never silent
+        sends = {"mdblist": [], "simkl": []}
         if "mdblist" in self.services:
-            for mdblist_payload, _ in payloads:
-                try:
-                    if self._api("mdblist").post_json("scrobble/pause", mdblist_payload) is None:
-                        g.log("bridgeSync: progress push to mdblist rejected", "warning")
-                except Exception as e:
-                    g.log(f"bridgeSync: progress push to mdblist failed: {e}", "error")
-            if payloads:
-                g.log(f"bridgeSync ->MDBList: {len(payloads)} progress", "info")
-
+            have = self._mdb_playback()
+            if have is None:
+                g.log("bridgeSync: MDBList resume points could not be read - none sent to it this cycle", "info")
+            else:
+                threshold = g.get_int_setting("mdblist.playCountMinimumPercent", 80)
+                sends["mdblist"] = [
+                    r
+                    for r in rows
+                    if not self._finished_elsewhere(r, threshold) and self._resume_due(have.get(r["mdb_have"]), r["paused_at"])
+                ]
         if "simkl" in self.services:
-            if payloads:
-                self._simkl_pace()  # the bridge's own writes above may still hold Simkl's per-user lock
-            for _, simkl_payload in payloads:
-                try:
-                    if self._api("simkl").post_json("scrobble/pause", simkl_payload) is None:
-                        g.log("bridgeSync: progress push to simkl rejected", "warning")
-                except Exception as e:
-                    g.log(f"bridgeSync: progress push to simkl failed: {e}", "error")
-            if payloads:
-                g.log(f"bridgeSync ->Simkl: {len(payloads)} progress", "info")
+            have = self._simkl_playback()
+            if have is None:
+                g.log("bridgeSync: Simkl resume points could not be read - none sent to it this cycle", "info")
+            else:
+                threshold = g.get_int_setting("simkl.playCountMinimumPercent", 80)
+                # Simkl keeps one resume point per show, so of a show's episodes only the one Trakt saved last goes
+                # to it (sent in turn, the last of them would win whichever was newest)
+                newest = {}
+                chosen = []
+                for r in rows:
+                    if self._finished_elsewhere(r, threshold):
+                        continue
+                    if r["media"] == "movie":
+                        chosen.append(r)
+                    elif r["show"] not in newest or (r["paused_at"] or "") > (newest[r["show"]]["paused_at"] or ""):
+                        newest[r["show"]] = r
+                chosen.extend(newest.values())
+                sends["simkl"] = sorted(
+                    (r for r in chosen if self._resume_due(have.get(r["simkl_have"]), r["paused_at"])),
+                    key=lambda r: r["paused_at"] or "",
+                    reverse=True,
+                )[:_SIMKL_PROGRESS_CAP]
+
+        for target in ("mdblist", "simkl"):
+            for row in sends[target]:
+                ok, _data = self._post(target, "scrobble/pause", row[target])
+                failed[target] += not ok
+            if sends[target]:
+                g.log(f"bridgeSync ->{_TARGET_NAMES[target]}: {len(sends[target])} progress", "info")
+            if failed[target]:
+                g.log(f"bridgeSync: {failed[target]} {_TARGET_NAMES[target]} resume post(s) got no usable answer", "warning")
 
     @staticmethod
     def _progress_payloads(media_type, entry):

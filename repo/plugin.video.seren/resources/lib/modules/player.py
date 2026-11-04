@@ -935,6 +935,9 @@ class SerenPlayer(xbmc.Player):
                 return
             finally:
                 self.last_attempted_simkl_stop = time.time()
+            if response.status_code == 404:
+                # Simkl answers 404 when it does not know the item by its TMDb id: ask again with the IMDb / TVDB ids
+                response = self._simkl_retry_by_other_ids("scrobble/stop", post_data, response)
             # simkl.apib doesn't pin the write endpoints to one status code the way
             # Trakt's does (201) - check .ok rather than hardcoding a number. 409
             # means "already marked watched in the last hour" - treat as success.
@@ -965,6 +968,40 @@ class SerenPlayer(xbmc.Player):
                 self.last_attempted_simkl_pause = time.time()
             if not response.ok:
                 g.log(f"Simkl scrobble/pause returned status code: {response.status_code}", "warning")
+
+    def _simkl_alt_ids(self):
+        """The IMDb / TVDB ids of the playing movie, or of the show for an episode (those are the ids Simkl knows a
+        show by), for a retry after Simkl did not know the TMDb id."""
+        info = self.item_information["info"]
+        if self.mediatype == "movie":
+            pairs = (("imdb", info.get("imdb_id")), ("tvdb", info.get("tvdb_id")))
+        else:
+            pairs = (
+                ("imdb", info.get("tvshow.imdb_id")),
+                ("tvdb", info.get("tvshow.tvdb_id") or info.get("tvdb_show_id")),
+            )
+        return {key: value for key, value in pairs if value}
+
+    def _simkl_retry_by_other_ids(self, path, post_data, response):
+        """Simkl 404s a scrobble whose TMDb id it does not know (a finished episode then never reached Simkl). Sends
+        the same request once more with the IMDb / TVDB ids added; returns the new response, or the old one when there
+        is nothing to retry with or the retry could not be made."""
+        ids = self._simkl_alt_ids()
+        key = "movie" if self.mediatype == "movie" else "show"
+        if not ids or not isinstance(post_data.get(key), dict):
+            g.log(f"Simkl {path}: unknown TMDb id and no IMDb or TVDB id to try instead", "warning")
+            return response
+        retry = {**post_data, key: {**post_data[key], "ids": {**post_data[key].get("ids", {}), **ids}}}
+        try:
+            retried = self._simkl_api.post(path, retry)
+        except Exception:
+            g.log_stacktrace()
+            return response
+        g.log(
+            f"Simkl {path}: unknown TMDb id, retried with {'/'.join(ids)}: HTTP {retried.status_code}",
+            "info" if retried.ok else "warning",
+        )
+        return retried
 
     def _simkl_write_watched_locally(self, response_json):
         """Write-through counterpart to _mdblist_write_watched_locally, closing the gap

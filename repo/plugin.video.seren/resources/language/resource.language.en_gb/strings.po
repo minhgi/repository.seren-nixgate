@@ -7409,3 +7409,27 @@ msgstr "Asian Drama — MyDramaList Titles"
 msgctxt "#31616"
 msgid "Look up the alternative titles of Korean, Chinese, Japanese, Taiwanese, Hong Kong, Thai and Filipino dramas and films on MyDramaList (through the unofficial Kuryana service, kuryana.tbdh.app) and add them to the titles used to match releases. The first play of a drama may take a few seconds longer; results are saved for 30 days. Does nothing when the service is down. Needs the Asian Drama option above. Also lets a4kScrapers 2.99.148 or newer search with up to 5 titles, taken in turn from these, the TMDb alternative titles and TMDb Helper, when a plain search finds few sources (more requests to each scraper)."
 msgstr "Look up the alternative titles of Korean, Chinese, Japanese, Taiwanese, Hong Kong, Thai and Filipino dramas and films on MyDramaList (through the unofficial Kuryana service, kuryana.tbdh.app) and add them to the titles used to match releases. The first play of a drama may take a few seconds longer; results are saved for 30 days. Does nothing when the service is down. Needs the Asian Drama option above. Also lets a4kScrapers 2.99.148 or newer search with up to 5 titles, taken in turn from these, the TMDb alternative titles and TMDb Helper, when a plain search finds few sources (more requests to each scraper)."
+
+msgctxt "#31617"
+msgid "Copy removals made elsewhere"
+msgstr "Copy removals made elsewhere"
+
+msgctxt "#31618"
+msgid "Off"
+msgstr "Off"
+
+msgctxt "#31619"
+msgid "Log only"
+msgstr "Log only"
+
+msgctxt "#31620"
+msgid "Watchlist and collection"
+msgstr "Watchlist and collection"
+
+msgctxt "#31621"
+msgid "Also watched history"
+msgstr "Also watched history"
+
+msgctxt "#31622"
+msgid "What Cross-Service Sync does when you remove an item on the website or in an app of one service (not in Seren, which is copied at once). Removing from watched history deletes every play of the item on the other services, so it is a separate choice. An item is only removed after it is missing on two runs in a row; if a lot of items disappear at once nothing is removed. Watchlist and collection is the default. Also watched history adds unwatching. Log only writes what would be removed to the Kodi log and removes nothing. What is removed is written to bridge_removals.jsonl in Seren's userdata folder first."
+msgstr "What Cross-Service Sync does when you remove an item on the website or in an app of one service (not in Seren, which is copied at once). Removing from watched history deletes every play of the item on the other services, so it is a separate choice. An item is only removed after it is missing on two runs in a row; if a lot of items disappear at once nothing is removed. Watchlist and collection is the default. Also watched history adds unwatching. Log only writes what would be removed to the Kodi log and removes nothing. What is removed is written to bridge_removals.jsonl in Seren's userdata folder first."
