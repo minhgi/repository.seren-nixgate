@@ -127,7 +127,7 @@
 			Rework for Seren 2.0
 		</news>
 	</extension>
-</addon><addon id="plugin.video.seren" version="3.9.72" name="Seren" provider-name="Nixgates">
+</addon><addon id="plugin.video.seren" version="3.9.76" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -194,6 +194,14 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.76
+            [NEW] Asian Drama - The extra titles a4kScrapers searches with for a few-source Asian drama are now taken in turn from MyDramaList, the TMDb alternative titles and TMDb Helper, instead of all the MyDramaList titles first, so a show with many MyDramaList titles no longer uses every one of the 5 slots on them.
+            Changelog 3.9.75
+            [NEW] Asian Drama - The search for few-source Asian dramas by a4kScrapers (2.99.148 or newer) now also tries the alternative titles TMDb lists for the show (English and the Asian regions), after the MyDramaList titles and before the ones from TMDb Helper. Still at most 5 titles, still only when MyDramaList found titles for the show.
+            Changelog 3.9.74
+            [NEW] Asian Drama - When a plain search for an Asian drama episode finds fewer than 10 sources, a4kScrapers (2.99.148 or newer) now also searches with up to 5 of the MyDramaList titles found for it, the same way it does for anime. That can mean more requests to each scraper. It needs 'Asian Drama - MyDramaList Titles' to be on; older a4kScrapers versions ignore it.
+            Changelog 3.9.73
+            [NEW] Asian Drama - Seren can now look up the alternative titles of Korean, Chinese, Japanese, Taiwanese, Hong Kong, Thai and Filipino dramas and films on MyDramaList (through the unofficial Kuryana service) and add them to the titles that releases and cloud files are matched against, next to the TMDb titles. A title is only taken when its year, country and name agree with TMDb; nothing is added when the service is down or has no match. Results are saved for 30 days (7 days for dramas from the last two years). Turn it off with 'Asian Drama - MyDramaList Titles' in the Smart Search settings.
             Changelog 3.9.72
             [FIX] Anime - For anime whose seasons the anime list files as OVA (some whole seasons are), the Skip Intro lookup and the episode details now use that season's entry. Season 1 episodes also no longer use the entry of a later season when the list has no season 1 entry for the show; they get no anime skip time or episode details instead of the wrong ones.
             Changelog 3.9.71

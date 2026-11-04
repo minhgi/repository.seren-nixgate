@@ -7399,3 +7399,13 @@ msgstr "AIOStreams - Timeout (seconds)"
 msgctxt "#31614"
 msgid "How long to wait for AIOStreams before giving up on it. The other providers carry on regardless."
 msgstr "How long to wait for AIOStreams before giving up on it. The other providers carry on regardless."
+
+#: /resources/settings.xml
+msgctxt "#31615"
+msgid "Asian Drama — MyDramaList Titles"
+msgstr "Asian Drama — MyDramaList Titles"
+
+#: /resources/settings.xml
+msgctxt "#31616"
+msgid "Look up the alternative titles of Korean, Chinese, Japanese, Taiwanese, Hong Kong, Thai and Filipino dramas and films on MyDramaList (through the unofficial Kuryana service, kuryana.tbdh.app) and add them to the titles used to match releases. The first play of a drama may take a few seconds longer; results are saved for 30 days. Does nothing when the service is down. Needs the Asian Drama option above. Also lets a4kScrapers 2.99.148 or newer search with up to 5 titles, taken in turn from these, the TMDb alternative titles and TMDb Helper, when a plain search finds few sources (more requests to each scraper)."
+msgstr "Look up the alternative titles of Korean, Chinese, Japanese, Taiwanese, Hong Kong, Thai and Filipino dramas and films on MyDramaList (through the unofficial Kuryana service, kuryana.tbdh.app) and add them to the titles used to match releases. The first play of a drama may take a few seconds longer; results are saved for 30 days. Does nothing when the service is down. Needs the Asian Drama option above. Also lets a4kScrapers 2.99.148 or newer search with up to 5 titles, taken in turn from these, the TMDb alternative titles and TMDb Helper, when a plain search finds few sources (more requests to each scraper)."

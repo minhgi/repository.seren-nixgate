@@ -13,6 +13,7 @@ import threading
 from collections import Counter
 from collections import OrderedDict
 from importlib import reload as reload_module
+from itertools import zip_longest
 from urllib import parse
 
 import xbmc
@@ -106,6 +107,28 @@ def _clean_cjk_alias(alias):
     stripped = _CJK_DECORATION_RE.sub('', alias).strip()
     stripped = _MULTI_SPACE_RE.sub(' ', stripped)
     return stripped if stripped and stripped != alias else None
+
+
+def _add_mdl_aliases(alias_list, shown_title, mdl_aliases):
+    """Append MyDramaList aliases (and their torrent-cleaned variants) to alias_list, skipping duplicates."""
+    for alias in mdl_aliases:
+        for variant in (alias, _torrent_clean_title(alias)):
+            if variant and variant not in alias_list and variant.lower() != shown_title.lower():
+                alias_list.append(variant)
+
+
+def _interleave_titles(*title_lists):
+    """One title from each list in turn (first of each, then second of each, ...), skipping repeats.
+
+    a4kScrapers searches only the first few titles it can use, so taking them in turn keeps one source's long
+    list from using up every slot.
+    """
+    ordered = []
+    for group in zip_longest(*title_lists):
+        for title in group:
+            if isinstance(title, str) and title and title not in ordered:
+                ordered.append(title)
+    return ordered
 
 
 def _torrent_clean_title(title):
@@ -1887,6 +1910,10 @@ class Sources:
                 and g.get_bool_setting('general.smartSearch', True)
                 and g.get_bool_setting('general.smartSearch.asiandrama', True)):
             try:
+                # TMDB alternative titles (US + Asian regions) as collected by the TMDB indexer, taken
+                # before anything below is appended to the list; searched by a4kScrapers after the MDL titles
+                tmdb_alt_titles = [a for a in simple_info['show_aliases'] if isinstance(a, str)]
+
                 # 1. Merge aliases passed from TMDb Helper
                 # Primary: window property (reliable — bypasses URL encoding pipeline)
                 # Fallback: action_args (for player JSONs with {aliases_urlencoded} template var)
@@ -1918,6 +1945,24 @@ class Sources:
                     if cleaned_original and cleaned_original not in simple_info['show_aliases']:
                         simple_info['show_aliases'].append(cleaned_original)
 
+                # 2b. MyDramaList alternative titles (Kuryana): romanized/English/native variants TMDb lacks
+                mdl_extra = []
+                if g.get_bool_setting('general.smartSearch.asiandrama.mdl', True):
+                    from resources.lib.modules import mdl_aliases
+                    mdl_extra = mdl_aliases.get_aliases(
+                        'tv',
+                        info['info'].get('tmdb_show_id', '') or info['info'].get('tmdb_id', ''),
+                        info['info'].get('tvshowtitle', ''),
+                        original_title,
+                        simple_info['year'],
+                        simple_info['country'],
+                    )
+                    _add_mdl_aliases(simple_info['show_aliases'], simple_info['show_title'], mdl_extra)
+                    if mdl_extra:
+                        # a4kScrapers searches with these titles, in this order, when a plain search finds few sources
+                        simple_info['asian_drama_search_aliases'] = _interleave_titles(
+                            mdl_extra, tmdb_alt_titles, tmdbhelper_aliases)
+
                 # 3. Clean CJK decoration from all aliases (tildes, brackets, etc.)
                 cleaned_aliases = []
                 for alias in list(simple_info['show_aliases']):
@@ -1930,7 +1975,7 @@ class Sources:
 
                 g.log(f"Asian drama enrichment: country={simple_info['country']}, "
                       f"original_title='{original_title}', "
-                      f"tmdbhelper_injected={len(tmdbhelper_aliases)}, "
+                      f"tmdbhelper_injected={len(tmdbhelper_aliases)}, mdl={len(mdl_extra)}, "
                       f"total_aliases={len(simple_info['show_aliases'])}: "
                       f"{simple_info['show_aliases']}", "notice")
             except Exception as e:
@@ -2074,6 +2119,21 @@ class Sources:
                     if cleaned_original and cleaned_original not in simple_info['aliases']:
                         simple_info['aliases'].append(cleaned_original)
 
+                # 2b. MyDramaList alternative titles (Kuryana); anime films are not on MyDramaList
+                mdl_extra = []
+                if (g.get_bool_setting('general.smartSearch.asiandrama.mdl', True)
+                        and not tools.is_anime_by_genre(info)):
+                    from resources.lib.modules import mdl_aliases
+                    mdl_extra = mdl_aliases.get_aliases(
+                        'movie',
+                        info['info'].get('tmdb_id', ''),
+                        info['info'].get('title', ''),
+                        original_title,
+                        simple_info['year'],
+                        simple_info['country'],
+                    )
+                    _add_mdl_aliases(simple_info['aliases'], simple_info['title'], mdl_extra)
+
                 # 3. Clean CJK decoration from all aliases
                 cleaned_aliases = []
                 for alias in list(simple_info['aliases']):
@@ -2086,7 +2146,7 @@ class Sources:
 
                 g.log(f"Asian drama movie enrichment: country={simple_info['country']}, "
                       f"original_title='{original_title}', "
-                      f"tmdbhelper_injected={len(tmdbhelper_aliases)}, "
+                      f"tmdbhelper_injected={len(tmdbhelper_aliases)}, mdl={len(mdl_extra)}, "
                       f"total_aliases={len(simple_info['aliases'])}: "
                       f"{simple_info['aliases']}", "notice")
             except Exception as e:

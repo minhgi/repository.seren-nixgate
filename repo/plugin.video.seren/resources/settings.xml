@@ -4175,6 +4175,14 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
+					<setting id="general.smartSearch.asiandrama.mdl" type="boolean" label="31615" help="31616">
+						<level>0</level>
+						<default>true</default>
+						<dependencies>
+							<dependency type="enable" setting="general.smartSearch.asiandrama">true</dependency>
+						</dependencies>
+						<control type="toggle"/>
+					</setting>
 			</group>
 			<group id="2" label="30758">
 				<setting id="general.titleSubs" type="boolean" label="30758" help="30759">
