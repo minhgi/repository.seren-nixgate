@@ -127,7 +127,7 @@
 			Rework for Seren 2.0
 		</news>
 	</extension>
-</addon><addon id="plugin.video.seren" version="3.9.77" name="Seren" provider-name="Nixgates">
+</addon><addon id="plugin.video.seren" version="3.9.78" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -194,6 +194,8 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.78
+            [FIX] Playback - A torrent whose title is only the show name and its quality, for example 'Tigers Sniff the Rose [1080p]', is no longer rejected as the wrong episode when the file Seren picked inside it is named for the right episode (S01E06). Before, Seren counted such a pack as a mismatch three times, cleared its cache and rescraped, and the same pack came back. A title that names a different season or episode is still rejected, and so is a file that does not match the episode.
             Changelog 3.9.77
             [FIX] Cross-Service Sync - Resume points: Trakt's resume point is no longer sent on to MDBList or Simkl when that service already holds a resume point for the item that is the same or newer (the old behaviour overwrote progress made there), when the item is already watched there (it put a finished item back in progress), or when that service's resume points cannot be read. Simkl gets one resume point per show (the newest episode). A resume post that gets no answer is now logged.
             [NEW] Cross-Service Sync - Removals made on a service's own website or app are now copied to the other services: taking an item off the watchlist or collection and, if you choose it, unwatching. New setting 'Copy removals made elsewhere' (Off, Log only, Watchlist and collection - the default, Also watched history). An item is only removed after it is missing on two runs in a row, nothing is removed when a lot of items disappear at once, a watched item that was played again on another service in the meantime is kept and sent back, and what the sync removes is written to bridge_removals.jsonl in Seren's userdata folder first. If you turn Cross-Service Sync back on after a long break, leave 'Also watched history' off until one run has finished.

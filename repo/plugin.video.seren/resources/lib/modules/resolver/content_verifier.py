@@ -101,6 +101,8 @@ class ContentVerifier:
             matched = self._verify_movie(title_to_check)
         elif self.media_type == "episode":
             matched = self._verify_episode(title_to_check, source)
+            if not matched and source_type == "torrent":
+                matched = self._verify_unmarked_title_by_file(title_to_check, source)
         else:
             return True  # Unknown media type, skip verification
 
@@ -389,29 +391,10 @@ class ContentVerifier:
             return True  # No show title metadata, can't verify
 
         clean_release = source_utils.clean_title(release_title)
-        clean_show = source_utils.clean_title(show_title)
 
         # Step 1: Show title must be present in release title
-        if clean_show and clean_show not in clean_release:
-            # Try alias matching
-            aliases = self.info.get("aliases", [])
-            alias_found = False
-            raw_release = (release_title or "").lower()
-            for alias in aliases:
-                clean_alias = source_utils.clean_title(alias)
-                if clean_alias:
-                    if clean_alias in clean_release:
-                        alias_found = True
-                        break
-                # A non-Latin alias (Thai, Chinese, ...) cleans to "", which is a
-                # substring of every title; match it on the raw title instead.
-                else:
-                    raw_alias = str(alias).strip().lower()
-                    if raw_alias and raw_alias in raw_release:
-                        alias_found = True
-                        break
-            if not alias_found:
-                return False
+        if not self._show_in_title(release_title, clean_release):
+            return False
 
         # Step 2: Verify season/episode specifics based on package type
         package = source.get("package", "")
@@ -445,6 +428,76 @@ class ContentVerifier:
         # No package type (cloud sources) or unknown — use full episode regex fallback
         # This handles all formats: single episodes, season packs, episode title matching
         return self._verify_episode_regex(clean_release)
+
+    def _show_in_title(self, release_title, clean_release):
+        """True when the show title (or one of its aliases) appears in the release title."""
+        show_title = self.info.get("tvshowtitle", "")
+        clean_show = source_utils.clean_title(show_title)
+        if not clean_show or clean_show in clean_release:
+            return True
+        raw_release = (release_title or "").lower()
+        for alias in self.info.get("aliases", []):
+            clean_alias = source_utils.clean_title(alias)
+            if clean_alias:
+                if clean_alias in clean_release:
+                    return True
+            # A non-Latin alias (Thai, Chinese, ...) cleans to "", which is a
+            # substring of every title; match it on the raw title instead.
+            else:
+                raw_alias = str(alias).strip().lower()
+                if raw_alias and raw_alias in raw_release:
+                    return True
+        return False
+
+    # A release title that carries any of these is not "unmarked": it says something about
+    # the season or episode itself, so the file fallback below must not overrule it.
+    _EPISODE_MARKER_RE = re.compile(
+        r"(?:^|\s)(?:s\d{1,2}(?:e\d{1,3})?|e\d{1,3}|ep ?\d{0,3}|(?:episodes?|seasons?)\d{0,3}|\d{1,2}x\d{1,3}|\d{1,3}"
+        r"|complete|collection|series|box ?set|batch|pack)(?=\s|$)"
+    )
+
+    def _title_has_no_episode_markers(self, release_title, clean_release):
+        """True for a title that is just the show name plus quality/source tags, e.g.
+        'Tigers Sniff the Rose [1080p]': no SxxExx, season, episode, pack word or number."""
+        raw = self._CJK_NUMERAL_RE.sub(self._cjk_numeral_to_digits, (release_title or "").lower())
+        if (self._marker_ranges(raw, self._LOC_SEASON_PATTERNS)
+                or self._marker_ranges(raw, self._LOC_EPISODE_PATTERNS)):
+            return False
+        clean_show = source_utils.clean_title(self.info.get("tvshowtitle", ""))
+        rest = clean_release.replace(clean_show, " ") if clean_show else clean_release
+        return not self._EPISODE_MARKER_RE.search(rest)
+
+    def _verify_unmarked_title_by_file(self, release_title, source):
+        """Fallback for a torrent whose title names the show but no season/episode.
+
+        Debrid packs are often named just 'Show [1080p]' while the episode file inside is
+        'Show S01E06.mkv'. The resolver has already picked that file with the same episode
+        regex used below, so when the title is unmarked the file Seren will actually play is
+        what gets verified. Fails closed: no recorded file, a title with markers, a title
+        without the show, or a file that does not match the episode all leave it a mismatch.
+        """
+        resolved = str(source.get("_resolved_file") or "")
+        if not resolved:
+            return False
+        clean_release = source_utils.clean_title(release_title)
+        if not self._show_in_title(release_title, clean_release):
+            return False
+        if not self._title_has_no_episode_markers(release_title, clean_release):
+            return False
+        try:
+            regex = source_utils._full_meta_episode_regex(self.item_information)
+            name = source_utils.clean_title(resolved.split("/")[-1].replace("&", " ").lower())
+            matched = len(regex.findall(name)) > 0
+        except Exception:
+            return False
+        if matched:
+            g.log(
+                f"Content verification: title '{release_title}' has no season/episode marker, "
+                f"but the file Seren picked inside it ('{resolved.split('/')[-1]}') matches "
+                f"{self._expected_description()} — accepted",
+                "info",
+            )
+        return matched
 
     # Season/episode markers in titles that are not English. clean_title() strips
     # non-ASCII (and the Latin-script words below are not "season"/"S01E01"), so none
