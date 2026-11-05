@@ -178,6 +178,8 @@ def lookup_episode(imdb_id=None, tmdb_id=None, season=None, episode=None):
             "thetvdb_season": _season_value(row),
             "thetvdb_part": None,
             "anime_episode": episode - row["tmdb_offset"],
+            "tmdb_offset": row["tmdb_offset"],
+            "tmdb_season": row["season_rank"],
             "next_anilist_id": following["anilist_id"] if following else None,
         }, None
     except Exception as e:

@@ -2013,9 +2013,18 @@ class Sources:
                         if alias and alias not in simple_info['show_aliases'] and alias.lower() != simple_info['show_title'].lower():
                             simple_info['show_aliases'].append(alias)
 
+                    # An episode Trakt files under the show's first season but that belongs to a later entry
+                    # (season / cour): search with that entry's ids, titles and numbering
+                    from resources.lib.modules.anime.smart_search import apply_entry_search
+                    try:
+                        entry_applied = apply_entry_search(simple_info, info, anime_ids)
+                    except Exception as e:
+                        entry_applied = False
+                        g.log(f"Anime entry search failed, using the show-level search: {e}", "warning")
+
                     # Fix season/episode numbering for cour splits
                     from resources.lib.modules.anime.smart_search import get_alternative_episode_numbers
-                    alt_ep = get_alternative_episode_numbers(
+                    alt_ep = None if entry_applied else get_alternative_episode_numbers(
                         anilist_id=anime_ids.get('anilist_id'),
                         trakt_season=int(simple_info['season_number']),
                         trakt_episode=int(simple_info['episode_number']),

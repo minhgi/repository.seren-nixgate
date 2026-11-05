@@ -150,6 +150,10 @@ class PlaybackWatchdog(xbmc.Player):
             if src_title and src_title in failed_titles:
                 continue
 
+            # Same torrent already failed content verification on another debrid service
+            if verifier.already_mismatched(source):
+                continue
+
             # ── Resolve ────────────────────────────────────────────────────
             try:
                 stream_link, release_title = resolver.resolve_single_source(

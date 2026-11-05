@@ -57,9 +57,20 @@ class ContentVerifier:
         self.cloud_enabled = g.get_bool_setting("general.cloudContentVerify", True)
         self.max_mismatches = g.get_int_setting("general.contentVerifyMaxMismatch", 3)
         self.mismatch_count = 0
+        self._mismatch_hashes = set()  # torrents already counted as a mismatch (one entry per hash, not per debrid service)
         self._rescrape_needed = False
         self._sources = sources or []
         self._bulk_cleaned = False
+
+    @staticmethod
+    def _hash_of(source):
+        return str(source.get("hash") or "").lower()
+
+    def already_mismatched(self, source):
+        """True when another copy of this torrent (same hash, e.g. on another debrid service) was already
+        a content mismatch: resolving it again would only add a second debrid transfer and a second count."""
+        torrent_hash = self._hash_of(source)
+        return bool(torrent_hash) and torrent_hash in self._mismatch_hashes
 
     @property
     def rescrape_needed(self):
@@ -120,7 +131,19 @@ class ContentVerifier:
                 "warning",
             )
         else:
-            # Torrent mismatch — count toward threshold
+            # Torrent mismatch — count toward threshold, once per torrent: the same release resolved on
+            # Premiumize, Real-Debrid and TorBox used to use up all three slots and trigger a rescrape that
+            # returned the same list.
+            torrent_hash = self._hash_of(source)
+            if torrent_hash:
+                if torrent_hash in self._mismatch_hashes:
+                    g.log(
+                        f"Content verification: '{title_to_check}' is the same torrent that already "
+                        f"mismatched ({torrent_hash[:8]}...), not counted again",
+                        "debug",
+                    )
+                    return False
+                self._mismatch_hashes.add(torrent_hash)
             self.mismatch_count += 1
             g.log(
                 f"Content verification MISMATCH #{self.mismatch_count}/{self.max_mismatches}: "

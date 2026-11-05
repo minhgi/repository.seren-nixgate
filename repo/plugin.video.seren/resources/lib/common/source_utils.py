@@ -1168,9 +1168,15 @@ def _full_meta_episode_regex(args):
         )
         # Branch 3: fansub dash style for the alt (cour-corrected) episode
         alt_fansub_dash = _fansub_dash_branch(alt_episode)
-        reg_string = (
-            f"(?:{reg_string})|(?:{alt_string})|(?:{alt_ordinal})|(?:{alt_fansub_dash})"
-        )
+        if episode_info.get("alternative_entry"):
+            # The alt numbers are the episode's place inside a later entry (set by apply_entry_search): a bare
+            # "- 01" is then season 1 episode 1 of a continuously numbered release, so only the season-marked
+            # forms (S03E01, 3rd Season - 01) count.  The primary dash branch still accepts "- 49".
+            reg_string = f"(?:{reg_string})|(?:{alt_string})|(?:{alt_ordinal})"
+        else:
+            reg_string = (
+                f"(?:{reg_string})|(?:{alt_string})|(?:{alt_ordinal})|(?:{alt_fansub_dash})"
+            )
 
     if episode_title:
         reg_string += f"|{episode_title}"

@@ -127,7 +127,7 @@
 			Rework for Seren 2.0
 		</news>
 	</extension>
-</addon><addon id="plugin.video.seren" version="3.9.79" name="Seren" provider-name="Nixgates">
+</addon><addon id="plugin.video.seren" version="3.9.80" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -194,6 +194,8 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.80
+            [FIX] Anime - An episode that Trakt/TMDb files under season 1 but that really belongs to a later season (The Apothecary Diaries S01E49 is season 3, episode 1) is now searched with that season's own ids, titles and numbering: scrapers get its AniDB/MAL/AniList ids (animetosho was filtered to season 1's AniDB id and could never find it), its title variants, S03E01 as the alternative numbering and the continuous number (49) for fansub releases, while the Trakt numbering is searched too. A bare '- 01' no longer passes as season 3 episode 1 (it is season 1 episode 1 in continuous numbering); only S03E01 / '3rd Season - 01' style names do. [FIX] Playback - A torrent that fails content verification now counts as ONE mismatch however many debrid services resolve it (Premiumize, Real-Debrid and TorBox used to use up all three slots at once and trigger a rescrape that returned the same list), and the same torrent is not resolved again on the other services.
             Changelog 3.9.79
             [FIX] Premiumize - Seren no longer pops up 'Premiumize API error: An unknown error occurred.' over and over. Premiumize answers that when Seren deletes a transfer it no longer has (already removed after a watched play, by an earlier cleanup, or by Clear Transfers); deleting a transfer now only writes a warning to the log. The background cleanup also read your used storage in the wrong unit (bytes multiplied by 1000, compared with the setting in GB), so it ran on every maintenance cycle as soon as any storage was used; it now compares GB with 'Max Storage Space Used Before Deletion (GB)' as the setting says, so it only cleans up past that limit. Other Premiumize errors still show a notification.
             Changelog 3.9.78
