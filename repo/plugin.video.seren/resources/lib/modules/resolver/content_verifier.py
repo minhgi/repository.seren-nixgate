@@ -352,11 +352,16 @@ class ContentVerifier:
         Verify a movie source. Checks that the release title contains the
         movie title and year, and does NOT look like a TV episode.
         """
-        title = self.info.get("originaltitle", self.info.get("title", ""))
         year = str(self.info.get("year", ""))
-        if not title:
-            return True  # No title metadata, can't verify
+        titles = source_utils.movie_title_candidates(self.info)
+        if not titles:
+            return True  # No usable title metadata, can't verify
 
+        # A release is named by the original title or by the localised one (e.g. a Japanese
+        # original title with an English release name), so either may match.
+        return any(self._verify_movie_title(release_title, title, year) for title in titles)
+
+    def _verify_movie_title(self, release_title, title, year):
         simple_info = {"year": year, "title": title}
         clean_release = source_utils.clean_title(release_title)
         clean_movie = source_utils.clean_title(title)

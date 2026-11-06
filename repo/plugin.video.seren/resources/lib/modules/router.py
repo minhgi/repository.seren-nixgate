@@ -166,6 +166,8 @@ _ROUTE_TABLE = {
 
     # --- Cross-service bridge sync (Phase 7) ---
     "bridgeSync": _func("resources.lib.modules.bridgeSync", "run"),
+    "bridgeSyncNow": _func("resources.lib.modules.bridgeSync", "run_now"),
+    "bridgeTriggerPoll": _func("resources.lib.modules.bridgeSync", "poll"),
 
     # --- MDBList menus ---
     "mdblistRecentMovies":       _menu("resources.lib.gui.mdblistMenus", "recent_movies"),
@@ -1705,10 +1707,11 @@ def dispatch(params):
         if_playing = params.get('playing')
         if if_playing is not None:
             if_playing = False if if_playing.lower() == "false" else True if if_playing.lower() == "true" else None
+        # a background sync asks for this refresh: not a change the user made, so the bridge need not run
         if if_playing is not None:
-            g.trigger_widget_refresh(if_playing=if_playing)
+            g.trigger_widget_refresh(if_playing=if_playing, bridge=False)
         else:
-            g.trigger_widget_refresh()
+            g.trigger_widget_refresh(bridge=False)
 
     elif action == "updateLocalTimezone":
         g.init_local_timezone()

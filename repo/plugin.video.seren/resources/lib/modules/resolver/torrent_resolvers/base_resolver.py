@@ -203,14 +203,15 @@ class TorrentResolverBase(ApiBase):
             return self._finalize_resolving(item_information, torrent, folder_details[0], folder_details)
 
         folder_details = source_utils.filter_files_for_resolving(folder_details, item_information)
+        movie_titles = source_utils.movie_title_candidates(item_information["info"]) or [
+            item_information["info"]["originaltitle"]
+        ]
         filter_list = [
             i
             for i in folder_details
-            if source_utils.filter_movie_title(
-                None,
-                i["path"].split("/")[-1],
-                item_information["info"]["originaltitle"],
-                simple_info,
+            if any(
+                source_utils.filter_movie_title(None, i["path"].split("/")[-1], movie_title, simple_info)
+                for movie_title in movie_titles
             )
         ]
         if len(filter_list) == 1:

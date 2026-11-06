@@ -1606,7 +1606,7 @@ class GlobalVariables:
     def container_refresh(self):
         return xbmc.executebuiltin("Container.Refresh")
 
-    def trigger_widget_refresh(self, if_playing=True):
+    def trigger_widget_refresh(self, if_playing=True, bridge=True):
         """
         Trigger a widget refresh using the update library with an invalid path trick
         Widget refresh will not be attempted if playing if if_playing is False or if another process is waiting to
@@ -1618,9 +1618,17 @@ class GlobalVariables:
         playback is started or if the library is already being scanned, but for at most WIDGET_REFRESH_MAX_WAIT
         seconds: an uncapped wait held one plugin interpreter for 208-412 s on the Shield (3.9.45/3.9.49 logs). A refresh
         that gives up is dropped, not deferred - the next widget-affecting action queues a new one.
+        bridge=True (every caller that follows a change the user made) also asks the cross-service sync to run shortly
+        (setting crosssync.dynamic, modules/bridgeTrigger.py); the request is made before any early return below.
         :param if_playing: Whether to attempt to refresh widgets if playing.  Default: True
         :type if_playing: bool
+        :param bridge: Whether this refresh follows a change of the user's data. Default: True
+        :type bridge: bool
         """
+        if bridge:
+            from resources.lib.modules.bridgeTrigger import request_run
+
+            request_run()
         player = xbmc.Player()
         if (
             self.get_bool_runtime_setting("widget_refreshing")

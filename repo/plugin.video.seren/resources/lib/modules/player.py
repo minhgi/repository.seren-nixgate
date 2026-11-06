@@ -491,6 +491,9 @@ class SerenPlayer(xbmc.Player):
         self._mdblist_stop_watching()
         self._simkl_stop_watching()
         self._trakt_mark_playing_item_watched()
+        from resources.lib.modules.bridgeTrigger import request_run
+
+        request_run()  # progress / watched state changed: the cross-service sync runs shortly (crosssync.dynamic)
         self._debrid_post_playback_cleanup()
         if g.get_bool_setting("general.force.widget.refresh.playback"):
             # trigger_widget_refresh() has a blocking wait loop — never call it directly
