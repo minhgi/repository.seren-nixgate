@@ -1,3 +1,9 @@
+[B]3.9.100[/B]
+- [FIX] Menus - The button menu on the right of the Sort, Filter, Download Manager, Manual Caching, Provider Packages and Configure Provider Package windows had the same cut-off labels at the edge of the screen as the Playback Locale and source list windows; their buttons now have a fixed width so the labels show in full.
+
+[B]3.9.99[/B]
+- [FIX] Source list - The menu on the right of the source list (View Uncached, Filter Results, Close) was cut off at the right edge of the screen and could not be read; its buttons now have a fixed width so the labels show in full.
+
 [B]3.9.98[/B]
 - [FIX] Playback Locale window - The menu on the right (Movies, TV Shows, Anime, Reset, Close) was cut off at the right edge of the screen and could not be read; its buttons now have a fixed width so the labels show in full.
 

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.video.seren" version="3.9.98" name="Seren" provider-name="Nixgates">
+<addon id="plugin.video.seren" version="3.9.100" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -66,6 +66,10 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.100
+            [FIX] Menus - The button menu on the right of the Sort, Filter, Download Manager, Manual Caching, Provider Packages and Configure Provider Package windows had the same cut-off labels at the edge of the screen as the Playback Locale and source list windows; their buttons now have a fixed width so the labels show in full.
+            Changelog 3.9.99
+            [FIX] Source list - The menu on the right of the source list (View Uncached, Filter Results, Close) was cut off at the right edge of the screen and could not be read; its buttons now have a fixed width so the labels show in full.
             Changelog 3.9.98
             [FIX] Playback Locale window - The menu on the right (Movies, TV Shows, Anime, Reset, Close) was cut off at the right edge of the screen and could not be read; its buttons now have a fixed width so the labels show in full.
             Changelog 3.9.97
