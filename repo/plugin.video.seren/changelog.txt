@@ -1,3 +1,33 @@
+[B]3.9.97[/B]
+- [FIX] Torrent cache - The quiet background re-scrape now stays open until its torrent providers have answered (it used to close after a fraction of a second and leave slow providers cut off).
+- [FIX] Scraping log - When a fast tier hands its unused time to the next one, the amount is now capped by the overall timeout and no longer logged as a negative "used" time.
+
+[B]3.9.96[/B]
+- [FIX] Provider performance - A scraper that raises an error on 5 scrapes in a row is now really skipped (the check never worked before because of how the database rows were read). It is skipped for 24 hours and then tried again, so a network outage cannot switch scrapers off for good.
+- [NEW] Torrent cache - When an episode of a show that is still airing is played from stored releases that are more than halfway to expiring, Seren quietly re-scrapes it about 90 seconds later (no window, playback untouched) so the next play finds current releases. Hidden setting scraping.staleRefresh (false) turns it off.
+
+[B]3.9.95[/B]
+- [FIX] Playback start - Starting an episode no longer sits silently behind a background Trakt/MDBList sync that is processing the same show: when the episode is already stored, the wait is capped at about 4 seconds (it once held a play for 23 seconds before any window appeared).
+- [NEW] Scraping - A scrape that finishes completely and finds nothing at all (no sources, no uncached torrents) is remembered after it happens twice, for 30 minutes (10 for a show that is still airing), so replaying a dead item no longer repeats a full scrape. A manual rescrape always searches again, and changing the scraping tiers or timeout forgets the remembered result.
+- [FIX] Scraping - In the anime tier (Tier 1), when most providers have answered, the last one (for example a throttled nyaa) gets 5 more seconds and is then left behind instead of holding the scrape until its deadline. Other tiers and manual pre-scrapes are not affected. Hidden setting scraping.stragglerGrace (0 turns it off).
+- [FIX] Scraping log - Provider load times over 1 second are logged, and a provider that answers after the keep-alive ended still has its cached yield recorded.
+- [FIX] Provider performance - The maintenance log line and the debrid cache statistics now show the real number of tracked providers and cached hashes instead of zero.
+
+[B]3.9.94[/B]
+- [FIX] Torrent cache - Playing an item no longer extends how long its cached torrents are kept. Seed-count refreshes keep the existing expiry, so a show you watch every day is scraped again after the cache expires instead of never. Episodes of shows that are still airing are kept for 3 days instead of 2 weeks, so new and better releases show up sooner.
+- [FIX] Provider performance - The scraper statistics now record how many cached sources each provider found, so the Performance Score and the statistics screen show real cached yield instead of always zero.
+- [FIX] Scraping log - When the scrape is ended early by cloud files, adaptive sources or direct sources (for example Easynews) the log now says which one did it and how many it found.
+
+[B]3.9.93[/B]
+- [FIX] Scraping - One slow provider can no longer make Seren skip the cache check for every later tier. Each tier now gets a fresh time slice from when it actually starts, a tier that finishes late still has its torrents cache-checked, and the first tier's scrape no longer waits indefinitely for a straggler (it carries on with partial results). No new tier is started once the scrape window has ended.
+
+[B]3.9.92[/B]
+- [FIX] Scraping - Real Debrid StoreAll sources that were never cache-checked (shown as UNVERIFIED) no longer count towards the tier threshold, so ten of them can no longer stop Seren from scraping the remaining tiers. The 'cached so far' counts in the scrape log now show verified sources only.
+
+[B]3.9.91[/B]
+- [FIX] Playback - When a scrape stopped early because cached results were already found, Seren spent about 12 seconds looking up seeder counts on torrent sites before it started the video. Those lookups now run in the background after playback has started, and only update the torrent cache for the next play of that item.
+- [FIX] Real Debrid StoreAll - Sources it adds without a cache check are now marked UNVERIFIED instead of CACHED, no longer count towards stopping the scrape early, and are no longer saved as cached in the debrid cache. The StoreAll threshold now counts every verified Real Debrid source found so far, not only the ones confirmed in the current batch. The external cache log line now shows how many unchecked hashes were confirmed.
+
 [B]3.9.90[/B]
 - [FIX] Cross-Service Sync - After Seren un-watched an anime episode on Simkl because you un-watched it on Trakt or MDBList, a later run mistook that for you un-watching it on Simkl, so the episode was not sent back to Simkl when you watched it on Trakt again with its old date. Seren now forgets the episode once it has removed it.
 

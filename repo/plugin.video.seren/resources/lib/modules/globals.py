@@ -882,13 +882,30 @@ class GlobalVariables:
         if "episode" in action_args["item_type"]:
             from resources.lib.database.trakt_sync import shows
 
-            action_args.update(
-                shows.TraktSyncDatabase().get_episode_action_args(
-                    action_args["trakt_id"],
-                    action_args["season"],
-                    action_args["episode"],
+            # Resolving the episode makes the sync database mill the show, which waits for a background sync that is
+            # milling the same show (a play once sat 22 s here before any window). For an interactive play of an
+            # episode that is already stored locally, cap that wait so playback goes ahead with the stored data.
+            wait_cap = None
+            if g.REQUEST_PARAMS.get("action") == "getSources":
+                try:
+                    from resources.lib.modules.sync_lock import SYNC_WAIT_CAP_SECONDS, BoundedSyncWait
+
+                    if shows.TraktSyncDatabase().fetchone(
+                        "SELECT 1 FROM episodes WHERE trakt_show_id = "
+                        f"{int(action_args['trakt_id'])} AND season = {int(action_args['season'])} "
+                        f"AND number = {int(action_args['episode'])}"
+                    ):
+                        wait_cap = BoundedSyncWait(SYNC_WAIT_CAP_SECONDS)
+                except Exception as e:
+                    g.log(f"Bounded sync wait unavailable for episode resolve: {e}", "warning")
+            with wait_cap or contextlib.nullcontext():
+                action_args.update(
+                    shows.TraktSyncDatabase().get_episode_action_args(
+                        action_args["trakt_id"],
+                        action_args["season"],
+                        action_args["episode"],
+                    )
                 )
-            )
 
         if "show" in action_args["item_type"]:
             action_args["item_type"] = "shows"

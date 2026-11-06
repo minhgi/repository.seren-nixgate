@@ -117,6 +117,7 @@ def get_quality(release_title):
 INFO_STRUCT = {
     "sourcetype": {
         "CACHED",
+        "UNVERIFIED",
         "SEASON",
         "SHOW",
         "BATCH",
