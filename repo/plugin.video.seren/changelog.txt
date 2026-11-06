@@ -1,3 +1,6 @@
+[B]3.9.98[/B]
+- [FIX] Playback Locale window - The menu on the right (Movies, TV Shows, Anime, Reset, Close) was cut off at the right edge of the screen and could not be read; its buttons now have a fixed width so the labels show in full.
+
 [B]3.9.97[/B]
 - [FIX] Torrent cache - The quiet background re-scrape now stays open until its torrent providers have answered (it used to close after a fraction of a second and leave slow providers cut off).
 - [FIX] Scraping log - When a fast tier hands its unused time to the next one, the amount is now capped by the overall timeout and no longer logged as a negative "used" time.

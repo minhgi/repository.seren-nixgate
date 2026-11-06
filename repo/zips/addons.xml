@@ -127,7 +127,7 @@
 			Rework for Seren 2.0
 		</news>
 	</extension>
-</addon><addon id="plugin.video.seren" version="3.9.97" name="Seren" provider-name="Nixgates">
+</addon><addon id="plugin.video.seren" version="3.9.98" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -194,6 +194,8 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.98
+            [FIX] Playback Locale window - The menu on the right (Movies, TV Shows, Anime, Reset, Close) was cut off at the right edge of the screen and could not be read; its buttons now have a fixed width so the labels show in full.
             Changelog 3.9.97
             [FIX] Torrent cache - The quiet background re-scrape now stays open until its torrent providers have answered (it used to close after a fraction of a second and leave slow providers cut off).
             [FIX] Scraping log - When a fast tier hands its unused time to the next one, the amount is now capped by the overall timeout and no longer logged as a negative "used" time.
