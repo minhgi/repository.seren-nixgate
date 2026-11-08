@@ -61,6 +61,9 @@ class SerenPlayer(xbmc.Player):
         self.playback_stopped = False
         self.stop_event_received = False  # Set by onPlayBackStopped regardless of playback_started
         self._end_playback_done = False  # Guard: prevents double-execution of _end_playback()
+        self._cleanup_token = f"{id(self)}-{time.time()}"  # identifies this playback's smart-delete claim
+        self._cleanup_claimed = False  # True once this playback took the pending smart-delete record
+        self._claimed_cleanup = None  # The smart-delete record this playback owns (or None)
         self._playback_marker = ""  # Value this play wrote to the seren.playback Home property (see g.set_playback_marker)
         self._locale_backup = None  # Pre-override Kodi locale snapshot from apply_catalog_locale()
         self.scrobbled = False
@@ -244,6 +247,7 @@ class SerenPlayer(xbmc.Player):
 
         # Manually trigger start state
         self.playback_started = True
+        self._claim_cleanup()
         self.playback_timestamp = time.time()
         try:
             self._running_path = self.getPlayingFile()
@@ -468,6 +472,7 @@ class SerenPlayer(xbmc.Player):
             return
 
         self.playback_started = True
+        self._claim_cleanup()
         self.playback_timestamp = time.time()
         self._running_path = self.getPlayingFile()
 
@@ -503,15 +508,35 @@ class SerenPlayer(xbmc.Player):
             import threading
             threading.Thread(target=g.trigger_widget_refresh, daemon=True).start()
 
+    def _claim_cleanup(self):
+        """Take ownership of the smart-delete record resolved for this playback (see claim_pending_cleanup)."""
+        if self._cleanup_claimed:
+            return
+        self._cleanup_claimed = True
+        try:
+            from resources.lib.debrid.debrid_utils import claim_pending_cleanup
+
+            self._claimed_cleanup = claim_pending_cleanup(self._cleanup_token)
+        except Exception as e:
+            g.log(f"Smart delete claim error: {e}", "warning")
+
     def _debrid_post_playback_cleanup(self):
         """Unified smart auto-delete for all debrid services.
         Deletes the resolved torrent/transfer from cloud if fully watched.
         Keeps in cloud if stopped early (for later viewing).
         Works for Real-Debrid, Premiumize, AllDebrid, TorBox, and Debrid-Link."""
         try:
+            from resources.lib.debrid.debrid_utils import cleanup_item_in_use
             from resources.lib.debrid.debrid_utils import get_pending_cleanup
+            from resources.lib.debrid.debrid_utils import release_cleanup_claim
 
-            pending = get_pending_cleanup()
+            if self._cleanup_claimed:
+                # Playback started: use the record taken at start, never whatever the global slot holds now
+                # (that may already belong to the next episode).
+                pending = self._claimed_cleanup
+                release_cleanup_claim(self._cleanup_token)
+            else:
+                pending = get_pending_cleanup()
             if not pending:
                 return
 
@@ -531,6 +556,12 @@ class SerenPlayer(xbmc.Player):
 
             # Check if fully watched using same threshold as Trakt scrobbling
             if self.watched_percentage >= self.playCountMinimumPercent:
+                if cleanup_item_in_use(service, item_id):
+                    g.log(
+                        f"Smart delete ({service}): Keeping item {item_id} - the next playback is using it",
+                        "info",
+                    )
+                    return
                 # Fully watched — delete from cloud
                 debrid_module = self._get_debrid_module(service)
                 if debrid_module:

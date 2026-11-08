@@ -1020,7 +1020,7 @@ class GlobalVariables:
             19: 119,
             20: 121,
             21: 131,
-            22: 132,
+            22: 149,
         }
 
         if (db_version := kodi_myvideos_version_map.get(self.KODI_VERSION)) is None:
@@ -1052,7 +1052,46 @@ class GlobalVariables:
                                 result["password"] = setting.text
                 except ElementTree.ParseError as pe:
                     g.log(f"Failed to parse advanced settings.xml: {pe}", "warning")
+        if result["type"] == "sqlite3" and self.KODI_VERSION is not None and self.KODI_VERSION >= 22:
+            # Kodi 22+ bumps the MyVideos schema number between builds (132, 143, 146, 149, ...),
+            # so a fixed number cannot be trusted: use the newest MyVideos DB that has a files table.
+            if detected := self._detect_kodi_video_db_name():
+                result["database"] = detected
         return result
+
+    def _detect_kodi_video_db_name(self):
+        """Name (without .db) of the newest Kodi MyVideos sqlite DB that contains a `files` table, or None.
+
+        Empty or table-less MyVideos files (left behind by older opens of a path Kodi never used) are skipped.
+        The result is cached for the life of the process."""
+        if cached := getattr(self, "_kodi_video_db_name_cache", None):
+            return cached
+        try:
+            import sqlite3
+            from pathlib import Path
+
+            candidates = []
+            for name in os.listdir(self.KODI_DATABASE_PATH):
+                if match := re.fullmatch(r"MyVideos(\d+)\.db", name):
+                    candidates.append((int(match.group(1)), name))
+            for _, name in sorted(candidates, reverse=True):
+                path = os.path.join(self.KODI_DATABASE_PATH, name)
+                if os.path.getsize(path) == 0:
+                    continue
+                connection = None
+                try:
+                    connection = sqlite3.connect(f"{Path(path).as_uri()}?mode=ro", uri=True, timeout=5)
+                    if connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='files'").fetchone():
+                        self._kodi_video_db_name_cache = name[:-3]
+                        return self._kodi_video_db_name_cache
+                except sqlite3.Error:
+                    continue
+                finally:
+                    if connection is not None:
+                        connection.close()
+        except Exception as e:
+            g.log(f"Could not detect the Kodi video database: {e}", "warning")
+        return None
 
     def clear_kodi_bookmarks(self):
         try:

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.video.seren" version="3.9.100" name="Seren" provider-name="Nixgates">
+<addon id="plugin.video.seren" version="3.9.103" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -66,6 +66,13 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.103
+            [FIX] Smart delete - A cloud item that belonged to a source that failed to play (stalled, errored or was cancelled) could be picked up by the next episode you played from a different source, such as Usenet, and be deleted or kept by mistake. The watchdog now drops the leftover record before it tries each new source and when no source plays.
+            Changelog 3.9.102
+            [FIX] Kodi 22 - Seren's cleanup of its own resume points in Kodi's video database never worked on Kodi 22 ("no such table: files" in the log) because it opened an old, empty database file. It now finds the database Kodi 22 really uses, so Seren's leftover bookmarks and stream details are removed again when you pause or stop.
+            [FIX] Smart delete - When one episode ended just as the next episode of the same season pack started, the pack could be deleted from the cloud under the next episode, or the wrong item could be deleted. Each playback now keeps its own delete record from the moment it starts, and an item is not deleted while another playback or a resolved source is still using it.
+            Changelog 3.9.101
+            [FIX] Playback - The next episode after one that had just finished could take about a minute to start. A stop notice from the finished episode reached the new attempt, so the first source was marked as failed while it was opening fine, and the next source then interrupted it and stalled. A stop or error notice that arrives while the player is playing is now ignored, Kodi is given a moment to deliver waiting notices before each attempt and after each stop, and the log records which notice set a flag.
             Changelog 3.9.100
             [FIX] Menus - The button menu on the right of the Sort, Filter, Download Manager, Manual Caching, Provider Packages and Configure Provider Package windows had the same cut-off labels at the edge of the screen as the Playback Locale and source list windows; their buttons now have a fixed width so the labels show in full.
             Changelog 3.9.99
