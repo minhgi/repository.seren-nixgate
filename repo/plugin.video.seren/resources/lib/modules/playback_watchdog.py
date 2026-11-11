@@ -33,6 +33,16 @@ from resources.lib.modules.globals import g
 from resources.lib.modules.resolver import Resolver
 from resources.lib.modules.resolver.content_verifier import ContentVerifier
 
+# Resume seek retry (3.9.104). Kodi can drop the first seekTime() when it arrives while the stream is still being
+# opened (a slow HTTP/debrid stream: the player's own start-of-file seek then runs after ours and wins), so the episode
+# played from 0 although a resume point was found. _wait_for_settle re-seeks, a few times at most and only while the
+# player is evidently still running from the start (never after the user has moved the position themselves).
+_RESUME_RETRY_MAX = 3  # extra seekTime() calls after the first one
+_RESUME_RETRY_GAP = 3.0  # seconds that must pass since the previous seek before another is sent
+_RESUME_RETRY_WINDOW = 15.0  # seconds after the first seek in which a retry may still be sent
+_RESUME_RETRY_ADVANCING_POLLS = 2  # consecutive polls with getTime() advancing (a position stuck at 0 is a seek in progress)
+_RESUME_RETRY_MIN_SHORTFALL = 10.0  # the position must be at least this far below the target to count as "not resumed"
+
 
 class PlaybackWatchdog(xbmc.Player):
     """Stall-detecting playback manager.
@@ -58,6 +68,7 @@ class PlaybackWatchdog(xbmc.Player):
         # AV change tracking — fires when subtitle/audio streams change
         self._last_av_change = 0.0
         self._attempt_started = time.time()  # for the callback log lines
+        self._resume_seek_at = None  # time.time() of the first resume seek of the current attempt
 
         # Detect subtitle services so we can wait for them to finish.
         # Gated on user setting — some setups have subtitle services that
@@ -315,6 +326,7 @@ class PlaybackWatchdog(xbmc.Player):
         self._user_stopped = False
         self._last_av_change = time.time()
         self._attempt_started = time.time()
+        self._resume_seek_at = None
 
         # Build ListItem
         listitem = self._build_listitem(stream_link, source, item_information)
@@ -368,6 +380,7 @@ class PlaybackWatchdog(xbmc.Player):
         if self._resume_time and self._resume_time > 0:
             try:
                 self.seekTime(self._resume_time)
+                self._resume_seek_at = time.time()
                 g.log(
                     f"Watchdog: Seeked to resume position {self._resume_time:.0f}s",
                     "info",
@@ -417,6 +430,13 @@ class PlaybackWatchdog(xbmc.Player):
         seek_target = float(self._resume_time) if self._resume_time else 0.0
         seek_position_ok = False  # getTime() is near the resume target
 
+        # Resume seek retry state (see _RESUME_RETRY_*). All locals, so every source attempt starts clean.
+        first_seek_at = self._resume_seek_at or settle_start
+        last_seek_at = first_seek_at
+        resume_retries = 0
+        advancing_polls = 0
+        previous_position = None
+
         g.log(
             f"Watchdog: Waiting for playback to settle... "
             f"(subtitle_detection={self._subtitle_detection}, "
@@ -439,12 +459,53 @@ class PlaybackWatchdog(xbmc.Player):
             except Exception:
                 continue
 
+            # Count consecutive polls in which the position moved forward: a position stuck at 0 means the stream is
+            # still opening or a seek is still being carried out, and a second seek then would only stack on the first.
+            if previous_position is not None and current > previous_position + 0.1:
+                advancing_polls += 1
+            else:
+                advancing_polls = 0
+            previous_position = current
+
             if not seek_settled:
+                # Resume seek retry. Kodi can drop the seek sent right after "Playback confirmed" (the player's own
+                # start-of-file seek then runs after it). Send it again when ALL of these hold: the position is
+                # advancing, it is well below the target, and it is no further along than playback running from the
+                # start could be (so a position the user chose with the seek bar is never pulled back), the last seek
+                # is a few seconds old, and we are still early in the attempt. Capped at _RESUME_RETRY_MAX.
+                now = time.time()
+                looks_unresumed = (
+                    current < seek_target - _RESUME_RETRY_MIN_SHORTFALL and current <= (now - first_seek_at) + 5
+                )
+                if (
+                    resume_retries < _RESUME_RETRY_MAX
+                    and advancing_polls >= _RESUME_RETRY_ADVANCING_POLLS
+                    and now - last_seek_at >= _RESUME_RETRY_GAP
+                    and now - first_seek_at <= _RESUME_RETRY_WINDOW
+                    and looks_unresumed
+                ):
+                    resume_retries += 1
+                    last_seek_at = now
+                    advancing_polls = 0
+                    try:
+                        self.seekTime(seek_target)
+                        g.log(
+                            f"Watchdog: Resume position not reached (playing at {current:.1f}s, target {seek_target:.0f}s) "
+                            f"- seeking again ({resume_retries}/{_RESUME_RETRY_MAX})",
+                            "info",
+                        )
+                    except Exception as e:
+                        g.log(f"Watchdog: Resume seek retry failed: {e}", "warning")
+                    seek_position_ok = False
+                    continue
+
                 # First check: is getTime() reporting a position near the
                 # seek target? Before Kodi processes the seek, getTime()
                 # returns 0.0 or the pre-seek position.
+                # (A position that is "within 30s" only because the target itself is early and playback is still
+                # running from the start is not a landed seek.)
                 if not seek_position_ok:
-                    if abs(current - seek_target) <= 30:
+                    if abs(current - seek_target) <= 30 and not looks_unresumed:
                         seek_position_ok = True
                         last_time = current
                     continue  # Keep waiting for position to reach target
@@ -457,6 +518,12 @@ class PlaybackWatchdog(xbmc.Player):
                         f"(target was {seek_target:.0f}s)",
                         "info",
                     )
+                    if resume_retries:
+                        g.log(
+                            f"Watchdog: Resume position reached after {resume_retries} retr"
+                            f"{'y' if resume_retries == 1 else 'ies'} (first seek was not carried out)",
+                            "info",
+                        )
                 last_time = current
                 continue  # Don't check AV until seek is done
 
@@ -476,6 +543,16 @@ class PlaybackWatchdog(xbmc.Player):
             last_time = current
 
         # Timed out — proceed anyway (better than blocking forever)
+        if not seek_settled:
+            try:
+                position_now = f"{self.getTime():.1f}s"
+            except Exception:
+                position_now = "unknown"
+            g.log(
+                f"Watchdog: Resume position {seek_target:.0f}s was not reached (playing at {position_now} after "
+                f"{resume_retries} retr{'y' if resume_retries == 1 else 'ies'}) - playback continues from there",
+                "warning",
+            )
         g.log(
             f"Watchdog: Settle timeout ({settle_timeout}s) — proceeding with monitoring",
             "warning",
