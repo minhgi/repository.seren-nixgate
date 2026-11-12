@@ -127,7 +127,7 @@
 			Rework for Seren 2.0
 		</news>
 	</extension>
-</addon><addon id="plugin.video.seren" version="3.9.104" name="Seren" provider-name="Nixgates">
+</addon><addon id="plugin.video.seren" version="3.9.106" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -194,6 +194,8 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.106
+            [FIX] Playback - Kodi could freeze (the screen stopped responding until you pressed Back) when the next episode came from a slow Usenet source. If the stream took longer than 20 seconds to open, the watchdog stopped it in the middle of opening, and Kodi locked up. It now keeps waiting while the stream is still opening (up to 90 seconds) instead of stopping it, and gives up at once only when the player has already stopped. The log says when a slow stream was waited for and how long it took.
             Changelog 3.9.104
             [FIX] Playback - An episode could start from the beginning although a resume point was found. Kodi sometimes drops the first seek to the resume position when it arrives while a slow stream is still being opened, and the watchdog then carried on without checking. It now checks the position after the seek and, if playback is still running from the start, seeks again (up to three times, within the first 15 seconds). A position you moved yourself with the seek bar is never changed, and the log says when a retry was needed or the resume position could not be reached.
             Changelog 3.9.103

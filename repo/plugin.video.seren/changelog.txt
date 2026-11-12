@@ -1,3 +1,6 @@
+[B]3.9.106[/B]
+- [FIX] Playback - Kodi could freeze (the screen stopped responding until you pressed Back) when the next episode came from a slow Usenet source. If the stream took longer than 20 seconds to open, the watchdog stopped it in the middle of opening, and Kodi locked up. It now keeps waiting while the stream is still opening (up to 90 seconds) instead of stopping it, and gives up at once only when the player has already stopped. The log says when a slow stream was waited for and how long it took.
+
 [B]3.9.104[/B]
 - [FIX] Playback - An episode could start from the beginning although a resume point was found. Kodi sometimes drops the first seek to the resume position when it arrives while a slow stream is still being opened, and the watchdog then carried on without checking. It now checks the position after the seek and, if playback is still running from the start, seeks again (up to three times, within the first 15 seconds). A position you moved yourself with the seek bar is never changed, and the log says when a retry was needed or the resume position could not be reached.
 

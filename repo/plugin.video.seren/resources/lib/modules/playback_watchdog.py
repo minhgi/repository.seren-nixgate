@@ -43,6 +43,14 @@ _RESUME_RETRY_WINDOW = 15.0  # seconds after the first seek in which a retry may
 _RESUME_RETRY_ADVANCING_POLLS = 2  # consecutive polls with getTime() advancing (a position stuck at 0 is a seek in progress)
 _RESUME_RETRY_MIN_SHORTFALL = 10.0  # the position must be at least this far below the target to count as "not resumed"
 
+# Slow stream open (3.9.106). A Usenet/Easynews file can take 20+ s to open (seek into the file, stream probe). Stopping
+# or replacing the player while Kodi is still opening the stream froze Kodi on the Shield (the GUI thread waited for the
+# player's open thread, which was waiting for the display-mode switch): the watchdog's 20 s stop landed exactly there.
+# So after the normal wait the watchdog keeps waiting while the player is still opening, up to this hard cap, and only
+# gives up at once when the player has gone idle (then there is nothing to stop).
+_OPEN_WAIT_BASE = 20.0  # seconds a start is awaited before the player's state is looked at
+_OPEN_WAIT_CAP = 90.0  # seconds after play() beyond which an opening stream is given up on
+
 
 class PlaybackWatchdog(xbmc.Player):
     """Stall-detecting playback manager.
@@ -346,7 +354,9 @@ class PlaybackWatchdog(xbmc.Player):
         # We do NOT rely on onAVStarted callbacks — they may not route to
         # this Player instance when the plugin context has been cancelled.
         playback_started = False
-        for _ in range(40):  # 40 × 0.5s = 20s max wait
+        open_began = time.time()
+        still_opening_logged = False
+        while True:
             if self._monitor.waitForAbort(0.5):
                 return "error"
             if self._playback_ended("start-up"):
@@ -360,11 +370,34 @@ class PlaybackWatchdog(xbmc.Player):
                 except Exception:
                     pass
 
+            waited = time.time() - open_began
+            if waited < _OPEN_WAIT_BASE:
+                continue
+            # Past the normal wait: a stream that is still opening is waited for, never stopped or replaced mid-open
+            # (a stop here, or the next source's play(), is what froze Kodi on the Shield).
+            try:
+                still_opening = self.isPlaying()
+            except Exception:
+                still_opening = False
+            if not still_opening:
+                break  # the player is idle: nothing to wait for, nothing to stop
+            if waited >= _OPEN_WAIT_CAP:
+                break
+            if not still_opening_logged:
+                still_opening_logged = True
+                g.log(
+                    f"Watchdog: stream still opening after {waited:.0f}s - waiting up to {_OPEN_WAIT_CAP:.0f}s "
+                    f"instead of stopping it",
+                    "info",
+                )
+
         if not playback_started:
-            g.log("Watchdog: Playback never started within 20s", "warning")
+            g.log(f"Watchdog: Playback never started within {time.time() - open_began:.0f}s", "warning")
             self._safe_stop()
             return "error"
 
+        if still_opening_logged:
+            g.log(f"Watchdog: slow stream opened after {time.time() - open_began:.1f}s", "info")
         g.log(
             f"Watchdog: Playback confirmed at {self.getTime():.1f}s",
             "info",
