@@ -3779,8 +3779,8 @@ msgid "External Cache Check"
 msgstr "External Cache Check"
 
 msgctxt "#30678"
-msgid "When enabled, uses Torrentio and DMM APIs to verify which torrents are actually cached on Real-Debrid before showing results. Reduces failed playback attempts. Disable to show all results without verification."
-msgstr "When enabled, uses Torrentio and DMM APIs to verify which torrents are actually cached on Real-Debrid before showing results. Reduces failed playback attempts. Disable to show all results without verification."
+msgid "When enabled, uses Torrentio (and MediaFusion, if configured) to verify which torrents are actually cached on Real-Debrid before showing results. Reduces failed playback attempts. Disable to show all results without verification."
+msgstr "When enabled, uses Torrentio (and MediaFusion, if configured) to verify which torrents are actually cached on Real-Debrid before showing results. Reduces failed playback attempts. Disable to show all results without verification."
 
 msgctxt "#30679"
 msgid "When enabled, uses AIOStreams API to verify which torrents are actually cached on AllDebrid before showing results. Reduces failed playback attempts. Disable to show all results without verification."

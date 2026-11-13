@@ -3325,7 +3325,7 @@ class TorrentCacheCheck:
                 self._write_cache_results(unchecked, confirmed_cached, 'rd')
                 return
 
-            # ── Layer 3: External cache check via Torrentio (user key) + DMM ──
+            # ── Layer 3: External cache check via Torrentio (user key); DMM check disabled in 3.9.118 ──
             # Tracks whether ExternalCache ran cleanly so Strategy 2
             # (instantAvailability) only runs when ExternalCache disabled or all
             # its checkers threw exceptions. ext_cache_zero_clean signals the
@@ -3359,7 +3359,7 @@ class TorrentCacheCheck:
                                 confirmed_cached.add(i['hash'].lower())
                                 _ext_hits += 1
                         _mf_rd = bool(g.get_setting("mf.token") and g.get_setting("mf.service") == "2")
-                        _rd_label = "Torrentio+DMM" + ("+MF" if _mf_rd else "")
+                        _rd_label = "Torrentio" +("+MF" if _mf_rd else "")
                         # _ext_hits is the overlap with the hashes still unchecked; len(ext_cached) is everything the
                         # external checkers reported for this episode (many are already known from the DB cache).
                         g.log(

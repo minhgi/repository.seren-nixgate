@@ -754,6 +754,10 @@ class SerenPlayer(xbmc.Player):
             else:
                 g.log(f"Trakt scrobble/stop returned status code: {scrobble_response.status_code}", "warning")
         elif self.current_time > self.ignoreSecondsAtStart:
+            if post_data["progress"] >= 80:
+                # Trakt refuses a pause at 80% or more (HTTP 422 progress_too_high), so no resume point can be saved there.
+                g.log(f"Trakt scrobble/pause skipped at {post_data['progress']}% (Trakt only accepts below 80%)", "debug")
+                return
             if (pause_time := time.time() - self.last_attempted_scrobble_pause) < 5:
                 g.log(f"Trakt scrobble/pause repeat called: {pause_time}s", "warning")
             try:

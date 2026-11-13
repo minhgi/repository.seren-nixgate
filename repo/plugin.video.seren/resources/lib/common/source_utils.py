@@ -1163,8 +1163,9 @@ def _full_meta_episode_regex(args):
     # (e.g. ep 9 must not match ep 19).
     def _fansub_dash_branch(ep):
         ep_int = str(int(ep))   # strip leading zero: "09" → "9"
+        # (?<!season): the number after 'Season ' is the season ('Show Season 4 - 60' is not episode 4; Seren 3.9.112)
         return (
-            rf"(?:^|\s)0?{re.escape(ep_int)}(?:v\d)?(?:\s|$)"
+            rf"(?<!season)(?:^|\s)0?{re.escape(ep_int)}(?:v\d)?(?:\s|$)"
         )
 
     reg_string = f"(?:{reg_string})|(?:{_fansub_dash_branch(episode)})"
@@ -1224,12 +1225,141 @@ def get_best_episode_match(dict_key, dictionary_list, item_information):
         files.append(i)
     files = [i for i in files if len(i["regex_matches"]) > 0]
 
+    # Multi-season packs (Seren 3.9.112): the file name alone ('- 20') does not say which season it is for, so use the folder
+    # a file sits in ('Season 4'): a file in another season's folder is not the requested episode.
+    files = _prefer_requested_season_files(dict_key, files, item_information, dictionary_list)
+
     if not files:
         return None
 
     files = sorted(files, key=lambda x: len(" ".join(x["regex_matches"])), reverse=True)
 
     return files[0]
+
+
+# A folder named for one season ('Season 4', 'Attack on Titan (Season 01)', 'S02'): the season label must end the folder name,
+# so a pack folder like 'Show S01-04 (BD 1080p)' is not read as season 1.
+_SEASON_FOLDER_RE = re.compile(r'(?:^|\s)(?:season|s)\s?0?(\d{1,2})(?:\s(?:part|cour)\s?\d+)?$')
+
+
+_NON_EPISODE_RE = re.compile(r'(?:^|\s)(?:oad|ova|oav)(?:\s|$)')
+
+
+def _folder_season(path):
+    """Season number named by the folder a pack file sits in, or None."""
+    parts = path.split("/")
+    if len(parts) < 2:
+        return None
+    match = _SEASON_FOLDER_RE.search(clean_title(parts[-2].replace("&", " ").lower()))
+    return int(match.group(1)) if match else None
+
+
+# A later cour named in the pack's path ('Part 2', 'Cour 2', '2nd Cour'): the pack restarts its numbering with that cour
+_LATER_PART_RE = re.compile(r'(?:^|\s)(?:part|cour)\s?[2-9](?:\s|$)|(?:^|\s)[2-9](?:nd|rd|th)\s(?:part|cour)(?:\s|$)')
+
+
+# Files of a pack that are not numbered episodes (clean-title tokens): creditless opening/ending, previews, extras
+_PACK_EXTRA_RE = re.compile(r'(?:^|\s)(?:nced|ncop|oped|nc|pv|cm|trailer|extras?|specials?|menu|oad|ova|oav)(?:\s|$)')
+
+
+def _alt_numbering_plausible(path, all_files, dict_key, season, offset):
+    """Can `path` (a file matched only by the cour-corrected number, same season as the Trakt one) really be the requested episode?
+    Yes when the pack's path names a later part/cour, or when the pack's folder holds fewer episodes than `offset` (the episodes
+    before the cour): a pack with `offset` or more episodes is the earlier part or a continuous one, so its 'S04E04' / '- 04' is not
+    the cour's episode 4. The size of the folder is the larger of the highest SxxExx number and the count of its episode files, so
+    dash-named packs ('[Group] Show - 04') are judged too. A folder with no files to judge by keeps the old behaviour (accepted)."""
+    if _LATER_PART_RE.search(clean_title(path.replace("&", " ").lower())):
+        return True
+    directory = path.rsplit("/", 1)[0] if "/" in path else ""
+    episode_rx = re.compile(rf"(?:^|\s)s0?{season}e0?(\d{{1,3}})(?:\s|$)")
+    top = count = 0
+    for other in all_files:
+        other_path = other[dict_key]
+        if (other_path.rsplit("/", 1)[0] if "/" in other_path else "") != directory:
+            continue
+        name = clean_title(other_path.split("/")[-1].replace("&", " ").lower())
+        if _PACK_EXTRA_RE.search(name):
+            continue
+        count += 1
+        for found in episode_rx.findall(name):
+            top = max(top, int(found))
+    size = max(top, count)
+    return size == 0 or size < offset
+
+
+def _prefer_requested_season_files(dict_key, files, item_information, all_files):
+    """
+    Narrow the files whose name matched the requested episode number down to the ones that belong to the requested season.
+    A file counts for the Trakt numbering only when its folder is the Trakt season's, and for the cour-corrected
+    (alternative_season / alternative_episode) numbering only when its folder is the alternative season's. Files in a folder
+    that names no season are kept as before. When every match sits in another season's folder, anime requests (the only ones
+    carrying alternative_season) get no file instead of the wrong season's episode; other requests keep the old behaviour.
+    :return: the files to rank
+    """
+    info = item_information.get("info", {})
+    try:
+        season = int(info.get("season"))
+    except (TypeError, ValueError):
+        return files
+    try:
+        alt_season = int(info.get("alternative_season"))
+        alt_episode = int(info.get("alternative_episode"))
+    except (TypeError, ValueError):
+        alt_season = alt_episode = None
+
+    trakt_regex = _full_meta_episode_regex({"info": {**info, "alternative_season": "", "alternative_episode": ""}})
+    alt_regex = None
+    if alt_season is not None:
+        alt_regex = _full_meta_episode_regex(
+            {"info": {**info, "season": alt_season, "episode": alt_episode, "alternative_season": "", "alternative_episode": ""}}
+        )
+
+    if alt_season is not None and season > 0:
+        # OAD / OVA files of an anime pack (own folder or file name, not the pack's root folder) are not the numbered episodes ('Attack On Titan OAD - 04' is not S4E04)
+        files = [
+            i for i in files if not _NON_EPISODE_RE.search(clean_title(" ".join(i[dict_key].split("/")[-2:]).replace("&", " ").lower()))
+        ]
+
+    def _same_season_cour_guard(candidates):
+        """Cour numbering inside the SAME season (Trakt S4E20 = 'Part 2' episode 4 -> alternative S4E04): a file named S04E04 is the
+        requested episode only when the pack restarts its numbering with that cour. A file that carries the Trakt number wins
+        outright, and a pack that already holds the episodes before the cour (S04E01-S04E16 for a request whose alternative number
+        has offset 16) is the earlier cour's pack, whose S04E04 is Part 1's episode 4 (Seren 3.9.114)."""
+        if alt_season is None or alt_season != season:
+            return candidates
+        try:
+            requested = int(info.get("episode"))
+        except (TypeError, ValueError):
+            return candidates
+        if requested <= alt_episode:
+            return candidates
+        by_number = [i for i in candidates if trakt_regex.findall(clean_title(i[dict_key].split("/")[-1].replace("&", " ").lower()))]
+        if by_number:
+            return by_number
+        return [i for i in candidates if _alt_numbering_plausible(i[dict_key], all_files, dict_key, season, requested - alt_episode)]
+
+    good, neutral = [], []
+    for i in files:
+        folder = _folder_season(i[dict_key])
+        if folder is None:
+            neutral.append(i)
+            continue
+        name = clean_title(i[dict_key].split("/")[-1].replace("&", " ").lower())
+        by_trakt = bool(trakt_regex.findall(name))
+        by_alt = bool(alt_regex and alt_regex.findall(name))
+        if (folder == season and by_trakt) or (folder == alt_season and (by_alt or not by_trakt)):
+            good.append(i)
+    good = _same_season_cour_guard(good)
+    if good:
+        return good
+    neutral = _same_season_cour_guard(neutral)
+    if neutral:
+        # An anime pack that has a folder for the requested season but no matching file in it does not hold the episode: a match
+        # outside every season folder ('Attack on Titan Junior High - 04', a flat S1-S3 folder) is another show or season
+        if alt_season is not None and any(_folder_season(i[dict_key]) in (season, alt_season) for i in all_files):
+            return []
+        return neutral
+    return [] if alt_season is not None else files
 
 
 def clear_extras_by_string(args, extra_string, folder_details):

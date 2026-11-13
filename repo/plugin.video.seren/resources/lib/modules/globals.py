@@ -875,9 +875,10 @@ class GlobalVariables:
         if "season" in action_args["item_type"]:
             from resources.lib.database.trakt_sync import shows
 
-            action_args.update(
-                shows.TraktSyncDatabase().get_season_action_args(action_args["trakt_id"], action_args["season"])
-            )
+            resolved = shows.TraktSyncDatabase().get_season_action_args(action_args["trakt_id"], action_args["season"])
+            if not resolved:
+                return g._unresolvable_action_args(action_args, f"season {action_args.get('season')}")
+            action_args.update(resolved)
 
         if "episode" in action_args["item_type"]:
             from resources.lib.database.trakt_sync import shows
@@ -899,18 +900,38 @@ class GlobalVariables:
                 except Exception as e:
                     g.log(f"Bounded sync wait unavailable for episode resolve: {e}", "warning")
             with wait_cap or contextlib.nullcontext():
-                action_args.update(
-                    shows.TraktSyncDatabase().get_episode_action_args(
-                        action_args["trakt_id"],
-                        action_args["season"],
-                        action_args["episode"],
-                    )
+                resolved = shows.TraktSyncDatabase().get_episode_action_args(
+                    action_args["trakt_id"],
+                    action_args["season"],
+                    action_args["episode"],
                 )
+            if not resolved:
+                return g._unresolvable_action_args(
+                    action_args, f"season {action_args.get('season')} episode {action_args.get('episode')}"
+                )
+            action_args.update(resolved)
 
         if "show" in action_args["item_type"]:
             action_args["item_type"] = "shows"
 
         action_args["mediatype"] = action_args.pop("item_type")
+        return action_args
+
+    @staticmethod
+    def _unresolvable_action_args(action_args, what):
+        """The season or episode asked for is not in Trakt's data for this show (Trakt can number a long-running or split show
+        differently from TMDb, e.g. One Piece season 21 is episodes 892-1088 there). Before this the failed lookup returned
+        None into dict.update() and the whole script died with Kodi's generic 'Python callback returned an error' and nothing
+        shown. Same shape as the 'trakt_id is missing' branch above: mediatype is set and the trakt_id is dropped, so the play
+        request ends in getSources' 'Unable to identify item' path (clean cancel + a message) and everything else sees an
+        item it cannot resolve. The show id is logged before it is dropped."""
+        g.log(
+            f"legacy_action_args_converter: {what} of Trakt show {action_args.get('trakt_id')} (TMDb "
+            f"{action_args.get('tmdb_id')}) is not in the Trakt data, cannot resolve",
+            "warning",
+        )
+        action_args["mediatype"] = action_args.pop("item_type")
+        action_args.pop("trakt_id", None)
         return action_args
 
     @staticmethod
@@ -1501,6 +1522,84 @@ class GlobalVariables:
         if marker and self.HOME_WINDOW.getProperty(self._PLAYBACK_MARKER_KEY) == marker:
             self.HOME_WINDOW.clearProperty(self._PLAYBACK_MARKER_KEY)
 
+    _PLAY_START_KEY = "seren.play_start"
+    # How long a play request counts as "still starting". A normal start (scrape + up to three source attempts) is over well inside
+    # this; the cap only protects against a claim that was never released (the Python process died), so a later request is never
+    # ignored for longer than this.
+    _PLAY_START_WINDOW = 180
+
+    def _play_start_key(self, item_information):
+        """Identity of the item a play request is for: media type, TMDb id (the show's for an episode), season, episode."""
+        try:
+            info = item_information["info"]
+            if info.get("mediatype") == self.MEDIA_EPISODE:
+                tmdb_id = info.get("tmdb_show_id") or info.get("tvshow.tmdb_id")
+                key = f"episode:{tmdb_id}:{info.get('season')}:{info.get('episode')}"
+            elif info.get("mediatype") == self.MEDIA_MOVIE:
+                tmdb_id = info.get("tmdb_id")
+                key = f"movie:{tmdb_id}"
+            else:
+                return ""
+            return key if tmdb_id else ""
+        except (KeyError, TypeError, AttributeError):
+            return ""
+
+    def duplicate_play_age(self, item_information):
+        """Read-only: seconds since the claim of an earlier request for the SAME item that has not released it yet, or None when
+        there is no such claim (a different item, an unidentifiable item, no claim, or a claim older than _PLAY_START_WINDOW)."""
+        key = self._play_start_key(item_information)
+        if not key:
+            return None
+        try:
+            held = json.loads(self.HOME_WINDOW.getProperty(self._PLAY_START_KEY) or "null")
+        except (TypeError, ValueError):
+            return None
+        if not (isinstance(held, dict) and held.get("key") == key):
+            return None
+        try:
+            age = time.time() - float(held.get("ts", 0))
+        except (TypeError, ValueError):
+            return None
+        return age if 0 <= age < self._PLAY_START_WINDOW else None
+
+    def claim_play_start(self, item_information):
+        """Register this play request as the one that is starting playback of its item.
+
+        Returns (token, age): a token to hand to release_play_start when the stream is playing (or the request ended), or
+        (None, seconds) when another request for the SAME item claimed it less than _PLAY_START_WINDOW seconds ago and has not
+        released it yet - that one is a duplicate (double click, impatient second press, a second add-on asking again) and
+        must not start a second scrape/watchdog on the item. A different item, an unidentifiable item and an old claim are
+        all allowed through. The check and the write are not atomic across Python interpreters; two requests landing within
+        the same few milliseconds could still both pass, a limit accepted because real duplicates arrive hundreds of ms or more apart.
+        """
+        key = self._play_start_key(item_information)
+        if not key:
+            return "", 0.0
+        age = self.duplicate_play_age(item_information)
+        if age is not None:
+            return None, age
+        now = time.time()
+        token = f"{now:.3f}:{key}"
+        self.HOME_WINDOW.setProperty(self._PLAY_START_KEY, json.dumps({"key": key, "ts": now, "token": token}))
+        return token, 0.0
+
+    def release_play_start(self, token):
+        """The request that claimed the start is done starting (stream playing, or it ended without one). Only the claim this
+        request wrote is cleared, never a newer request's."""
+        if not token:
+            return
+        try:
+            held = json.loads(self.HOME_WINDOW.getProperty(self._PLAY_START_KEY) or "null")
+        except (TypeError, ValueError):
+            held = None
+        if isinstance(held, dict) and held.get("token") == token:
+            self.HOME_WINDOW.clearProperty(self._PLAY_START_KEY)
+
+    def reject_duplicate_play(self):
+        """Answer a duplicate play request: resolve only its own plugin handle as failed. Deliberately NOT cancel_playback(), which
+        would clear the playlist and close the windows of the request that is really starting."""
+        xbmcplugin.setResolvedUrl(self.PLUGIN_HANDLE, False, xbmcgui.ListItem(offscreen=True))
+
     _PLAYBACK_RESULT_KEY = "seren.playback_result"
     playback_user_canceled = False
 
@@ -1538,6 +1637,27 @@ class GlobalVariables:
             return ""
         self.HOME_WINDOW.setProperty(self._PLAYBACK_RESULT_KEY, value)
         return value
+
+    def set_playback_result_for_unidentified(self, action_args, result="failed"):
+        """A play request that could not even be identified (the movie or episode is not in Trakt's data, or has no Trakt ID) has
+        no item information, so set_playback_result cannot be used; build the same signal from the request's own action args
+        (TMDb id - the show's for an episode -, season, episode). Without it another add-on cannot tell this from the user backing
+        out and would not try its next player. Written after reset_playback_result and never once the user cancelled. Returns the
+        value written, or "" when the request carries no usable TMDb id."""
+        try:
+            mediatype = action_args.get("mediatype")
+            tmdb_id = action_args.get("tmdb_id")
+            if not tmdb_id:
+                return ""
+            if mediatype == self.MEDIA_EPISODE:
+                info = {"mediatype": mediatype, "tmdb_show_id": tmdb_id, "season": int(action_args["season"]), "episode": int(action_args["episode"])}
+            elif mediatype == self.MEDIA_MOVIE:
+                info = {"mediatype": mediatype, "tmdb_id": tmdb_id}
+            else:
+                return ""
+        except (KeyError, TypeError, ValueError, AttributeError):
+            return ""
+        return self.set_playback_result({"info": info}, result)
 
     def close_busy_dialog(self):
         xbmc.executebuiltin("Dialog.Close(busydialog)")

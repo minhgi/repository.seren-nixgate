@@ -553,14 +553,23 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
                              INNER JOIN seasons AS se
                                         ON se.trakt_id = e.trakt_season_id
                              INNER JOIN shows AS s ON s.trakt_id = e.trakt_show_id
+                             -- absoluteNumber: regular episodes up to and including this one (specials, season 0, are not
+                             -- counted; a special counts the specials up to it). The old season * 10 + number key counted the
+                             -- specials and mis-ordered seasons of 10 or more episodes (Seren 3.9.113).
                              INNER JOIN (SELECT e.trakt_show_id, count(DISTINCT e.trakt_id) AS absoluteNumber
                                          FROM episodes AS e
                                                   INNER JOIN (SELECT e.trakt_show_id,
-                                                                     (e.season * 10 + e.number) AS identifier
+                                                                     e.season AS season,
+                                                                     e.number AS number
                                                               FROM episodes AS e
                                                               WHERE e.trakt_id = {trakt_id}) AS agg
                                                              ON agg.trakt_show_id = e.trakt_show_id
-                                                                 AND agg.identifier >= (e.season * 10 + number)
+                                                                 AND ((agg.season = 0 AND e.season = 0
+                                                                       AND e.number <= agg.number)
+                                                                      OR (agg.season > 0 AND e.season > 0
+                                                                          AND (e.season < agg.season
+                                                                               OR (e.season = agg.season
+                                                                                   AND e.number <= agg.number))))
                                          GROUP BY e.trakt_show_id) AS a
                                         ON a.trakt_show_id = e.trakt_show_id
                     WHERE e.trakt_id = {trakt_id}

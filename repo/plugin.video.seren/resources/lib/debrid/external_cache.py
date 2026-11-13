@@ -29,7 +29,10 @@ Design principles (derived from POV and Otaku reference implementations):
 
 For Real-Debrid  (matches POV and Otaku exactly):
   - Torrentio: user's own RD key (hardcoded fallback only when no user key)
-  - DMM Availability API: RD-crowdsourced hash index (no debrid key needed)
+  - DMM Availability API: DISABLED (3.9.118) - debridmediamanager.com now answers every
+    tool call to /api/availability/check with HTTP 403 ("Tools use the sponsor API"); its
+    replacement /api/sponsor/availability needs a paid sponsor API key. dmm_check_cache()
+    below is kept for a possible re-enable but is no longer called.
 
 check_rd_external() and check_ad_external() return a 3-value success indicator:
   True  → cached hashes found (show them)
@@ -280,6 +283,7 @@ def torrentio_check_cache(imdb, season, episode, service="rd", debrid_key=None):
 # =========================================================================== #
 #  DMM — Real-Debrid cache check (hash-based)
 # =========================================================================== #
+# DISABLED in 3.9.118 (not called by check_rd_external): DMM returns HTTP 403 to tools now.
 # DMM's /api/availability/check returns hashes cached on RD via crowdsourced index.
 # Requires challenge-response auth (dmmProblemKey + solution) computed locally.
 # Max 100 hashes per request. RD-specific — used directly for RD and as a proxy
@@ -910,13 +914,12 @@ def comet_check_cache(imdb, season, episode, api_key=None, service="ad"):
 
 def check_rd_external(hash_list, imdb, season, episode):
     """
-    Run Torrentio + DMM in parallel for Real-Debrid.
+    Run Torrentio for Real-Debrid (DMM check disabled in 3.9.118: DMM 403s tools).
     MediaFusion is added when the user has configured an RD token in mf.token/mf.service.
 
     Torrentio: user's own RD token first (checks their actual cached library).
                Falls back to hardcoded shared RD key only if no user token configured.
                Fallback logic is inside _get_torrentio_debrid_param().
-    DMM: RD-crowdsourced index, no debrid key needed. Capped at 100 hashes.
     MediaFusion: only when mf.token is set and mf.service == 2 (Real-Debrid).
                  Uses the user's personal D- token embedded in the URL path.
 
@@ -945,7 +948,6 @@ def check_rd_external(hash_list, imdb, season, episode):
             executor.submit(
                 torrentio_check_cache, imdb, season, episode, "rd", rd_token
             ): "torrentio",
-            executor.submit(dmm_check_cache, hash_list, imdb): "dmm",
         }
         if use_mf:
             futures[executor.submit(
@@ -979,7 +981,7 @@ def check_rd_external(hash_list, imdb, season, episode):
 
     mf_label = "+MF" if use_mf else ""
     g.log(
-        f"ExternalCache RD: {len(all_cached)} cached hashes from Torrentio+DMM{mf_label}",
+        f"ExternalCache RD: {len(all_cached)} cached hashes from Torrentio{mf_label}",
         "info",
     )
     # any_success semantics:

@@ -453,12 +453,30 @@ def dispatch(params):
         item_information = helpers.SourcesHelper._get_item_information_for_play(action_args)
         if not item_information:
             g.log("getSources: Unable to identify item (missing or unresolvable Trakt ID)", "warning")
+            g.reset_playback_result()
+            g.set_playback_result_for_unidentified(action_args, "failed")
             g.cancel_playback()
+            # After cancel_playback: it closes every dialog, which would close a toast shown before it
+            g.notification(g.ADDON_NAME, "Not found in Trakt's data")   # short: this skin's pop-up shows one line and cuts a longer text off
+            return
+        # A request for the item that is already starting (see claim_play_start below) is turned away before it can touch
+        # anything: the playlist branch further down can clear and rebuild the playlist and call Player.play(PLAYLIST), which
+        # would stop the stream the first request is opening. The claim itself is written only after that branch (it re-invokes
+        # this action for the same item on purpose), so the re-invocation is never mistaken for a duplicate.
+        duplicate_age = g.duplicate_play_age(item_information)
+        if duplicate_age is not None:
+            g.log(
+                f"Duplicate play request for the same item {duplicate_age:.1f}s after the first one - ignored, "
+                f"the first request is still starting playback",
+                "warning",
+            )
+            g.reject_duplicate_play()
             return
         g.reset_playback_result()
         smart_play = SmartPlay(item_information)
         background = None
         resolver_window = None
+        play_token = ""
 
         try:
             # Check to confirm user has a debrid provider authenticated and enabled
@@ -478,6 +496,20 @@ def dispatch(params):
             if play_list:
                 g.log("Cancelling non playlist playback", "warning")
                 xbmc.Player().play(g.PLAYLIST)
+                return
+
+            # A second request for the item that is already starting (double click, impatient second press, another add-on
+            # asking again) must not start a second scrape + watchdog: two watchdogs on one item restart the stream under each
+            # other and both scrobble / smart-delete. Placed after the playlist branch above, which re-invokes this action for
+            # the same item on purpose.
+            play_token, play_start_age = g.claim_play_start(item_information)
+            if play_token is None:
+                g.log(
+                    f"Duplicate play request for the same item {play_start_age:.1f}s after the first one - ignored, "
+                    f"the first request is still starting playback",
+                    "warning",
+                )
+                g.reject_duplicate_play()
                 return
 
             resume_time = smart_play.handle_resume_prompt(resume, force_resume_off, force_resume_on, force_resume_check)
@@ -613,8 +645,12 @@ def dispatch(params):
                     if sources2:
                         if watchdog_enabled:
                             from resources.lib.modules.playback_watchdog import PlaybackWatchdog
+                            # Continue the first pass, don't restart it: values only, so the old Player instance can go
+                            carry = (watchdog.attempts_made, set(watchdog.failed_titles))
                             watchdog = PlaybackWatchdog()
-                            stream_link = watchdog.attempt_playback(sources2, ii2, pack_select, resume_time=resume_time)
+                            stream_link = watchdog.attempt_playback(
+                                sources2, ii2, pack_select, resume_time=resume_time, carry=carry
+                            )
                             _release_title = None
                             if isinstance(stream_link, tuple):
                                 stream_link, _release_title = stream_link
@@ -715,6 +751,10 @@ def dispatch(params):
             if not stream_link:
                 raise NoPlayableSourcesException
 
+            # The stream is chosen and playing (or about to be handed to Kodi): the start-up phase is over, so a new request
+            # for this item - a deliberate restart - is no longer a duplicate. Released again in the finally below if we never get here.
+            g.release_play_start(play_token)
+
             try:
                 from resources.lib.modules import player as _player_module
                 seren_player = _player_module.SerenPlayer()
@@ -808,6 +848,8 @@ def dispatch(params):
                 pass
 
             g.cancel_playback()
+        finally:
+            g.release_play_start(play_token)
 
     elif action == "preScrape":
 
