@@ -7469,3 +7469,67 @@ msgstr "Copy anime un-watches"
 msgctxt "#31631"
 msgid "Un-watching an anime episode on one service un-watches it on the others, by season entry and number: an episode you un-watch on Simkl is removed from Trakt and MDBList, and one you un-watch on Trakt or MDBList is removed from Simkl. Works only with Copy removals made elsewhere set to Also watched history and Anime episodes from Simkl On, and with the same guards (missing on two runs in a row and for three minutes, nothing removed when many vanish at once, an episode played again is kept). Log only writes what would be removed to the Kodi log. Whatever this is set to, an episode you un-watch on Simkl is not sent back from Trakt by Anime episodes to Simkl until you play it again on Trakt."
 msgstr "Un-watching an anime episode on one service un-watches it on the others, by season entry and number: an episode you un-watch on Simkl is removed from Trakt and MDBList, and one you un-watch on Trakt or MDBList is removed from Simkl. Works only with Copy removals made elsewhere set to Also watched history and Anime episodes from Simkl On, and with the same guards (missing on two runs in a row and for three minutes, nothing removed when many vanish at once, an episode played again is kept). Log only writes what would be removed to the Kodi log. Whatever this is set to, an episode you un-watch on Simkl is not sent back from Trakt by Anime episodes to Simkl until you play it again on Trakt."
+
+msgctxt "#31632"
+msgid "Auto-skip countdown (seconds)"
+msgstr "Auto-skip countdown (seconds)"
+
+msgctxt "#31633"
+msgid "How many seconds the Skip button counts down before an auto-skip happens by itself. Press Cancel to keep watching. Set to 0 to skip at once, without a countdown. Only applies to the segment types set to skip by themselves."
+msgstr "How many seconds the Skip button counts down before an auto-skip happens by itself. Press Cancel to keep watching. Set to 0 to skip at once, without a countdown. Only applies to the segment types set to skip by themselves."
+
+msgctxt "#31634"
+msgid "Stay seated card (films)"
+msgstr "Stay seated card (films)"
+
+msgctxt "#31635"
+msgid "When TMDB says a film has a scene during or after the credits, a card appears as the credits begin, with Keep watching and Stop. The Skip Credits button is not shown for those films. Needs TheIntroDB to know where the credits begin."
+msgstr "When TMDB says a film has a scene during or after the credits, a card appears as the credits begin, with Keep watching and Stop. The Skip Credits button is not shown for those films. Needs TheIntroDB to know where the credits begin."
+
+msgctxt "#31636"
+msgid "After the credits"
+msgstr "After the credits"
+
+msgctxt "#31637"
+msgid "Stay seated: there is one more scene"
+msgstr "Stay seated: there is one more scene"
+
+msgctxt "#31638"
+msgid "Stay seated: there is more to come"
+msgstr "Stay seated: there is more to come"
+
+msgctxt "#31639"
+msgid "This film has a scene during the credits."
+msgstr "This film has a scene during the credits."
+
+msgctxt "#31640"
+msgid "This film has a scene after the credits."
+msgstr "This film has a scene after the credits."
+
+msgctxt "#31641"
+msgid "This film has a scene during and after the credits."
+msgstr "This film has a scene during and after the credits."
+
+msgctxt "#31642"
+msgid "Keep watching"
+msgstr "Keep watching"
+
+msgctxt "#31643"
+msgid "Stop"
+msgstr "Stop"
+
+msgctxt "#31644"
+msgid "Prefetch sources for your next episode"
+msgstr "Prefetch sources for your next episode"
+
+msgctxt "#31645"
+msgid "While Kodi is idle, quietly scrape the torrent providers for the next episode of the shows you watched most recently (Trakt; MDBList and Simkl when Trakt has nothing to queue) - one show every 13-17 minutes, only when no results are stored for it yet - so playing it can start from the stored results. Needs the torrent cache. This setting never scrapes while a video is playing."
+msgstr "While Kodi is idle, quietly scrape the torrent providers for the next episode of the shows you watched most recently (Trakt; MDBList and Simkl when Trakt has nothing to queue) - one show every 13-17 minutes, only when no results are stored for it yet - so playing it can start from the stored results. Needs the torrent cache. This setting never scrapes while a video is playing."
+
+msgctxt "#31646"
+msgid "Prefetch the next episode while you watch"
+msgstr "Prefetch the next episode while you watch"
+
+msgctxt "#31647"
+msgid "About a minute into an episode, quietly scrape the torrent providers for the episode after it (the first of the next season at a season end), so the stored results are ready when it ends. Torrent search only: nothing is resolved or played. Uses some network while you stream. Needs the torrent cache."
+msgstr "About a minute into an episode, quietly scrape the torrent providers for the episode after it (the first of the next season at a season end), so the stored results are ready when it ends. Torrent search only: nothing is resolved or played. Uses some network while you stream. Needs the torrent cache."

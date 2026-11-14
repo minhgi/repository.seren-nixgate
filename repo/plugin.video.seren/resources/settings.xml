@@ -2896,6 +2896,26 @@
 					<default>true</default>
 					<control type="toggle"/>
 				</setting>
+				<setting id="scraping.prefetchNextUp" type="boolean" label="31644" help="31645">
+					<level>0</level>
+					<default>true</default>
+					<dependencies>
+						<dependency type="enable">
+							<condition operator="is" setting="general.torrentCache">true</condition>
+						</dependency>
+					</dependencies>
+					<control type="toggle"/>
+				</setting>
+				<setting id="scraping.prefetchWhilePlaying" type="boolean" label="31646" help="31647">
+					<level>0</level>
+					<default>true</default>
+					<dependencies>
+						<dependency type="enable">
+							<condition operator="is" setting="general.torrentCache">true</condition>
+						</dependency>
+					</dependencies>
+					<control type="toggle"/>
+				</setting>
 				<setting id="general.timeout" type="integer" label="30112" help="31318">
 					<level>0</level>
 					<default>30</default>
@@ -4325,6 +4345,11 @@
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
+				<setting id="skip.staySeated" type="boolean" label="31634" help="31635">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
 				<setting id="skip.preview" type="boolean" label="30903" help="30904">
 					<level>0</level>
 					<default>false</default>
@@ -4349,6 +4374,16 @@
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
+				</setting>
+				<setting id="skip.autoCountdown" type="integer" label="31632" help="31633">
+					<level>0</level>
+					<default>5</default>
+					<constraints>
+						<minimum>0</minimum>
+						<step>1</step>
+						<maximum>15</maximum>
+					</constraints>
+					<control type="slider" format="integer"/>
 				</setting>
 				<setting id="skip.offset" type="integer" label="30907" help="30908">
 					<level>0</level>

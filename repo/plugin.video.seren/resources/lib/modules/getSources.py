@@ -184,12 +184,14 @@ class Sources:
     Handles fetching and processing of available sources for provided meta data
     """
 
-    def __init__(self, item_information, background_refresh=False):
+    def __init__(self, item_information, background_refresh=False, quiet=False):
         self.hash_regex = re.compile(r'btih:(.*?)(?:&|$)')
         # A background refresh re-scrapes an item whose stored (Tier 0) releases are getting old while the user plays
         # from them. It shows nothing, ignores Tier 0 so the live providers are really asked, and never touches
         # playback (no cancel_playback, no cache assist).
         self.background_refresh = background_refresh
+        # quiet: no pop-ups from a background refresh nobody asked for (the next-up prefetch repeats every cycle)
+        self.quiet = quiet
         self.canceled = False
         self.torrent_cache = TorrentCache()
         self.torrent_threads = ThreadPool()
@@ -370,9 +372,10 @@ class Sources:
             ):
                 self.runtime = time.time() - start_time
                 if self.runtime > 5:
-                    (g.notification_unless_playing if self.background_refresh else g.notification)(
-                        g.ADDON_NAME, g.get_language_string(30615)
-                    )
+                    if not self.quiet:
+                        (g.notification_unless_playing if self.background_refresh else g.notification)(
+                            g.ADDON_NAME, g.get_language_string(30615)
+                        )
                     g.log('No providers enabled', 'warning')
                     return
 
@@ -524,24 +527,25 @@ class Sources:
         return [reason for reason, blocked in checks if blocked]
 
     def _schedule_stale_refresh(self, overwrite_torrent_cache):
-        """Stale-while-revalidate for episodes of airing shows.
+        """Stale-while-revalidate for episodes.
 
         The play that just pre-terminated was served from Tier 0. If that episode's own stored releases have less
-        than half of their airing lifetime left, queue one silent re-scrape a little later (after playback has
-        started) so the next play finds current releases instead of a list that is about to expire.
+        than half of their lifetime left (3 days for an episode of an airing show, 2 weeks otherwise), queue one
+        silent re-scrape a little later (after playback has started) so the next play of it - a resume, a replay,
+        a rescrape - finds current releases instead of a list that is about to expire. The stream that is playing
+        keeps the source list it was started from.
         """
         try:
             if (
                 overwrite_torrent_cache
                 or g.REQUEST_PARAMS.get('action', '') == "preScrape"
                 or self.media_type != g.MEDIA_EPISODE
-                or not self.item_information.get('is_airing')
                 or not self.sources_information['local_cache_hashes']
                 or not g.get_bool_setting('scraping.staleRefresh', True)
                 or not g.get_bool_setting('general.torrentCache')
             ):
                 return
-            half_life = datetime.timedelta(days=AIRING_TORRENT_CACHE_DAYS) / 2
+            half_life = self._torrent_cache_expiration() / 2
             newest = self.torrent_cache.get_episode_release_expiry(self.item_information)
             now = time.time()
             if newest is not None and newest - now > half_life.total_seconds():
@@ -1703,9 +1707,10 @@ class Sources:
             else:
                 providers = reload_module(importlib.import_module("providers"))
         except ValueError:
-            (g.notification_unless_playing if self.background_refresh else g.notification)(
-                g.ADDON_NAME, g.get_language_string(30443)
-            )
+            if not self.quiet:
+                (g.notification_unless_playing if self.background_refresh else g.notification)(
+                    g.ADDON_NAME, g.get_language_string(30443)
+                )
             g.log('No providers installed', 'warning')
             return
 

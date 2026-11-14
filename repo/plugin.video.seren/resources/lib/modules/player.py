@@ -38,6 +38,7 @@ class SerenPlayer(xbmc.Player):
         self.watched_percentage = 0
         self.ignoreSecondsAtStart = g.get_int_setting("trakt.ignoreSecondsAtStart")
         self.min_time_before_scrape = 600
+        self.playback_prefetch_after = 60  # seconds into an episode before the next episode is prefetched (prefetch.py)
         self.playCountMinimumPercent = g.get_int_setting("trakt.playCountMinimumPercent")
         self.mdblist_ignoreSecondsAtStart = g.get_int_setting("mdblist.ignoreSecondsAtStart")
         self.mdblist_playCountMinimumPercent = g.get_int_setting("mdblist.playCountMinimumPercent")
@@ -85,6 +86,7 @@ class SerenPlayer(xbmc.Player):
         self.marked_watched = False
         self.dialogs_triggered = False
         self.pre_scrape_initiated = False
+        self.playback_prefetch_done = False
         self.playback_timestamp = 0
 
         # Skip segment handler (intro/recap/credits/preview across anime/TV/movies)
@@ -111,6 +113,11 @@ class SerenPlayer(xbmc.Player):
             "preview": g.get_bool_setting("skip.autoPreview"),
         }
         self._skip_offset = g.get_int_setting("skip.offset")
+        # Auto-skip counts down this many seconds on the overlay before seeking (0 = skip at once, as before 3.9.119)
+        self._skip_countdown = max(0, min(15, g.get_int_setting("skip.autoCountdown", 5)))
+        # Films with a scene during/after the credits get a "Stay seated" card as the credits begin
+        self._stay_seated_enabled = g.get_bool_setting("skip.staySeated", True)
+        self._stay_seated_done = False
 
         # Anime-only fallback timer (used when AniSkip/Anime-Skip have no data)
         self._skip_fallback_delay = g.get_int_setting("anime.skipFallbackDelay")
@@ -150,6 +157,7 @@ class SerenPlayer(xbmc.Player):
         :rtype:None
         """
         self.pre_scrape_initiated = False
+        self.playback_prefetch_done = False
         if resume_time:
             self.offset = float(resume_time)
 
@@ -179,7 +187,9 @@ class SerenPlayer(xbmc.Player):
         xbmcplugin.setResolvedUrl(g.PLUGIN_HANDLE, True, self._create_list_item(stream_link))
 
         # Start skip-segment handler in background for episodes and movies
-        if any(self._skip_enabled.values()) and self.mediatype in (g.MEDIA_EPISODE, g.MEDIA_MOVIE):
+        if (
+            any(self._skip_enabled.values()) or (self._stay_seated_enabled and self.mediatype == g.MEDIA_MOVIE)
+        ) and self.mediatype in (g.MEDIA_EPISODE, g.MEDIA_MOVIE):
             try:
                 from resources.lib.modules.skip.skip_handler import SkipHandler
                 episode_number = self.item_information["info"].get("episode", 0) if self.mediatype == g.MEDIA_EPISODE else 0
@@ -204,6 +214,7 @@ class SerenPlayer(xbmc.Player):
         :param resume_time: Time to seek to (if resuming)
         """
         self.pre_scrape_initiated = False
+        self.playback_prefetch_done = False
         if resume_time:
             self.offset = float(resume_time)
             # Watchdog already seeked to the resume position before the
@@ -265,7 +276,9 @@ class SerenPlayer(xbmc.Player):
                 self.smart_module.append_next_season()
 
         # Start skip-segment handler in background for episodes and movies
-        if any(self._skip_enabled.values()) and self.mediatype in (g.MEDIA_EPISODE, g.MEDIA_MOVIE):
+        if (
+            any(self._skip_enabled.values()) or (self._stay_seated_enabled and self.mediatype == g.MEDIA_MOVIE)
+        ) and self.mediatype in (g.MEDIA_EPISODE, g.MEDIA_MOVIE):
             try:
                 from resources.lib.modules.skip.skip_handler import SkipHandler
                 episode_number = self.item_information["info"].get("episode", 0) if self.mediatype == g.MEDIA_EPISODE else 0
@@ -1181,6 +1194,9 @@ class SerenPlayer(xbmc.Player):
             if self.min_time_before_scrape > time_left and not self.pre_scrape_initiated:
                 self._handle_pre_scrape()
 
+            if not self.playback_prefetch_done and self.current_time >= self.playback_prefetch_after:
+                self._handle_playback_prefetch()
+
             if self.watched_percentage >= self.playCountMinimumPercent and self.scrobble_started and not self.scrobbled:
                 self._handle_bookmark()
                 self._trakt_stop_watching()
@@ -1237,10 +1253,19 @@ class SerenPlayer(xbmc.Player):
         current = int(self.current_time)
         segments = self._skip_handler.segments
 
+        # Stay seated card for films (own branch: works even when every skip type is switched off)
+        if self._stay_seated_enabled and not self._stay_seated_done:
+            self._check_stay_seated(current, segments)
+        hold_credits = self._holds_credits_skip()
+
         # Walk segment types in chronological order so the right overlay fires when
         # ranges overlap. A real episode plays as: recap → intro → … → credits → preview.
         for seg_type in ("recap", "intro", "credits", "preview"):
             if not self._skip_enabled.get(seg_type):
+                continue
+
+            # A film with a scene during/after the credits: no "Skip Credits" (the Stay seated card says why)
+            if seg_type == "credits" and hold_credits:
                 continue
 
             seg_list = segments.get(seg_type) or []
@@ -1277,6 +1302,71 @@ class SerenPlayer(xbmc.Player):
 
                 # We've entered the segment for the first time (or re-entered after seek-back)
                 self._dispatch_segment(seg_type, start, end, offset, ends_at_media_end)
+
+    def _holds_credits_skip(self):
+        """True for a film TMDB says has a scene during/after the credits, while the Stay seated card is switched on.
+
+        While the TMDB lookup is still pending the credits skip waits too (a film resumed at its credits could otherwise
+        flash "Skip Credits" before the answer arrives); it fires on a later tick if the film turns out to have no scene."""
+        handler = self._skip_handler
+        if not (self._stay_seated_enabled and handler and handler.is_movie):
+            return False
+        if not handler.stingers_ready:
+            return True
+        return bool(handler.stingers and any(handler.stingers))
+
+    def _check_stay_seated(self, current, segments):
+        """Show the Stay seated card once, when the credits of a film with a credits scene begin.
+
+        The credits start comes from TheIntroDB (a credits segment in the second half of the film); without one there is
+        no card (nothing tells us where the credits begin). The card only shows within two minutes after that start."""
+        handler = self._skip_handler
+        if not handler.is_movie or not handler.stingers_ready:
+            return
+        stingers = handler.stingers
+        if not stingers or not any(stingers):
+            self._stay_seated_done = True  # no scene, or TMDB could not be asked: nothing more to do this playback
+            return
+
+        total = int(self.total_time)
+        start = None
+        if total >= 600:
+            for seg_start, _seg_end in segments.get("credits") or []:
+                if seg_start is not None and total * 0.5 < seg_start < total:
+                    start = seg_start
+                    break
+        if start is None:
+            self._stay_seated_done = True
+            g.log("Stay seated: TheIntroDB does not know where the credits begin, no card", "debug")
+            return
+
+        if current < start or current > start + 120:
+            return  # not there yet, or resumed/jumped well past the start of the credits (seeking back into it shows the card)
+        self._stay_seated_done = True
+        g.set_runtime_setting("seren.staySeatedDuring", "1" if stingers[0] else "0")
+        g.set_runtime_setting("seren.staySeatedAfter", "1" if stingers[1] else "0")
+        xbmc.executebuiltin('RunPlugin("plugin://plugin.video.seren/?action=showStaySeated")')
+        g.log(f"Stay seated: card shown at {current}s (credits from {start}s, during/after={stingers})", "debug")
+
+    def _auto_skip_countdown(self, target):
+        """Seconds the overlay counts down before an auto-skip. 0 = skip at once (setting 0, or too little of the segment left)."""
+        if self._skip_countdown <= 0:
+            return 0
+        try:
+            room = int(target - self.current_time) - 2  # leave time for the window to open and the last tick
+        except Exception:
+            return 0
+        return max(0, min(self._skip_countdown, room))
+
+    def _show_skip_overlay(self, seg_type, target, src, countdown=0):
+        """Open the Skip overlay (through the router, like Playing Next); with countdown it skips by itself at zero."""
+        g.set_runtime_setting("seren.skipSegmentEnd", str(int(target)))
+        g.set_runtime_setting("seren.skipSegmentType", seg_type)
+        if countdown:
+            g.set_runtime_setting("seren.skipSegmentCountdown", str(int(countdown)))
+        xbmc.executebuiltin('RunPlugin("plugin://plugin.video.seren/?action=showSkipIntro")')
+        extra = f", auto-skip in {countdown}s" if countdown else ""
+        g.log(f"Skip: showing {seg_type} overlay (target={target}s, src={src}{extra})", "debug")
 
     def _segment_entry_check(self, state_key, current, seg_start, seg_end, margin=0.25):
         """One-shot-per-entry guard. Mirrors TheIntroDB addon's re-entry logic.
@@ -1328,8 +1418,12 @@ class SerenPlayer(xbmc.Player):
                     self.dialogs_triggered = True
                     g.log(f"Skip: auto-triggered Playing Next from {seg_type} ({src})", "debug")
             else:
-                self.seekTime(target)
-                g.log(f"Skip: auto-skipped {seg_type} ({src}) → {target}s", "debug")
+                countdown = self._auto_skip_countdown(target)
+                if countdown:
+                    self._show_skip_overlay(seg_type, target, src, countdown)
+                else:
+                    self.seekTime(target)
+                    g.log(f"Skip: auto-skipped {seg_type} ({src}) → {target}s", "debug")
             return
 
         # credits/preview that run to the end of media → use Playing Next dialog
@@ -1342,15 +1436,24 @@ class SerenPlayer(xbmc.Player):
             return
 
         # Otherwise show the Skip overlay (intro/recap, or mid-file credits/preview)
-        g.set_runtime_setting("seren.skipSegmentEnd", str(int(target)))
-        g.set_runtime_setting("seren.skipSegmentType", seg_type)
-        xbmc.executebuiltin('RunPlugin("plugin://plugin.video.seren/?action=showSkipIntro")')
-        g.log(f"Skip: showing {seg_type} overlay (target={target}s, src={src})", "debug")
+        self._show_skip_overlay(seg_type, target, src)
 
     def _handle_pre_scrape(self):
         if self.pre_scrape_enabled and not self.pre_scrape_initiated:
             self.smart_module.pre_scrape()
             self.pre_scrape_initiated = True
+
+    def _handle_playback_prefetch(self):
+        """Once per playback: queue a silent torrent scrape for the episode after this one (modules/prefetch.py)."""
+        self.playback_prefetch_done = True
+        if self.mediatype != g.MEDIA_EPISODE:
+            return
+        try:
+            from resources.lib.modules.prefetch import prefetch_following_episode
+
+            prefetch_following_episode(self.trakt_id)
+        except Exception as e:
+            g.log(f"Prefetch of the next episode failed: {e}", "warning")
 
     def _try_get_bookmark(self):
         bm = self.bookmark_sync.get_bookmark(self.trakt_id)
@@ -1469,6 +1572,28 @@ class PlayerDialogs(xbmc.Player):
         return xbmcgui.getCurrentWindowId() == 12005
 
 
+def show_stay_seated_dialog():
+    """Module-level function called via RunPlugin to show the Stay seated card.
+
+    Reads which kind of credits scene the film has (during and/or after) from runtime settings."""
+    try:
+        during = g.get_runtime_setting("seren.staySeatedDuring") == "1"
+        after = g.get_runtime_setting("seren.staySeatedAfter") == "1"
+        g.clear_runtime_setting("seren.staySeatedDuring")
+        g.clear_runtime_setting("seren.staySeatedAfter")
+        if not (during or after):
+            return
+
+        from resources.lib.database.skinManager import SkinManager
+        from resources.lib.gui.windows.stay_seated import StaySeated
+
+        window = StaySeated(*SkinManager().confirm_skin_path("stay_seated.xml"), during=during, after=after)
+        window.doModal()
+        del window
+    except Exception:
+        g.log_stacktrace()
+
+
 def show_skip_intro_dialog():
     """Module-level function called via RunPlugin to show the Skip overlay.
 
@@ -1479,9 +1604,17 @@ def show_skip_intro_dialog():
         # Prefer new generic key; fall back to legacy anime-only key for compatibility.
         skip_end = g.get_runtime_setting("seren.skipSegmentEnd")
         seg_type = g.get_runtime_setting("seren.skipSegmentType") or "intro"
+        # Auto-skip countdown (seconds), set only when the overlay should skip by itself; cleared on every call
+        countdown = g.get_runtime_setting("seren.skipSegmentCountdown")
+        g.clear_runtime_setting("seren.skipSegmentCountdown")
+        try:
+            countdown = max(0, int(float(countdown or 0)))
+        except (TypeError, ValueError):
+            countdown = 0
         if not skip_end:
             skip_end = g.get_runtime_setting("anime.skipIntroEnd")
             seg_type = "intro"
+            countdown = 0
         if not skip_end:
             return
         skip_end = int(float(skip_end))
@@ -1496,6 +1629,7 @@ def show_skip_intro_dialog():
             *SkinManager().confirm_skin_path("skip_intro.xml"),
             skip_end=skip_end,
             segment_type=seg_type,
+            countdown=countdown,
         )
         window.doModal()
         del window

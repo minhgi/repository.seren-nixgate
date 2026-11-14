@@ -39,6 +39,14 @@ def run_cycle():
         g.init_local_timezone()
     except Exception as e:
         g.log(f"cycleHousekeeping: local timezone update failed: {e}", "error")
+    if g.abort_requested():
+        return
+    try:
+        from resources.lib.modules.prefetch import prefetch_next_up
+
+        prefetch_next_up()
+    except Exception as e:
+        g.log(f"cycleHousekeeping: next-up prefetch failed: {e}", "error")
 
 
 def _torrent_cache_cleanup():

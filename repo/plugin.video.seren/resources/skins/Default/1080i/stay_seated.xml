@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<window>
+	<defaultcontrol always="true">3001</defaultcontrol>
+	<onload>Dialog.Close(fullscreeninfo,true)</onload>
+	<onload>Dialog.Close(videoosd,true)</onload>
+	<controls>
+		<control type="group">
+			<animation type="WindowOpen" reversible="false">
+				<effect type="fade" start="0" end="100" time="300"/>
+				<effect type="slide" start="400%,0" end="0,0" time="400" tween="cubic" easing="in"/>
+			</animation>
+			<animation type="WindowClose" reversible="false">
+				<effect type="fade" start="100" end="0" time="400"/>
+				<effect type="slide" start="0,0" end="400%,0" time="400" tween="cubic" easing="in"/>
+			</animation>
+			<control type="group">
+				<height>250</height>
+				<width>560</width>
+				<right>20</right>
+				<bottom>150</bottom>
+
+				<!-- Background -->
+				<control type="image">
+					<width>100%</width>
+					<height>100%</height>
+					<texture colordiffuse="CC000000">$INFO[Window.Property(texture.white)]</texture>
+				</control>
+
+				<!-- Kicker -->
+				<control type="label" id="3003">
+					<left>25</left>
+					<top>14</top>
+					<width>510</width>
+					<height>30</height>
+					<font>font12</font>
+					<textcolor>99ffffff</textcolor>
+					<aligny>center</aligny>
+				</control>
+
+				<!-- Heading -->
+				<control type="label" id="3004">
+					<left>25</left>
+					<top>46</top>
+					<width>510</width>
+					<height>36</height>
+					<font>font13</font>
+					<textcolor>ffffffff</textcolor>
+					<aligny>center</aligny>
+				</control>
+
+				<!-- Details -->
+				<control type="textbox" id="3005">
+					<left>25</left>
+					<top>88</top>
+					<width>510</width>
+					<height>70</height>
+					<font>font12</font>
+					<textcolor>ddffffff</textcolor>
+					<align>left</align>
+				</control>
+
+				<!-- Buttons -->
+				<control type="grouplist">
+					<orientation>horizontal</orientation>
+					<height>56</height>
+					<top>176</top>
+					<left>25</left>
+					<itemgap>15</itemgap>
+					<width>510</width>
+
+					<!-- Keep watching -->
+					<control type="button" id="3001">
+						<height>56</height>
+						<width min="50">auto</width>
+						<font>font12</font>
+						<textoffsetx>20</textoffsetx>
+						<textcolor>ddffffff</textcolor>
+						<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
+						<selectedcolor>ddffffff</selectedcolor>
+						<aligny>center</aligny>
+						<align>center</align>
+						<texturefocus border="10" colordiffuse="$INFO[Window.Property(settings.color)]">white.png</texturefocus>
+						<texturenofocus border="10" colordiffuse="AA212121">white.png</texturenofocus>
+						<pulseonselect>no</pulseonselect>
+					</control>
+
+					<!-- Stop -->
+					<control type="button" id="3002">
+						<height>56</height>
+						<width min="50">auto</width>
+						<font>font12</font>
+						<textoffsetx>20</textoffsetx>
+						<textcolor>ddffffff</textcolor>
+						<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
+						<selectedcolor>ddffffff</selectedcolor>
+						<aligny>center</aligny>
+						<align>center</align>
+						<texturefocus border="10" colordiffuse="$INFO[Window.Property(settings.color)]">white.png</texturefocus>
+						<texturenofocus border="10" colordiffuse="AA212121">white.png</texturenofocus>
+						<pulseonselect>no</pulseonselect>
+					</control>
+				</control>
+			</control>
+		</control>
+	</controls>
+</window>

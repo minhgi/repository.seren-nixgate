@@ -1,8 +1,10 @@
 import abc
+import re
 from copy import deepcopy
 
 import xbmc
 import xbmcgui
+import xbmcvfs
 
 from resources.lib.common import tools
 from resources.lib.database.skinManager import SkinManager
@@ -12,6 +14,49 @@ from resources.lib.modules.providers.install_manager import ProviderInstallManag
 ACTION_PREVIOUS_MENU = 10
 ACTION_PLAYER_STOP = 13
 ACTION_NAV_BACK = 92
+
+_FOCUS_TEXT_LIGHT = "eeffffff"
+_FOCUS_TEXT_DARK = "ff202020"
+_BAR_FALLBACK = "ffe50914"  # countdown bar colour used instead of a light accent colour (it disappears on bright pictures)
+_named_colors = None
+
+
+def _kodi_named_colors():
+    """Kodi's own colour names (special://xbmc/system/colors.xml, the CSS3 names Seren's colour list uses) as {name: AARRGGBB}."""
+    global _named_colors
+    if _named_colors is None:
+        _named_colors = {}
+        try:
+            import xml.etree.ElementTree as ET
+
+            root = ET.parse(xbmcvfs.translatePath("special://xbmc/system/colors.xml")).getroot()
+            for color in root.iter("color"):
+                _named_colors[(color.get("name") or "").lower()] = (color.text or "").strip().lower()
+        except Exception:
+            g.log_stacktrace()
+    return _named_colors
+
+
+def is_light_color(accent):
+    """True for a light accent colour (white, yellow, light green ...). Hex (RRGGBB / AARRGGBB) or a Kodi colour name;
+    unknown names count as not light."""
+    value = str(accent or "").strip().lower()
+    argb = value if re.fullmatch(r"[0-9a-f]{6}|[0-9a-f]{8}", value) else _kodi_named_colors().get(value, "")
+    if not re.fullmatch(r"[0-9a-f]{6}|[0-9a-f]{8}", argb):
+        return False
+    red, green, blue = (int(argb[-6:][i:i + 2], 16) for i in (0, 2, 4))
+    return (0.299 * red + 0.587 * green + 0.114 * blue) / 255 > 0.7
+
+
+def focus_text_color(accent):
+    """Text colour for a button that is focused on the accent colour: dark on a light accent so the label stays readable,
+    white otherwise."""
+    return _FOCUS_TEXT_DARK if is_light_color(accent) else _FOCUS_TEXT_LIGHT
+
+
+def bar_color(accent):
+    """Colour of the countdown bar: the accent colour, except a light one (a white bar vanishes on a bright picture)."""
+    return _BAR_FALLBACK if is_light_color(accent) else accent
 
 
 class BaseWindow(xbmcgui.WindowXMLDialog):
@@ -29,7 +74,10 @@ class BaseWindow(xbmcgui.WindowXMLDialog):
         self.setProperty('texture.white', f"{g.IMAGES_PATH}white.png")
         self.setProperty('seren.logo', g.DEFAULT_LOGO)
         self.setProperty('seren.fanart', g.DEFAULT_FANART)
-        self.setProperty('settings.color', g.get_user_text_color())
+        accent = g.get_user_text_color()
+        self.setProperty('settings.color', accent)
+        self.setProperty('settings.focustext', focus_text_color(accent))
+        self.setProperty('settings.barcolor', bar_color(accent))
         self.setProperty('test.pattern', f"{g.IMAGES_PATH}test_pattern.png")
         self.setProperty('skin.dir', SkinManager().confirm_skin_path(xml_file)[1])
 

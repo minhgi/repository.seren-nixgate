@@ -127,7 +127,7 @@
 			Rework for Seren 2.0
 		</news>
 	</extension>
-</addon><addon id="plugin.video.seren" version="3.9.118" name="Seren" provider-name="Nixgates">
+</addon><addon id="plugin.video.seren" version="3.9.124" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -194,6 +194,21 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.124
+            [NEW] Scraping - Prefetch the next episode while you watch (Settings &gt; Scraping, on by default; needs the torrent cache): about a minute into an episode Seren quietly scrapes the torrent providers for the episode after it (the first of the next season at a season end). Torrent search only, nothing is resolved or played.
+            [NEW] Scraping - The idle prefetch of your next episode now also follows your MDBList and Simkl next-up when Trakt has nothing to prefetch.
+            [CHG] Scraping - The background refresh of old stored results after a play now covers every episode, not only episodes of airing shows (half of the 2 week storage time for other shows).
+            Changelog 3.9.123
+            [NEW] Scraping - Prefetch sources for your next episode (Settings &gt; Scraping, on by default; needs the torrent cache): while Kodi is idle Seren quietly scrapes the torrent providers for the next episode of the shows you watched most recently, so the stored results are ready when you press play. One show every 13-17 minutes, only when nothing is stored for it yet, never while a video is playing, and no pop-ups.
+            Changelog 3.9.122
+            [FIX] Dialogs - The countdown line at the bottom of the Playing Next and Still Watching windows now stretches over the full width of the window (it only covered about half of it). When your accent colour is light (white, yellow ...) the line is drawn in red instead, because a white line disappeared on bright pictures; other accent colours are used as before.
+            Changelog 3.9.121
+            [FIX] Dialogs - In the Playing Next and Still Watching windows the rating next to the title (for example 8.07) now sits on the same line as the title instead of dropping lower and being cut off by the picture. In the Stay seated card the description is no longer stretched into wide gaps.
+            Changelog 3.9.120
+            [FIX] Dialogs - The focused button of the Playing Next, Still Watching, Skip and Stay seated windows is no longer white text on a white button when your accent colour is light (white, yellow, light green ...). The label of the focused button now turns dark on a light accent colour; dark accent colours keep the white label.
+            Changelog 3.9.119
+            [CHANGE] Skipping - Auto-skip now counts down. When a segment type is set to skip by itself (Skip Intro, Recap, Credits or Preview), the Skip button counts down (for example "Skip Intro (5)") and the Close button becomes Cancel, so a wrongly timed skip can be stopped. The new setting Auto-skip countdown (seconds) sets the length, 5 by default (this changes how auto-skip behaves for everyone who had it on); set it to 0 for the old instant skip. The countdown waits while playback is paused, and a segment too short for it still skips at once.
+            [NEW] Playback - Stay seated card for films. When TMDB says a film has a scene during or after the credits, a card appears as the credits begin, with Keep watching and Stop (it closes by itself after 15 seconds). For those films the Skip Credits button is not shown. The credits start comes from TheIntroDB, so a film TheIntroDB has no credits time for gets no card. New setting Stay seated card (films), on by default.
             Changelog 3.9.118
             [CHANGE] Real-Debrid external cache check - the DMM (Debrid Media Manager) part is switched off. debridmediamanager.com now refuses every request from tools to its availability endpoint with HTTP 403 (it points tools to a sponsor API that needs a paid API key), so each Real-Debrid scrape logged a 'DMM check failed: 403' warning and gained nothing. The check now asks Torrentio (and MediaFusion when a token is set) only, and the log line reads 'from Torrentio' instead of 'from Torrentio+DMM'. The DMM scraper in the a4kScrapers pack and the Zilean scraper are separate and unchanged. The old DMM function is left in the code, not called, in case a sponsor key is added later.
             Changelog 3.9.117

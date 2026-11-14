@@ -1104,6 +1104,31 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
 
         return self.wrap_in_trakt_object(self.fetchall(query))
 
+    def get_following_episode(self, trakt_id):
+        """The aired, non-special episode right after the given episode: the next number in its season, else episode 1 of
+        the next season (the row must be in the local episodes table; a season Trakt has not listed yet gives None).
+        Season/number come from the database columns, not from info (which can hold TMDb absolute numbering).
+        :param trakt_id: Trakt ID of the episode
+        :return: dict with trakt_id, trakt_show_id, trakt_season_id, or None
+        """
+        current = self.fetchone(
+            "SELECT trakt_show_id, season, number FROM episodes WHERE trakt_id=?", (int(trakt_id),)
+        )
+        if not current or not current.get("season"):
+            return None
+        return self.fetchone(
+            """
+            SELECT trakt_id, trakt_show_id, trakt_season_id
+            FROM (SELECT trakt_id, trakt_show_id, trakt_season_id, air_date
+                  FROM episodes
+                  WHERE trakt_show_id = ? AND season > 0 AND (season > ? OR (season = ? AND number > ?))
+                  ORDER BY season, number
+                  LIMIT 1)
+            WHERE Datetime(air_date) < Datetime(?)
+            """,
+            (current["trakt_show_id"], current["season"], current["season"], current["number"], self._get_aired_cutoff()),
+        )
+
     def get_watched_episodes(self, page=1):
         """
         Get watched episodes from database

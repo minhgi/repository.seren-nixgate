@@ -231,6 +231,7 @@ _ROUTE_TABLE = {
     "titleSubsClearAll":         _func("resources.lib.database.titleSubs", "title_subs_clear_all"),
     # --- Anime Skip ---
     "showSkipIntro":             _func("resources.lib.modules.player", "show_skip_intro_dialog"),
+    "showStaySeated":            _func("resources.lib.modules.player", "show_stay_seated_dialog"),
 
     # --- Providers ---
     "installProviders":     _call("resources.lib.modules.providers.install_manager", "ProviderInstallManager", "install_package", "action_args"),
@@ -893,12 +894,28 @@ def dispatch(params):
 
         item_information = tools.get_item_information(action_args)
         if item_information:
-            g.log(f"Stale refresh: re-scraping trakt id {item_information.get('trakt_id')}", "info")
-            refresher = Sources(item_information, background_refresh=True)
+            # reason=prefetch (idle) / prefetch_next (queued by the player) come from modules/prefetch.py: own log
+            # wording, re-checked when the scrape starts (a queued scrape can be minutes old), no pop-ups
+            reason = params.get("reason")
+            label = "Prefetch" if reason in ("prefetch", "prefetch_next") else "Stale refresh"
+            if label == "Prefetch":
+                from resources.lib.database.torrentCache import TorrentCache
+                from resources.lib.modules.prefetch import skip_reason
+
+                why = skip_reason(reason, xbmc.Player().isPlayingVideo(), bool(TorrentCache().get_torrents(item_information)))
+                if why == "playing":
+                    g.log("Prefetch: a video is playing now - skipped, the next cycle tries again", "info")
+                    g.clear_runtime_setting(f"prefetch.{item_information.get('trakt_id')}")
+                    return
+                if why == "stored":
+                    g.log("Prefetch: results are stored now - skipped", "info")
+                    return
+            g.log(f"{label}: re-scraping trakt id {item_information.get('trakt_id')}", "info")
+            refresher = Sources(item_information, background_refresh=True, quiet=label == "Prefetch")
             refresher.get_sources()
             newest = refresher.torrent_cache.get_episode_release_expiry(item_information)
             g.log(
-                f"Stale refresh completed: {len(refresher.sources_information['allTorrents'])} torrents found, "
+                f"{label} completed: {len(refresher.sources_information['allTorrents'])} torrents found, "
                 + (
                     f"newest stored release for the episode now expires in {(newest - time.time()) / 3600:.0f}h"
                     if newest
@@ -1198,6 +1215,11 @@ def dispatch(params):
         from resources.lib.modules.player import show_skip_intro_dialog
 
         show_skip_intro_dialog()
+
+    elif action == "showStaySeated":
+        from resources.lib.modules.player import show_stay_seated_dialog
+
+        show_stay_seated_dialog()
 
     elif action == "openSettings":
         xbmc.executebuiltin(f"Addon.OpenSettings({g.ADDON_ID})")

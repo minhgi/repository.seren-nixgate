@@ -46,6 +46,10 @@ class SkipHandler:
         self.sources = {}
 
         self.ready = False
+        # Films only: (scene during credits, scene after credits) from TMDB, None when unknown. Looked up AFTER the skip
+        # segments (so skip overlays never wait for it); stingers_ready says the lookup is over, whatever the outcome.
+        self.stingers = None
+        self.stingers_ready = False
         self._thread = None
         self._info = self.item_information.get("info", {}) or {}
         self.is_anime = self._detect_anime()
@@ -121,6 +125,21 @@ class SkipHandler:
             g.log(f"SkipHandler error: {e}", "warning")
         finally:
             self.ready = True
+
+        self._resolve_stingers()
+
+    def _resolve_stingers(self):
+        """Films: does TMDB say a scene follows during or after the credits? (feeds the Stay seated card)"""
+        try:
+            if self.is_movie and g.get_bool_setting("skip.staySeated", True):
+                from resources.lib.modules.skip.stinger import get_stingers
+
+                self.stingers = get_stingers(self._info.get("tmdb_id"))
+                g.log(f"SkipHandler: credits scenes (during, after) = {self.stingers}", "debug")
+        except Exception as e:
+            g.log(f"SkipHandler: credits scene lookup failed: {e}", "debug")
+        finally:
+            self.stingers_ready = True
 
     def _resolve_anime(self):
         """Existing AniSkip + Anime-Skip path. Maps anime intro→intro, ed→credits."""

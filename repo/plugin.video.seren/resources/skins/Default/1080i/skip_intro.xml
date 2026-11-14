@@ -15,7 +15,7 @@
 			</animation>
 			<control type="group">
 				<height>80</height>
-				<width>300</width>
+				<width>350</width>
 				<right>20</right>
 				<bottom>150</bottom>
 
@@ -33,7 +33,7 @@
 					<top>12</top>
 					<left>15</left>
 					<itemgap>15</itemgap>
-					<width>270</width>
+					<width>320</width>
 
 					<!-- Skip Intro -->
 					<control type="button" id="3001">
@@ -43,7 +43,7 @@
 						<font>font12</font>
 						<textoffsetx>20</textoffsetx>
 						<textcolor>ddffffff</textcolor>
-						<focusedcolor>eeffffff</focusedcolor>
+						<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 						<selectedcolor>ddffffff</selectedcolor>
 						<aligny>center</aligny>
 						<align>center</align>
@@ -60,7 +60,7 @@
 						<font>font12</font>
 						<textoffsetx>15</textoffsetx>
 						<textcolor>ddffffff</textcolor>
-						<focusedcolor>eeffffff</focusedcolor>
+						<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 						<selectedcolor>ddffffff</selectedcolor>
 						<aligny>center</aligny>
 						<align>center</align>

@@ -50,14 +50,16 @@
 
 			<!-- Progress Bar -->
 			<control type="progress" id="3014">
+				<left>0</left>
 				<bottom>0</bottom>
+				<width>100%</width>
 				<height>5</height>
 				<reveal>true</reveal>
 				<righttexture></righttexture>
 				<overlaytexture></overlaytexture>
 				<lefttexture></lefttexture>
 				<texturebg colordiffuse="33FFFFFF">white.png</texturebg>
-				<midtexture colordiffuse="$INFO[Window.Property(settings.color)]">white.png</midtexture>
+				<midtexture colordiffuse="$INFO[Window.Property(settings.barcolor)]">white.png</midtexture>
 			</control>
 
 			<!-- Shadow -->
@@ -98,6 +100,7 @@
 
 						<control type="label">
 							<left>30</left>
+							<height>20</height>
 							<label>$INFO[Window.Property(item.info.rating)]</label>
 							<font>font12</font>
 							<textcolor>ffffffff</textcolor>
@@ -142,7 +145,7 @@
 						<font>font12</font>
 						<textoffsetx>20</textoffsetx>
 						<textcolor>ddffffff</textcolor>
-						<focusedcolor>eeffffff</focusedcolor>
+						<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 						<selectedcolor>ddffffff</selectedcolor>
 						<align>center</align>
 						<texturefocus border="10" colordiffuse="$INFO[Window.Property(settings.color)]">white.png</texturefocus>
@@ -158,7 +161,7 @@
 						<font>font12</font>
 						<textoffsetx>20</textoffsetx>
 						<textcolor>ddffffff</textcolor>
-						<focusedcolor>eeffffff</focusedcolor>
+						<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 						<selectedcolor>ddffffff</selectedcolor>
 						<align>center</align>
 						<texturefocus border="10" colordiffuse="$INFO[Window.Property(settings.color)]">white.png</texturefocus>
@@ -174,7 +177,7 @@
 						<font>font12</font>
 						<textoffsetx>20</textoffsetx>
 						<textcolor>ddffffff</textcolor>
-						<focusedcolor>eeffffff</focusedcolor>
+						<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 						<selectedcolor>ddffffff</selectedcolor>
 						<align>center</align>
 						<texturefocus border="10" colordiffuse="$INFO[Window.Property(settings.color)]">white.png</texturefocus>
@@ -191,7 +194,7 @@
 						<font>font12</font>
 						<textoffsetx>20</textoffsetx>
 						<textcolor>ddffffff</textcolor>
-						<focusedcolor>eeffffff</focusedcolor>
+						<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 						<selectedcolor>ddffffff</selectedcolor>
 						<align>center</align>
 						<texturefocus border="10" colordiffuse="$INFO[Window.Property(settings.color)]">white.png</texturefocus>
