@@ -453,6 +453,19 @@ class Resolver:
                     except Exception:
                         pass
                 return None
+            except InfringingFile:
+                # RD refused the magnet (HTTP 451 / error_code=35): legally blocked, not a stale
+                # cache entry. Suppress the hash for 7 days and move on; it is deliberately not
+                # flagged _cloud_miss, so it does not count toward the cloud-miss rescrape.
+                g.log(f"Blocked by {source.get('debrid_provider', 'debrid')} (infringing_file): {source.get('hash', '')}", "info")
+                db_key = _DEBRID_PROVIDER_TO_DB_KEY.get(source.get('debrid_provider', ''))
+                if db_key and source.get('hash'):
+                    try:
+                        from resources.lib.database.debridCache import DebridCache
+                        DebridCache().set_infringing([source['hash']], db_key)
+                    except Exception:
+                        pass
+                return None
             except (UnexpectedResponse, FileIdentification) as e:
                 g.log(e, "error")
                 return None

@@ -8,6 +8,7 @@ import xbmcgui
 from resources.lib.common import source_utils
 from resources.lib.common import tools
 from resources.lib.database.cache import use_cache
+from resources.lib.modules.exceptions import InfringingFile
 from resources.lib.modules.exceptions import RanOnceAlready
 from resources.lib.modules.exceptions import UnexpectedResponse
 from resources.lib.modules.global_lock import GlobalLock
@@ -219,7 +220,10 @@ class RealDebrid:
             return None
 
         response = self.session.post(url, data=post_data, headers=self._get_headers(), timeout=10)
-        if not self._is_response_ok(response) and not fail_check:
+        # HTTP 451 (infringing_file, error_code 35) is a content block, not an expired token:
+        # refreshing the token and re-sending the same request just gets the same 451 again.
+        # Fall through and return the error body so the caller can act on error_code 35.
+        if not self._is_response_ok(response) and not fail_check and response.status_code != 451:
             self.try_refresh_token(True)
             response = self.post_url(original_url, post_data, fail_check=True)
         try:
@@ -264,6 +268,15 @@ class RealDebrid:
     def check_hash(self, hash_value):
         magnet = f'magnet:?xt=urn:btih:{hash_value}'
         response = self.add_magnet(magnet)
+
+        if isinstance(response, dict) and str(response.get('error_code')) == '35':
+            # RD refused the magnet itself (HTTP 451 infringing_file). No torrent was created,
+            # so there is nothing to clean up. This is a block, not a stale cache entry.
+            g.log(
+                f"RD addMagnet: infringing_file (error_code=35) — blocked by Real-Debrid: {hash_value}",
+                "warning",
+            )
+            raise InfringingFile(magnet)
 
         if not response or 'id' not in response:
             return {}

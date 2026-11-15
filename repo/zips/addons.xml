@@ -127,7 +127,7 @@
 			Rework for Seren 2.0
 		</news>
 	</extension>
-</addon><addon id="plugin.video.seren" version="3.9.124" name="Seren" provider-name="Nixgates">
+</addon><addon id="plugin.video.seren" version="3.9.125" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -194,6 +194,8 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.125
+            [FIX] Real-Debrid - When Real-Debrid refuses a torrent as a blocked (infringing) file, Seren no longer refreshes your Real-Debrid login and re-sends the same request, and no longer reports the torrent as "no longer cached". It now logs that Real-Debrid blocked it, remembers it as blocked for 7 days (later scrapes leave it out) and goes straight to the next source.
             Changelog 3.9.124
             [NEW] Scraping - Prefetch the next episode while you watch (Settings &gt; Scraping, on by default; needs the torrent cache): about a minute into an episode Seren quietly scrapes the torrent providers for the episode after it (the first of the next season at a season end). Torrent search only, nothing is resolved or played.
             [NEW] Scraping - The idle prefetch of your next episode now also follows your MDBList and Simkl next-up when Trakt has nothing to prefetch.
