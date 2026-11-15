@@ -172,6 +172,10 @@ _ROUTE_TABLE = {
     # --- MDBList menus ---
     "mdblistRecentMovies":       _menu("resources.lib.gui.mdblistMenus", "recent_movies"),
     "mdblistRecentShows":        _menu("resources.lib.gui.mdblistMenus", "recent_shows"),
+    "mdblistRecentEpisodes":     _menu("resources.lib.gui.mdblistMenus", "recent_episodes"),
+    "mdblistUpcomingEpisodes":   _menu("resources.lib.gui.mdblistMenus", "upcoming_episodes"),
+    "mdblistWatchedEpisodes":    _menu("resources.lib.gui.mdblistMenus", "watched_episodes"),
+    "mdblistUnfinishedShows":    _menu("resources.lib.gui.mdblistMenus", "unfinished_collection_shows"),
     "mdblistNextUp":             _menu("resources.lib.gui.mdblistMenus", "next_up"),
     "mdblistInProgressMovies":   _menu("resources.lib.gui.mdblistMenus", "in_progress_movies"),
     "mdblistInProgressEpisodes": _menu("resources.lib.gui.mdblistMenus", "in_progress_episodes"),
@@ -196,6 +200,9 @@ _ROUTE_TABLE = {
     # --- Simkl menus ---
     "simklRecentMovies":         _menu("resources.lib.gui.simklMenus", "recent_movies"),
     "simklRecentShows":          _menu("resources.lib.gui.simklMenus", "recent_shows"),
+    "simklRecentEpisodes":       _menu("resources.lib.gui.simklMenus", "recent_episodes"),
+    "simklUpcomingEpisodes":     _menu("resources.lib.gui.simklMenus", "upcoming_episodes"),
+    "simklWatchedEpisodes":      _menu("resources.lib.gui.simklMenus", "watched_episodes"),
     "simklInProgressMovies":     _menu("resources.lib.gui.simklMenus", "in_progress_movies"),
     "simklInProgressEpisodes":   _menu("resources.lib.gui.simklMenus", "in_progress_episodes"),
     "simklNextUp":               _menu("resources.lib.gui.simklMenus", "next_up"),
@@ -513,7 +520,9 @@ def dispatch(params):
                 g.reject_duplicate_play()
                 return
 
-            resume_time = smart_play.handle_resume_prompt(resume, force_resume_off, force_resume_on, force_resume_check)
+            resume_time = smart_play.handle_resume_prompt(
+                resume, force_resume_off, force_resume_on, force_resume_check, item_information=item_information
+            )
             background = helpers.show_persistent_window_if_required(item_information)
             # Clear out last resolved title for a show if we are doing a rescrape
             if overwrite_cache and item_information['info']['mediatype'] == g.MEDIA_EPISODE:

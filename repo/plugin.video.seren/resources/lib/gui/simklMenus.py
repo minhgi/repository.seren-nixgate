@@ -140,12 +140,18 @@ class Menus:
         return trakt_object
 
     def recent_movies(self):
-        rows = self.simkl_database.get_recent_movies(self.page_limit)
-        trakt_list = self._resolve([r["tmdb_id"] for r in rows], "movie")
+        """Watched movies, newest first, paged like Trakt's My Watched Movies (3.9.136: was one page with no Next Page)."""
+        from resources.lib.modules import service_episode_window
+
+        offset = (g.PAGE - 1) * self.page_limit
+        rows = self.simkl_database.get_recent_movies(self.page_limit + 1, offset)
+        has_more = len(rows) > self.page_limit
+        tmdb_ids = [r["tmdb_id"] for r in rows[: self.page_limit]]
+        trakt_list = service_episode_window.order_like(self._resolve(tmdb_ids, "movie"), tmdb_ids)
         if not trakt_list:
             g.cancel_directory()
             return
-        self.list_builder.movie_menu_builder(trakt_list, no_paging=True, hide_watched=False)
+        self.list_builder.movie_menu_builder(trakt_list, force_next_page=has_more, hide_watched=False)
 
     def recent_shows(self):
         rows = self.simkl_database.get_recent_shows(self.page_limit)
@@ -154,6 +160,96 @@ class Menus:
             g.cancel_directory()
             return
         self.list_builder.show_list_builder(trakt_list, no_paging=True, hide_watched=False)
+
+    def _status_tmdb_ids(self, status):
+        page = self.simkl_api.get_json(f"sync/all-items/shows/{status}")
+        if not isinstance(page, dict):
+            return []
+        ids = []
+        for entry in page.get("shows") or []:
+            tmdb_id = ((entry.get("show") or {}).get("ids") or {}).get("tmdb")
+            if tmdb_id is not None:
+                ids.append(tmdb_id)
+        return ids
+
+    def _calendar_shows(self):
+        """Trakt show objects for Recent / Upcoming Episodes (3.9.136): shows you are watching, recently watched shows,
+        then plan to watch, capped and resolved in that order."""
+        from resources.lib.modules import service_episode_window as window
+
+        recent = [row["tmdb_id"] for row in self.simkl_database.get_recent_shows(40)]
+        ids = window.candidate_ids(
+            self._status_tmdb_ids("watching"), recent[:10], self._status_tmdb_ids("plantowatch"), recent[10:]
+        )
+        return window.order_like(self._resolve(ids, "show"), ids), len(ids)
+
+    def recent_episodes(self):
+        """Episodes aired in the last 14 days from your watching / plan to watch / recently watched shows (Trakt: Recent Episodes)."""
+        import datetime
+
+        from resources.lib.modules import service_episode_window as window
+
+        shows, candidates = self._calendar_shows()
+        today = datetime.date.today()
+        hidden = self.hidden_database.get_hidden_items("calendar", "tvshow")
+        picks = window.episodes_in_window(shows, today - datetime.timedelta(days=13), today, True, hidden)
+        g.log(f"Simkl menus: recent episodes {candidates} candidates, {len(shows)} resolved, {len(picks)} episodes", "debug")
+        if not picks:
+            g.cancel_directory()
+            return
+        self.list_builder.mixed_episode_builder(picks, hide_watched=False, no_paging=True)
+
+    def upcoming_episodes(self):
+        """Episodes airing in the next 30 days from your watching / plan to watch / recently watched shows (Trakt: Upcoming Episodes)."""
+        import datetime
+
+        from resources.lib.modules import service_episode_window as window
+
+        shows, candidates = self._calendar_shows()
+        tomorrow = datetime.date.today() + datetime.timedelta(days=1)
+        hidden = self.hidden_database.get_hidden_items("calendar", "tvshow")
+        picks = window.episodes_in_window(shows, tomorrow, tomorrow + datetime.timedelta(days=29), False, hidden)
+        g.log(f"Simkl menus: upcoming episodes {candidates} candidates, {len(shows)} resolved, {len(picks)} episodes", "debug")
+        if not picks:
+            g.cancel_directory()
+            return
+        start = (g.PAGE - 1) * self.page_limit
+        self.list_builder.mixed_episode_builder(
+            picks[start : start + self.page_limit],
+            prepend_date=True,
+            hide_unaired=False,
+            hide_watched=False,
+            force_next_page=len(picks) > start + self.page_limit,
+        )
+
+    def watched_episodes(self):
+        """Every episode you watched on Simkl, newest first, paged (Trakt: My Watched Episodes). One live call: Simkl keeps
+        no per-episode rows locally, but sync/all-items/shows with include_all_episodes + episode_watched_at returns the
+        whole per-episode history (live: 29 shows, 1158 episodes, 75 KB, 0.6 s). Anime is a separate Simkl type and is not
+        included."""
+        from resources.lib.modules import service_episode_window as window
+
+        page = self.simkl_api.get_json(
+            "sync/all-items/shows", extended="full", include_all_episodes="yes", episode_watched_at="yes"
+        )
+        watched = []
+        for entry in (page or {}).get("shows") or []:
+            tmdb_id = ((entry.get("show") or {}).get("ids") or {}).get("tmdb")
+            if tmdb_id is None:
+                continue
+            for season in entry.get("seasons") or []:
+                for episode in season.get("episodes") or []:
+                    if episode.get("watched_at") and season.get("number") is not None and episode.get("number") is not None:
+                        watched.append((str(episode["watched_at"]), int(tmdb_id), season["number"], episode["number"]))
+        watched.sort(key=lambda row: row[0], reverse=True)
+        start = (g.PAGE - 1) * self.page_limit
+        window_rows = watched[start : start + self.page_limit]
+        episodes = window.watched_episode_items(self.trakt_api, [row[1:] for row in window_rows])
+        g.log(f"Simkl menus: watched episodes {len(watched)} in history, page {g.PAGE} {len(window_rows)} rows, {len(episodes)} resolved", "debug")
+        if not episodes:
+            g.cancel_directory()
+            return
+        self.list_builder.mixed_episode_builder(episodes, hide_watched=False, force_next_page=len(watched) > start + self.page_limit)
 
     def in_progress_movies(self):
         rows = self.simkl_database.get_bookmarks("movie")

@@ -315,6 +315,33 @@ class MDBListSyncDatabase(Database):
             (tmdb_id, season, number),
         )
 
+    def remove_bookmark(self, tmdb_id, media_type, season=None, number=None):
+        """Drops the local resume row of one item (write-through at a stop, see modules/resumeRefresh.write_local_bookmark)."""
+        if media_type == "movie":
+            self.execute_sql("DELETE FROM bookmarks WHERE tmdb_id=? AND media_type='movie'", (tmdb_id,))
+        else:
+            self.execute_sql(
+                "DELETE FROM bookmarks WHERE tmdb_id=? AND season=? AND number=? AND media_type='episode'",
+                (tmdb_id, season, number),
+            )
+
+    def set_bookmark(self, tmdb_id, media_type, season, number, percent, resume_seconds):
+        """Write-through of the resume point at a pause / stop; the periodic sync replaces the table from MDBList later."""
+        self.remove_bookmark(tmdb_id, media_type, season, number)
+        self.execute_sql(
+            "INSERT INTO bookmarks (tmdb_id, season, number, media_type, percent_played, resume_time, paused_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                tmdb_id,
+                season if media_type == "episode" else None,
+                number if media_type == "episode" else None,
+                media_type,
+                str(round(float(percent), 2)),
+                str(int(resume_seconds)),
+                self._get_datetime_now(),
+            ),
+        )
+
     def get_recent_movies(self, limit, offset=0, force_all=False):
         """Locally-synced watched movies, newest first. Populated both by
         write_watched_locally() (scrobbler/context-menu, immediate) and by
@@ -343,6 +370,19 @@ class MDBListSyncDatabase(Database):
         if not force_all:
             query += f" LIMIT {limit} OFFSET {offset}"
         return self.fetchall(query)
+
+    def get_watched_episodes(self, limit, offset=0):
+        """Individually watched episodes, newest first (3.9.136, the MDBList counterpart of Trakt's My Watched Episodes).
+        Whole-show / whole-season marks made on MDBList's own site have no per-episode rows and are not listed."""
+        return self.fetchall(
+            f"""
+            SELECT show_tmdb_id, season, number, last_watched_at
+            FROM episodes
+            WHERE watched = 1
+            ORDER BY last_watched_at DESC
+            LIMIT {int(limit)} OFFSET {int(offset)}
+            """
+        )
 
     def get_all_watched_movie_tmdb_ids(self):
         """bridgeSync's read-side for the Watched/movie domain. Reflects both

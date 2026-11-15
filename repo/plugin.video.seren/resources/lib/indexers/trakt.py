@@ -778,6 +778,30 @@ class TraktAPI(ApiBase):
                 )
             )
 
+    def get_page_json(self, url, **params):
+        """
+        Reads ONE page of a paged trakt endpoint without the cache and returns (normalised page, number of pages).
+        (None, 0) when the request failed, so a caller can tell "nothing there" from "could not read it".
+        :param url: endpoint to call against
+        :param params: any params for the url (page and limit included)
+        :return: tuple of the normalised page and the page count the endpoint reports (1 when it does not page)
+        """
+        response = self.get(url, **params)
+        if not response:
+            return None, 0
+        try:
+            page = self._handle_response(
+                self._try_sort(
+                    response.headers.get("X-Sort-By"),
+                    response.headers.get("X-Sort-How"),
+                    response.json(),
+                )
+            )
+            return page, int(response.headers.get("X-Pagination-Page-Count") or 1)
+        except (ValueError, AttributeError, TypeError) as e:
+            g.log(f"Failed to read a page of {url} from Trakt: {e}", "warning")
+            return None, 0
+
     @use_cache()
     def get_json_cached(self, url, **params):
         """

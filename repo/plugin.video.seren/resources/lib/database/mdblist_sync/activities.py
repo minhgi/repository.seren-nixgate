@@ -99,9 +99,53 @@ class MDBListSyncDatabase(mdblist_sync.MDBListSyncDatabase):
             except ActivitySyncFailure as e:
                 g.log(f"Failed to sync MDBList list items: {e}", "error")
 
+            try:
+                self.refresh_membership()
+            except Exception as e:
+                g.log(f"MDBList: could not refresh the watchlist / collection membership: {e}", "warning")
+
             if watched_count or playback_count:
                 g.notification_unless_playing(g.ADDON_NAME, g.get_language_string(30953).format(watched_count, playback_count))
                 xbmc.executebuiltin('RunPlugin("plugin://plugin.video.seren/?action=widgetRefresh&playing=False")')
+
+    def refresh_membership(self):
+        """Watchlist and collection membership into mdblistMembership.db (3.9.134), two requests per periodic sync. A request that
+        fails (None) leaves that kind as it is. watchlist/items lists {ids} per entry, sync/collection nests them under movie / show."""
+        from resources.lib.database.mdblist_membership import MDBListMembershipDatabase
+
+        store = MDBListMembershipDatabase()
+        watchlist = self.mdblist_api.get_json("watchlist/items", limit=5000, offset=0)
+        if self._membership_page_incomplete("watchlist", watchlist):
+            watchlist = None
+        if isinstance(watchlist, dict):
+            items = []
+            for key, media_type in (("movies", "movie"), ("shows", "show")):
+                for entry in watchlist.get(key) or []:
+                    tmdb_id = (entry.get("ids") or {}).get("tmdb")
+                    if tmdb_id is not None:
+                        items.append((media_type, int(tmdb_id)))
+            store.replace_kind("watchlist", items)
+        collection = self.mdblist_api.get_json("sync/collection", limit=5000, offset=0)
+        if self._membership_page_incomplete("collection", collection):
+            collection = None
+        if isinstance(collection, dict):
+            items = []
+            for key, media_type in (("movies", "movie"), ("shows", "show")):
+                for entry in collection.get(key) or []:
+                    tmdb_id = ((entry.get(media_type) or {}).get("ids") or {}).get("tmdb")
+                    if tmdb_id is not None:
+                        items.append((media_type, int(tmdb_id)))
+            store.replace_kind("collection", items)
+
+    @staticmethod
+    def _membership_page_incomplete(kind, response):
+        """True when MDBList says more items exist beyond this single page (pagination.has_more, 3.9.135). A truncated list must
+        not replace the stored membership: the menu would offer 'Add' for items that are already in it. The kind is left as it
+        was (unsynced -> no option shown) and a warning is logged."""
+        if isinstance(response, dict) and (response.get("pagination") or {}).get("has_more"):
+            g.log(f"MDBList: {kind} has more items than one page returned, membership not updated", "warning")
+            return True
+        return False
 
     def _sync_watched(self):
         """Pulls GET /sync/watched (offset/limit-paginated per mdblist.apib - the
@@ -343,3 +387,67 @@ class MDBListSyncDatabase(mdblist_sync.MDBListSyncDatabase):
             raise
         except Exception as e:
             raise ActivitySyncFailure(e) from e
+
+
+    def refresh_play_bookmark(self, tmdb_id, mediatype, season=None, number=None):
+        """Pull ONE item's resume point from MDBList into the local bookmarks table at play start (Seren 3.9.129, see
+        modules/resumeRefresh.py). One flat sync/playback request with a short timeout; replaces the item's local row when
+        MDBList's row is newer. Holds no lock and writes one row. Returns True when the local row was added or replaced."""
+        if not tmdb_id:
+            return False
+        entries = self.mdblist_api.get_json("sync/playback", timeout=4)
+        if entries is None:
+            return False  # the request failed: the local copy is left as it is
+        if isinstance(entries, dict):
+            entries = entries.get("items") or []
+        for entry in entries:
+            if entry.get("type") != mediatype:
+                continue
+            if mediatype == "movie":
+                ids, row_season, row_number = (entry.get("movie") or {}).get("ids", {}), None, None
+            else:
+                episode = entry.get("episode") or {}
+                ids, row_season, row_number = (entry.get("show") or {}).get("ids", {}), episode.get("season"), episode.get("number")
+            if str(ids.get("tmdb")) != str(tmdb_id):
+                continue
+            if mediatype == "episode" and (str(row_season) != str(season) or str(row_number) != str(number)):
+                continue
+            paused_at = entry.get("paused_at")
+            try:
+                percent = float(entry.get("progress"))
+                resume_time = round(percent / 100 * float(entry.get("runtime")) * 60)
+            except (TypeError, ValueError):
+                return False
+            if not paused_at or not 0 < percent < 100:
+                return False
+            local = self.get_bookmark(tmdb_id, mediatype, season, number)
+            if local and local["paused_at"] and g.validate_date(local["paused_at"]) >= (g.validate_date(paused_at) or ""):
+                return False  # the local row is as new or newer
+            if mediatype == "movie":
+                self.execute_sql("DELETE FROM bookmarks WHERE tmdb_id=? AND media_type='movie'", (tmdb_id,))
+            else:
+                self.execute_sql(
+                    "DELETE FROM bookmarks WHERE tmdb_id=? AND season=? AND number=? AND media_type='episode'",
+                    (tmdb_id, season, number),
+                )
+            self.execute_sql(
+                "INSERT INTO bookmarks (tmdb_id, season, number, media_type, percent_played, resume_time, paused_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (tmdb_id, row_season, row_number, mediatype, str(percent), str(resume_time), paused_at),
+            )
+            g.log(f"Resume: took the newer MDBList resume point for tmdb {tmdb_id} ({percent:.1f}%)", "info")
+            return True
+        # MDBList lists every paused item in this one answer: no row for this item = no resume point there any more
+        from resources.lib.modules.resumeRefresh import written_just_now
+
+        local = self.get_bookmark(tmdb_id, mediatype, season, number)
+        if local and not written_just_now(local["paused_at"]):  # a row written under 2 min ago may not have reached MDBList yet
+            if mediatype == "movie":
+                self.execute_sql("DELETE FROM bookmarks WHERE tmdb_id=? AND media_type='movie'", (tmdb_id,))
+            else:
+                self.execute_sql(
+                    "DELETE FROM bookmarks WHERE tmdb_id=? AND season=? AND number=? AND media_type='episode'",
+                    (tmdb_id, season, number),
+                )
+            g.log(f"Resume: MDBList no longer has a resume point for tmdb {tmdb_id}, dropped the local copy", "info")
+        return False

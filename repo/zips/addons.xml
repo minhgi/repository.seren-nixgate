@@ -127,7 +127,7 @@
 			Rework for Seren 2.0
 		</news>
 	</extension>
-</addon><addon id="plugin.video.seren" version="3.9.127" name="Seren" provider-name="Nixgates">
+</addon><addon id="plugin.video.seren" version="3.9.136" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -194,6 +194,24 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.136
+            [NEW] MDBList / Simkl - New My Shows entries like Trakt's: Recent Episodes, Upcoming Episodes and Watched Episodes for MDBList and Simkl (from the shows you recently watched or have on your watchlist, watching or plan to watch), and MDBList Unfinished Shows in Collection. Recent Movies for MDBList and Simkl now pages through your whole watched history.
+            Changelog 3.9.135
+            [FIX] MDBList - If your MDBList watchlist or collection is longer than one page, Seren no longer stores a cut-off copy; the Add/Remove options for that list stay hidden instead of offering Add for something already in it.
+            Changelog 3.9.134
+            [NEW] MDBList - The MDBList item menu now has Add to / Remove from Collection and Add to / Remove from Watchlist for movies and shows, like the Trakt menu (only the option that applies is shown). They need one sync first to know what is already in your MDBList watchlist and collection; Seren keeps that list in a small new file (mdblistMembership.db) so your existing MDBList data is untouched.
+            Changelog 3.9.133
+            [FIX] MDBList - Seren now tells MDBList when a video starts playing and when it resumes after a pause, the way it already did for Trakt and Simkl, so MDBList knows what you are watching (before it only heard about pauses and stops). Seeking sends nothing, as MDBList's and Simkl's documentation ask.
+            Changelog 3.9.132
+            [FIX] MDBList / Simkl - Pausing or stopping a video now saves the resume point in Seren's own copy for MDBList and Simkl at once, the way it already did for Trakt, instead of waiting for the next sync (up to 15 minutes). Lists show the progress straight away, the Simkl In Progress menu is current, and the next play starts at that point. The check that drops a resume point cleared on another device leaves a point saved in the last 2 minutes alone, and Simkl's Clear Progress now also works for a point Seren saved itself.
+            Changelog 3.9.131
+            [FIX] Resume - With the resume setting on "ask", the next episode of a playlist or auto-next no longer shows the Resume prompt (dismissing it cancelled playback and ended the run of episodes). It resumes at the newest saved point on its own. A play you start yourself still asks.
+            Changelog 3.9.130
+            [FIX] Resume - The check for the newest resume point (added in 3.9.129 for the TMDb Helper route) now covers every movie and episode play unless resuming is switched off. Plays started from Seren's own lists no longer depend on the list's copy of the resume point (it was older, or missing when the pause was made on another device), and playlist and auto-next plays (the next episode after one finishes) now resume at the newest saved point instead of always starting at 0:00. A resume point that was finished or cleared on another device is dropped from Seren's copy for Trakt as well (before it was kept until the next sync, and Trakt's later pages are read to be sure it is gone). If a service is slow or cannot be reached, Seren uses its own copy as before.
+            Changelog 3.9.129
+            [FIX] Resume - Playing an item right after you paused it on another device now resumes at that point. Seren used to read your resume points only from its own copy, which is refreshed about 45 seconds after Kodi starts and then every 15 minutes, so a play started sooner than that began at 0:00 or at an older point. When a play asks for a resume check (the TMDb Helper route), Seren now asks Trakt, MDBList and Simkl for the newest resume point of that item first (up to 8 seconds, all three at once) and resumes at the newest one. If a service is slow or cannot be reached, Seren uses its own copy as before. Plays started from Seren's own lists still use the list's copy.
+            Changelog 3.9.128
+            [FIX] Playback - Pressing Back or Stop in the first minute of a stream no longer makes Seren treat it as a failed source and start the next one. When Kodi was slow to report the stop (for example while it saved the position of an Easynews stream, about 2.5 seconds) Seren gave up waiting after 2 seconds, blacklisted the source you were watching and began playing the next one until you pressed Back again. Seren now waits up to 10 seconds for Kodi to report the stop.
             Changelog 3.9.127
             [FIX] Trakt Sync - Finishing an episode no longer freezes Seren for over a minute on slower devices (Shield). Right after an episode is marked watched Seren re-syncs your watched list, and one step of that sync (matching the watched episodes to your 160,000 stored episodes) ran as a full scan for every episode: about 12 seconds on a PC and over a minute on a Shield, with the sync database locked the whole time, so the next episode, the next-episode play and the watched mark of the episode just finished all waited. The step now uses the index and takes a fraction of a second. The same fix applies to the collected-episode and episode-rating syncs.
             Changelog 3.9.126

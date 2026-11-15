@@ -135,6 +135,21 @@ class TraktContextMenu:
                 watched = total > 0 and watched_count >= total
             self.dialog_list.append(g.get_language_string(30955 if watched else 30954))
 
+            # Collection and Watchlist (3.9.134), placed after the watched toggle like Trakt's own order (watched, collected,
+            # watchlisted). Gated on the local membership store only: the single applicable option, nothing before the
+            # first sync of that kind (no guessing, no live request).
+            if item_type in ("movie", "tvshow"):
+                from resources.lib.database.mdblist_membership import MDBListMembershipDatabase
+
+                member_type = "movie" if item_type == "movie" else "show"
+                membership = MDBListMembershipDatabase()
+                collected = membership.is_member("collection", member_type, info.get("tmdb_id"))
+                if collected is not None:
+                    self.dialog_list.append(g.get_language_string(30275 if collected else 30274).format(display_type))
+                watchlisted = membership.is_member("watchlist", member_type, info.get("tmdb_id"))
+                if watchlisted is not None:
+                    self.dialog_list.append(g.get_language_string(30277 if watchlisted else 30276))
+
             # Add to Custom List always shows (its picker has its own "New List..."
             # entry, see _mdblist_add_to_list, so it's never a dead end - and hiding it
             # once an item is in every synced list would lock the user out of adding it
@@ -159,6 +174,22 @@ class TraktContextMenu:
 
             options.update(
                 {
+                    g.get_language_string(30274).format(display_type): {
+                        "method": self._mdblist_add_to_collection,
+                        "info_key": "info",
+                    },
+                    g.get_language_string(30275).format(display_type): {
+                        "method": self._mdblist_remove_from_collection,
+                        "info_key": "info",
+                    },
+                    g.get_language_string(30276): {
+                        "method": self._mdblist_add_to_watchlist,
+                        "info_key": "info",
+                    },
+                    g.get_language_string(30277): {
+                        "method": self._mdblist_remove_from_watchlist,
+                        "info_key": "info",
+                    },
                     g.get_language_string(30954): {
                         "method": self._mdblist_mark_watched,
                         "info_key": "info",
@@ -1012,6 +1043,56 @@ class TraktContextMenu:
     def _mdblist_response_key(mediatype):
         return {"movie": "movies", "tvshow": "shows", "season": "seasons", "episode": "episodes"}.get(mediatype)
 
+    def _mdblist_add_to_watchlist(self, item_information):
+        self._mdblist_change_membership(item_information, "watchlist", True)
+
+    def _mdblist_remove_from_watchlist(self, item_information):
+        self._mdblist_change_membership(item_information, "watchlist", False)
+
+    def _mdblist_add_to_collection(self, item_information):
+        self._mdblist_change_membership(item_information, "collection", True)
+
+    def _mdblist_remove_from_collection(self, item_information):
+        self._mdblist_change_membership(item_information, "collection", False)
+
+    def _mdblist_change_membership(self, item_information, kind, add):
+        """Add / remove one movie or show to MDBList's watchlist or collection (3.9.134). watchlist/items/{add|remove} takes the
+        flat {movies|shows: [{tmdb}]} shape (cross_sync's helper), sync/collection and /remove the nested {ids: {tmdb}} shape.
+        The local membership store is written through on success, so the menu flips at once."""
+        mediatype = item_information["mediatype"]
+        tmdb_id = item_information.get("tmdb_id")
+        if mediatype not in ("movie", "tvshow") or not tmdb_id:
+            return
+        if kind == "watchlist":
+            from resources.lib.modules import cross_sync
+
+            payload = cross_sync._mdblist_flat_payload(item_information)  # pylint: disable=protected-access
+            path = "watchlist/items/add" if add else "watchlist/items/remove"
+        else:
+            payload = {("movies" if mediatype == "movie" else "shows"): [{"ids": {"tmdb": tmdb_id}}]}
+            path = "sync/collection" if add else "sync/collection/remove"
+        response = self.mdblist_api.post_json(path, payload)
+        if not response or response.get("error"):
+            g.notification(f"{g.ADDON_NAME}: {self.header_text}", g.get_language_string(30287))
+            g.log(f"MDBList {path} failed\nResponse: {response}", "warning")
+            return
+
+        from resources.lib.database.mdblist_membership import MDBListMembershipDatabase
+
+        member_type = "movie" if mediatype == "movie" else "show"
+        store = MDBListMembershipDatabase()
+        if add:
+            store.add(kind, member_type, int(tmdb_id))
+        else:
+            store.remove(kind, member_type, int(tmdb_id))
+        g.notification(
+            f"{g.ADDON_NAME}: {self.header_text}",
+            g.get_language_string(31049 if add else 31050).format("Watchlist" if kind == "watchlist" else "Collection"),
+        )
+        if not add:
+            g.container_refresh()
+        g.trigger_widget_refresh()
+
     def _mdblist_mark_watched(self, item_information):
         payload = self._info_to_mdblist_object(item_information)
         if payload is None:
@@ -1706,6 +1787,27 @@ class TraktContextMenu:
         g.container_refresh()
         g.trigger_widget_refresh()
 
+    def _simkl_live_playback_id(self, media_type, tmdb_id, season, number):
+        try:
+            entries = self.simkl_api.get_json("sync/playback")
+        except Exception:
+            return None
+        if isinstance(entries, dict):
+            entries = entries.get("items") or []
+        for entry in entries or []:
+            if entry.get("type") != media_type:
+                continue
+            if media_type == "movie":
+                ids = (entry.get("movie") or {}).get("ids") or {}
+            else:
+                episode = entry.get("episode") or {}
+                if episode.get("season") != season or episode.get("number") != number:
+                    continue
+                ids = (entry.get("show") or {}).get("ids") or {}
+            if str(ids.get("tmdb")) == str(tmdb_id):
+                return entry.get("id")
+        return None
+
     def _simkl_remove_playback_history(self, item_information):
         from resources.lib.database.simkl_sync import SimklSyncDatabase
 
@@ -1732,7 +1834,8 @@ class TraktContextMenu:
 
         cleared = False
         for row in rows:
-            playback_id = row["playback_id"]
+            # a row Seren wrote itself at a pause / stop (3.9.132) has no playback id: look it up in Simkl's live list
+            playback_id = row["playback_id"] or self._simkl_live_playback_id(media_type, tmdb_id, season, number)
             if not playback_id:
                 continue
             try:

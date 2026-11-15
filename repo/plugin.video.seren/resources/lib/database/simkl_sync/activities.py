@@ -575,3 +575,74 @@ class SimklSyncDatabase(simkl_sync.SimklSyncDatabase):
             raise
         except Exception as e:
             raise ActivitySyncFailure(e) from e
+
+
+    def refresh_play_bookmark(self, tmdb_id, mediatype, season=None, number=None):
+        """Pull ONE item's resume point from Simkl into the local bookmarks table at play start (Seren 3.9.129, see
+        modules/resumeRefresh.py). One flat sync/playback request with a short timeout; replaces the item's local row when
+        Simkl's row is newer. Holds no lock and writes one row. Returns True when the local row was added or replaced.
+        Simkl keeps a percentage only; the caller turns it into seconds with the item's runtime."""
+        if not tmdb_id:
+            return False
+        entries = self.simkl_api.get_json("sync/playback", timeout=4)
+        if entries is None:
+            return False  # the request failed: the local copy is left as it is
+        if isinstance(entries, dict):
+            entries = entries.get("items") or []
+        for entry in entries:
+            if entry.get("type") != mediatype:
+                continue
+            if mediatype == "movie":
+                ids, row_season, row_number = (entry.get("movie") or {}).get("ids") or {}, None, None
+            else:
+                episode = entry.get("episode") or {}
+                ids, row_season, row_number = (entry.get("show") or {}).get("ids") or {}, episode.get("season"), episode.get("number")
+            if str(ids.get("tmdb")) != str(tmdb_id):
+                continue
+            if mediatype == "episode" and (str(row_season) != str(season) or str(row_number) != str(number)):
+                continue
+            simkl_id = ids.get("simkl") or ids.get("simkl_id")
+            progress, paused_at = entry.get("progress"), entry.get("paused_at")
+            try:
+                percent = float(progress)
+            except (TypeError, ValueError):
+                return False
+            if not simkl_id or not paused_at or not 0 < percent < 100:
+                return False
+            if mediatype == "movie":
+                local = self.fetchone("SELECT paused_at FROM bookmarks WHERE tmdb_id=? AND media_type='movie'", (tmdb_id,))
+            else:
+                local = self.fetchone(
+                    "SELECT paused_at FROM bookmarks WHERE tmdb_id=? AND season=? AND number=? AND media_type='episode'",
+                    (tmdb_id, season, number),
+                )
+            if local and local["paused_at"] and g.validate_date(local["paused_at"]) >= (g.validate_date(paused_at) or ""):
+                return False  # the local row is as new or newer
+            if mediatype == "movie":
+                self.execute_sql("DELETE FROM bookmarks WHERE tmdb_id=? AND media_type='movie'", (tmdb_id,))
+            else:
+                self.execute_sql(
+                    "DELETE FROM bookmarks WHERE tmdb_id=? AND season=? AND number=? AND media_type='episode'",
+                    (tmdb_id, season, number),
+                )
+            self.execute_sql(
+                "INSERT INTO bookmarks (simkl_id, season, number, media_type, tmdb_id, playback_id, percent_played, paused_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (simkl_id, row_season, row_number, mediatype, tmdb_id, entry.get("id"), str(progress), paused_at),
+            )
+            g.log(f"Resume: took the newer Simkl resume point for tmdb {tmdb_id} ({percent:.1f}%)", "info")
+            return True
+        # Simkl lists every paused item in this one answer: no row for this item = no resume point there any more
+        if mediatype == "movie":
+            stale = self.fetchone("SELECT paused_at FROM bookmarks WHERE tmdb_id=? AND media_type='movie'", (tmdb_id,))
+        else:
+            stale = self.fetchone(
+                "SELECT paused_at FROM bookmarks WHERE tmdb_id=? AND season=? AND number=? AND media_type='episode'",
+                (tmdb_id, season, number),
+            )
+        from resources.lib.modules.resumeRefresh import written_just_now
+
+        if stale and not written_just_now(stale["paused_at"]):  # a row written under 2 min ago may not have reached Simkl yet
+            self.remove_bookmark(tmdb_id, mediatype, season, number)
+            g.log(f"Resume: Simkl no longer has a resume point for tmdb {tmdb_id}, dropped the local copy", "info")
+        return False

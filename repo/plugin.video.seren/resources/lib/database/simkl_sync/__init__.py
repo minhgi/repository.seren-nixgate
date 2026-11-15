@@ -293,6 +293,32 @@ class SimklSyncDatabase(Database):
             return False
         return bool(self.fetchone("SELECT 1 FROM shows WHERE tmdb_id=?", (tmdb_id,)))
 
+    def set_bookmark(self, tmdb_id, media_type, season, number, percent):
+        """Write-through of the resume point at a pause / stop (Seren 3.9.132). Simkl keys its rows by the simkl id, taken from the
+        local movie / show row; no such row yet = nothing written (returns False) and the next sync supplies the point. The row has no
+        playback_id (the context-menu clear looks it up live) and the periodic sync replaces the whole table later."""
+        if media_type == "movie":
+            row = self.fetchone("SELECT simkl_id FROM movies WHERE tmdb_id=?", (tmdb_id,))
+        else:
+            row = self.fetchone("SELECT simkl_id FROM shows WHERE tmdb_id=?", (tmdb_id,))
+        if not row or not row["simkl_id"]:
+            return False
+        self.remove_bookmark(tmdb_id, media_type, season, number)
+        self.execute_sql(
+            "INSERT INTO bookmarks (simkl_id, season, number, media_type, tmdb_id, playback_id, percent_played, paused_at) "
+            "VALUES (?, ?, ?, ?, ?, NULL, ?, ?)",
+            (
+                row["simkl_id"],
+                season if media_type == "episode" else None,
+                number if media_type == "episode" else None,
+                media_type,
+                tmdb_id,
+                str(round(float(percent), 2)),
+                self._get_datetime_now(),
+            ),
+        )
+        return True
+
     def mark_movie_watched_locally(self, tmdb_id):
         """Write-through so the toggle flips immediately instead of waiting on the next
         periodic activities sync. UPDATE-only, keyed by the tmdb_id index rather than

@@ -375,7 +375,9 @@ class SmartPlay:
         return self.item_information["info"]["episode"] == season["episode_count"]
 
     @staticmethod
-    def handle_resume_prompt(resume_switch, force_resume_off=False, force_resume_on=False, force_resume_check=False):
+    def handle_resume_prompt(
+        resume_switch, force_resume_off=False, force_resume_on=False, force_resume_check=False, item_information=None
+    ):
         """
         Handles displaying of resume prompt for item if required
         :param resume_switch: Resume param from arg string
@@ -386,12 +388,30 @@ class SmartPlay:
         :type force_resume_on: bool
         :param force_resume_check: Force a database check for item resume point
         :type force_resume_check: bool
+        :param item_information: The item being played; lets the resume check refresh the item's resume point from
+            Trakt, MDBList and Simkl first (modules/resumeRefresh.py)
+        :type item_information: dict
         :return: Resume time in seconds for item
         :rtype: int
         """
         bookmark_style = g.get_int_setting("general.bookmarkstyle")
+        answered = False
 
-        if force_resume_check and not resume_switch:
+        # The local copy of the resume points is only as new as the last periodic sync (up to ~15 min, or none yet right
+        # after Kodi started), and a list only adds a resume param when that copy already holds a point: ask the services
+        # for the newest point first, on every play (TMDb Helper route, Seren's own lists, playlist / auto-next plays) unless
+        # resuming is off. answered = the services were asked and the answer holds: a None then means "no resume point
+        # anywhere" and a param's older copy is dropped. Not answered (failure, nothing to ask) leaves the param / the
+        # local Trakt lookup below in charge as before. Nothing sends forceresumeoff except an external caller, which
+        # keeps "start from the beginning" working.
+        if item_information and bookmark_style != 2 and not force_resume_off:
+            from resources.lib.modules.resumeRefresh import newest_resume
+
+            newest, answered = newest_resume(item_information)
+            if answered:
+                resume_switch = newest
+
+        if force_resume_check and not resume_switch and not answered:
             from resources.lib.database.trakt_sync.bookmark import TraktSyncDatabase
 
             trakt_id = g.REQUEST_PARAMS.get("action_args").get("trakt_id")
@@ -400,9 +420,11 @@ class SmartPlay:
                 g.log(f"bookmark: {bookmark}")
                 resume_switch = bookmark["resume_time"]
 
-        if g.PLAYLIST.size() <= 1 and resume_switch is not None and bookmark_style != 2 and not force_resume_off:
+        if resume_switch is not None and bookmark_style != 2 and not force_resume_off:
 
-            if bookmark_style == 0 and not force_resume_on:
+            # A playlist / auto-next play never asks (3.9.131): a dismissed prompt cancels playback, which would stop the
+            # run of episodes; it resumes at the newest saved point, as with bookmark style "auto".
+            if bookmark_style == 0 and not force_resume_on and g.PLAYLIST.size() <= 1:
                 import datetime
 
                 selection = xbmcgui.Dialog().contextmenu(

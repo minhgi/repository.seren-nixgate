@@ -7541,3 +7541,73 @@ msgstr "Torrent Probe Cache Check"
 msgctxt "#31649"
 msgid "Probe up to 10 unchecked torrents (best quality first) by adding each magnet to Real-Debrid and seeing whether it is already downloaded. Each probe is deleted again straight away. Skipped for background scrapes, while a video is playing and when Real-Debrid has few free download slots; pauses for ten minutes if Real-Debrid says too many requests. Torrents Real-Debrid blocks are remembered for 7 days."
 msgstr "Probe up to 10 unchecked torrents (best quality first) by adding each magnet to Real-Debrid and seeing whether it is already downloaded. Each probe is deleted again straight away. Skipped for background scrapes, while a video is playing and when Real-Debrid has few free download slots; pauses for ten minutes if Real-Debrid says too many requests. Torrents Real-Debrid blocks are remembered for 7 days."
+
+#: /resources/lib/gui/tvshowMenus.py
+msgctxt "#31650"
+msgid "MDBList - Recent Episodes"
+msgstr "MDBList - Recent Episodes"
+
+#: /resources/lib/gui/tvshowMenus.py
+msgctxt "#31651"
+msgid "Episodes that aired in the last 14 days from the shows you recently watched or have on your MDBList watchlist"
+msgstr "Episodes that aired in the last 14 days from the shows you recently watched or have on your MDBList watchlist"
+
+#: /resources/lib/gui/tvshowMenus.py
+msgctxt "#31652"
+msgid "MDBList - Upcoming Episodes"
+msgstr "MDBList - Upcoming Episodes"
+
+#: /resources/lib/gui/tvshowMenus.py
+msgctxt "#31653"
+msgid "Episodes airing in the next 30 days from the shows you recently watched or have on your MDBList watchlist"
+msgstr "Episodes airing in the next 30 days from the shows you recently watched or have on your MDBList watchlist"
+
+#: /resources/lib/gui/tvshowMenus.py
+msgctxt "#31654"
+msgid "MDBList - Watched Episodes"
+msgstr "MDBList - Watched Episodes"
+
+#: /resources/lib/gui/tvshowMenus.py
+msgctxt "#31655"
+msgid "Episodes you have watched on MDBList one by one, newest first (a whole show or season marked watched on mdblist.com is not listed)"
+msgstr "Episodes you have watched on MDBList one by one, newest first (a whole show or season marked watched on mdblist.com is not listed)"
+
+#: /resources/lib/gui/tvshowMenus.py
+msgctxt "#31656"
+msgid "MDBList - Unfinished Shows in Collection"
+msgstr "MDBList - Unfinished Shows in Collection"
+
+#: /resources/lib/gui/tvshowMenus.py
+msgctxt "#31657"
+msgid "Shows in your MDBList collection that still have an aired episode you have not watched"
+msgstr "Shows in your MDBList collection that still have an aired episode you have not watched"
+
+#: /resources/lib/gui/tvshowMenus.py
+msgctxt "#31658"
+msgid "Simkl - Recent Episodes"
+msgstr "Simkl - Recent Episodes"
+
+#: /resources/lib/gui/tvshowMenus.py
+msgctxt "#31659"
+msgid "Episodes that aired in the last 14 days from the shows you are watching, plan to watch or recently watched on Simkl"
+msgstr "Episodes that aired in the last 14 days from the shows you are watching, plan to watch or recently watched on Simkl"
+
+#: /resources/lib/gui/tvshowMenus.py
+msgctxt "#31660"
+msgid "Simkl - Upcoming Episodes"
+msgstr "Simkl - Upcoming Episodes"
+
+#: /resources/lib/gui/tvshowMenus.py
+msgctxt "#31661"
+msgid "Episodes airing in the next 30 days from the shows you are watching, plan to watch or recently watched on Simkl"
+msgstr "Episodes airing in the next 30 days from the shows you are watching, plan to watch or recently watched on Simkl"
+
+#: /resources/lib/gui/tvshowMenus.py
+msgctxt "#31662"
+msgid "Simkl - Watched Episodes"
+msgstr "Simkl - Watched Episodes"
+
+#: /resources/lib/gui/tvshowMenus.py
+msgctxt "#31663"
+msgid "Every TV episode you have watched on Simkl, newest first (anime is not included)"
+msgstr "Every TV episode you have watched on Simkl, newest first (anime is not included)"

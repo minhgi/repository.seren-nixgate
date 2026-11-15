@@ -246,12 +246,18 @@ class Menus:
         return rows
 
     def recent_movies(self):
-        rows = self.mdblist_database.get_recent_movies(self.page_limit)
-        trakt_list = self._resolve([r["tmdb_id"] for r in rows], "movie")
+        """Watched movies, newest first, paged like Trakt's My Watched Movies (3.9.136: was one page with no Next Page)."""
+        from resources.lib.modules import service_episode_window
+
+        offset = (g.PAGE - 1) * self.page_limit
+        rows = self.mdblist_database.get_recent_movies(self.page_limit + 1, offset)
+        has_more = len(rows) > self.page_limit
+        tmdb_ids = [r["tmdb_id"] for r in rows[: self.page_limit]]
+        trakt_list = service_episode_window.order_like(self._resolve(tmdb_ids, "movie"), tmdb_ids)
         if not trakt_list:
             g.cancel_directory()
             return
-        self.list_builder.movie_menu_builder(trakt_list, no_paging=True, hide_watched=False)
+        self.list_builder.movie_menu_builder(trakt_list, force_next_page=has_more, hide_watched=False)
 
     def recent_shows(self):
         rows = self.mdblist_database.get_recent_shows(self.page_limit)
@@ -409,6 +415,132 @@ class Menus:
                 continue
             return episode
         return None
+
+    def _calendar_shows(self):
+        """Trakt show objects for Recent / Upcoming Episodes (3.9.136): recently watched shows, then watchlist shows (from
+        mdblistMembership.db, else bridgeSync's reader), minus dropped, capped and resolved in that order."""
+        from resources.lib.database.mdblist_membership import MDBListMembershipDatabase
+        from resources.lib.modules import service_episode_window as window
+
+        recent = [row["tmdb_id"] for row in self.mdblist_database.get_recent_shows(_NEXT_UP_SCAN_CAP)]
+        watchlist = MDBListMembershipDatabase().member_ids("watchlist", "show")
+        if watchlist is None:
+            watchlist = window.mdblist_watchlist_show_ids()
+        dropped = {int(i) for i in self._get_dropped_tmdb_ids() if str(i).isdigit()}
+        ids = [i for i in window.candidate_ids(recent[:10], watchlist, recent[10:]) if i not in dropped]
+        return window.order_like(self._resolve(ids, "show"), ids), len(ids)
+
+    def recent_episodes(self):
+        """Episodes aired in the last 14 days from your recently watched and watchlist shows (Trakt: Recent Episodes)."""
+        import datetime
+
+        from resources.lib.modules import service_episode_window as window
+
+        shows, candidates = self._calendar_shows()
+        today = datetime.date.today()
+        hidden = self.hidden_database.get_hidden_items("calendar", "tvshow")
+        picks = window.episodes_in_window(shows, today - datetime.timedelta(days=13), today, True, hidden)
+        g.log(f"MDBList menus: recent episodes {candidates} candidates, {len(shows)} resolved, {len(picks)} episodes", "debug")
+        if not picks:
+            g.cancel_directory()
+            return
+        self.list_builder.mixed_episode_builder(picks, hide_watched=False, no_paging=True)
+
+    def upcoming_episodes(self):
+        """Episodes airing in the next 30 days from your recently watched and watchlist shows (Trakt: Upcoming Episodes)."""
+        import datetime
+
+        from resources.lib.modules import service_episode_window as window
+
+        shows, candidates = self._calendar_shows()
+        tomorrow = datetime.date.today() + datetime.timedelta(days=1)
+        hidden = self.hidden_database.get_hidden_items("calendar", "tvshow")
+        picks = window.episodes_in_window(shows, tomorrow, tomorrow + datetime.timedelta(days=29), False, hidden)
+        g.log(f"MDBList menus: upcoming episodes {candidates} candidates, {len(shows)} resolved, {len(picks)} episodes", "debug")
+        if not picks:
+            g.cancel_directory()
+            return
+        start = (g.PAGE - 1) * self.page_limit
+        self.list_builder.mixed_episode_builder(
+            picks[start : start + self.page_limit],
+            prepend_date=True,
+            hide_unaired=False,
+            hide_watched=False,
+            force_next_page=len(picks) > start + self.page_limit,
+        )
+
+    def watched_episodes(self):
+        """Individually watched episodes, newest first, paged (Trakt: My Watched Episodes). Whole-show / whole-season
+        marks made on mdblist.com have no per-episode rows and so are not listed."""
+        from resources.lib.modules import service_episode_window as window
+
+        offset = (g.PAGE - 1) * self.page_limit
+        rows = self.mdblist_database.get_watched_episodes(self.page_limit + 1, offset)
+        has_more = len(rows) > self.page_limit
+        episodes = window.watched_episode_items(
+            self.trakt_api, [(r["show_tmdb_id"], r["season"], r["number"]) for r in rows[: self.page_limit]]
+        )
+        if not episodes:
+            g.cancel_directory()
+            return
+        self.list_builder.mixed_episode_builder(episodes, hide_watched=False, force_next_page=has_more)
+
+    def unfinished_collection_shows(self):
+        """Collected shows with an aired episode still unwatched (Trakt: Unfinished Shows in Collection). MDBList's
+        collection is show-level, so 'unfinished' is judged like next_up(): an aired, non-special episode missing from
+        MDBList's individually watched set. A show that MDBList lists as watched only in bulk (no per-episode rows) is
+        skipped rather than guessed. Bounded like in_progress_shows (scan cap, time budget, row cap)."""
+        from resources.lib.database.trakt_sync.shows import TraktSyncDatabase as ShowsDatabase
+
+        response = self.mdblist_api.get_json("sync/collection", limit=5000, offset=0) or {}
+        collected = []
+        for entry in response.get("shows") or []:
+            tmdb_id = ((entry.get("show") or {}).get("ids") or {}).get("tmdb")
+            if tmdb_id is not None:
+                collected.append((str(entry.get("collected_at") or ""), int(tmdb_id)))
+        # newest collected first, like Trakt's default Unfinished Shows in Collection order
+        tmdb_ids = [tmdb_id for _, tmdb_id in sorted(collected, key=lambda pair: pair[0], reverse=True)]
+        if not tmdb_ids:
+            g.cancel_directory()
+            return
+
+        watched_by_show = {}
+        for row in self.mdblist_database.get_all_watched_episode_tmdb_keys():
+            watched_by_show.setdefault(row["show_tmdb_id"], set()).add((row["season"], row["number"]))
+        bulk_shows = set(self.mdblist_database.get_bulk_watched_shows())
+        dropped = self._get_dropped_tmdb_ids()
+        shows_db = ShowsDatabase()
+        shows = []
+        started = time.monotonic()
+        examined = 0
+        for tmdb_id in tmdb_ids:
+            if len(shows) >= _IN_PROGRESS_SHOW_CAP or examined >= _NEXT_UP_SCAN_CAP:
+                break
+            if tmdb_id in dropped:
+                continue
+            watched_set = watched_by_show.get(tmdb_id)
+            if not watched_set and tmdb_id in bulk_shows:
+                continue
+            if examined and time.monotonic() - started > _NEXT_UP_TIME_BUDGET:
+                g.log(
+                    f"MDBList menus: unfinished collection stopped after {examined} shows ({len(shows)} listed): "
+                    f"over the {_NEXT_UP_TIME_BUDGET:.0f}s budget",
+                    "debug",
+                )
+                break
+            examined += 1
+            trakt_show = self.trakt_api.search_by_tmdb_id(tmdb_id, "show")
+            if not trakt_show or not trakt_show.get("trakt_id"):
+                continue
+            if self._pick_next_unwatched(shows_db.get_episode_skeleton(trakt_show["trakt_id"]), watched_set or set()):
+                shows.append(trakt_show)
+
+        g.log(f"MDBList menus: unfinished collection examined {examined} of {len(tmdb_ids)} shows, {len(shows)} listed", "debug")
+        if not shows:
+            g.cancel_directory()
+            return
+        self._seed_trakt_sync(shows, "show")
+        self.list_builder.show_list_builder(shows, no_paging=True, hide_watched=False)
 
     def in_progress_movies(self):
         rows = self._live_playback_rows("movie")

@@ -388,6 +388,24 @@ class Menus:
                 menu_item=g.create_icon_dict("shows_watched", g.ICONS_PATH),
             )
             g.add_directory_item(
+                g.get_language_string(31650),
+                action="mdblistRecentEpisodes",
+                description=g.get_language_string(31651),
+                menu_item=g.create_icon_dict("shows_recent", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31652),
+                action="mdblistUpcomingEpisodes",
+                description=g.get_language_string(31653),
+                menu_item=g.create_icon_dict("shows_update", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31656),
+                action="mdblistUnfinishedShows",
+                description=g.get_language_string(31657),
+                menu_item=g.create_icon_dict("shows_progress", g.ICONS_PATH),
+            )
+            g.add_directory_item(
                 g.get_language_string(30996),
                 action="mdblistMyLists",
                 mediatype="shows",
@@ -407,6 +425,12 @@ class Menus:
                 mediatype="shows",
                 description=g.get_language_string(31064),
                 menu_item=g.create_icon_dict("list_trakt", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31654),
+                action="mdblistWatchedEpisodes",
+                description=g.get_language_string(31655),
+                menu_item=g.create_icon_dict("shows_watched", g.ICONS_PATH),
             )
         if g.get_setting('simkl.auth') and g.get_bool_setting('simkl.enabled'):
             g.add_directory_item(
@@ -455,6 +479,24 @@ class Menus:
                 g.get_language_string(31107),
                 action="simklRecentShows",
                 description=g.get_language_string(31108),
+                menu_item=g.create_icon_dict("shows_watched", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31658),
+                action="simklRecentEpisodes",
+                description=g.get_language_string(31659),
+                menu_item=g.create_icon_dict("shows_recent", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31660),
+                action="simklUpcomingEpisodes",
+                description=g.get_language_string(31661),
+                menu_item=g.create_icon_dict("shows_update", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31662),
+                action="simklWatchedEpisodes",
+                description=g.get_language_string(31663),
                 menu_item=g.create_icon_dict("shows_watched", g.ICONS_PATH),
             )
         g.close_directory(g.CONTENT_MENU)

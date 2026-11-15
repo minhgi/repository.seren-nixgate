@@ -65,6 +65,14 @@ _NO_INPUT_MIN_AGE = 3.0  # a stop this soon after play() is read as the user's u
 _IDLE_RELIABLE_MIN = 2.0  # idle seconds at play() above which a key press right after play() is still visible
 _IDLE_TOLERANCE = 1.0  # getGlobalIdleTime() counts whole seconds
 
+# Stop pressed while a stream is playing (3.9.128). Once the player goes idle the watchdog waits for Kodi's stop callback
+# to tell a user stop from a failed stream, but Kodi fires it only after it has saved the file state, which for an HTTP
+# source (Easynews) took 2.2 s: the callback came 2.6 s after the player closed, the old 2 s wait had already run out, the
+# stop was read as an error and the source was blacklisted and the next one started (Shield 2026-11-15). So the wait is
+# longer. The idle timer cannot stand in for a missing callback here: Kodi itself resets it to 0 the moment a stream stops
+# (measured on the PC 2026-11-15: 17 s -> 0 at a PlayerControl(Stop) with no key press), key press or not.
+_PLAYING_CALLBACK_WAIT = 10.0  # seconds to wait for the stop/error callback after a playing stream's player went idle
+
 # Fast failure on the first attempt (3.9.108). A source that fails within about a second (an expired link, 403/404/410, a
 # reset connection) was still read as the user's Stop when it came before _NO_INPUT_MIN_AGE and the idle timer could not
 # vouch for the user (it reads ~0 at the first play(): Seren's own windows reset it), so the playback ended with "User
@@ -664,7 +672,7 @@ class PlaybackWatchdog(xbmc.Player):
             if self._playback_ended("settle"):
                 return False
             if not self.isPlayingVideo():
-                self._await_stop_callback()
+                self._await_stop_callback(_PLAYING_CALLBACK_WAIT)
                 return False
             self._track_position()
 
@@ -796,7 +804,7 @@ class PlaybackWatchdog(xbmc.Player):
                 return "ended" if self._ended_at_stream_end() else "error"
 
             if not self.isPlayingVideo():
-                self._await_stop_callback()
+                self._await_stop_callback(_PLAYING_CALLBACK_WAIT)
                 return "ended" if self._ended_at_stream_end() else "error"
 
             self._track_position()
@@ -810,7 +818,7 @@ class PlaybackWatchdog(xbmc.Player):
             try:
                 current = self.getTime()
             except Exception:
-                self._await_stop_callback()
+                self._await_stop_callback(_PLAYING_CALLBACK_WAIT)
                 return "error"
 
             if current > last_time + 0.5:

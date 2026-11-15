@@ -73,6 +73,8 @@ class SerenPlayer(xbmc.Player):
         self.last_attempted_scrobble_pause = 0
         self.mdblist_enabled = g.get_bool_setting("mdblist.enabled") and bool(g.get_setting("mdblist.auth") or g.get_setting("mdblist.apikey"))
         self.mdblist_scrobbled = False
+        self.mdblist_scrobble_started = False
+        self.last_attempted_mdblist_start = 0
         self.last_attempted_mdblist_stop = 0
         self.last_attempted_mdblist_pause = 0
         self.simkl_enabled = bool(g.get_setting("simkl.auth", "")) and g.get_bool_setting("simkl.enabled", True)
@@ -428,6 +430,7 @@ class SerenPlayer(xbmc.Player):
         :rtype: None
         """
         self._trakt_start_watching(re_scrobble=True)
+        self._mdblist_start_watching(re_scrobble=True)
         self._simkl_start_watching(re_scrobble=True)
 
     def onPlayBackEnded(self):
@@ -848,6 +851,36 @@ class SerenPlayer(xbmc.Player):
             }
         return None
 
+    def _mdblist_start_watching(self, re_scrobble=False):
+        """scrobble/start for MDBList (3.9.133), like Trakt and Simkl send at the start of playback and when a paused video resumes.
+        Never from a seek callback: mdblist.apib lists only 'playback begins / resumes from pause / un-paused' as start events and
+        Simkl's docs forbid start on seek, so the three services see the same events. Live probe 2026-11-15: start answers 201 with
+        the item's ids, a repeated start is accepted, and no paused row exists until a pause or stop."""
+        if (
+            not self.mdblist_enabled
+            or not self.mdblist_scrobbling_enabled
+            or (self.mdblist_scrobbled and not re_scrobble)
+            or (self.mdblist_scrobble_started and not re_scrobble)
+        ):
+            return
+
+        if (
+            self.watched_percentage >= self.mdblist_playCountMinimumPercent
+            or self.current_time < self.mdblist_ignoreSecondsAtStart
+        ):
+            return
+
+        post_data = self._build_mdblist_object()
+        if post_data is not None and time.time() - self.last_attempted_mdblist_start >= 5:
+            try:
+                self._mdblist_api.post("scrobble/start", post_data)
+            except Exception:
+                g.log_stacktrace()
+            finally:
+                self.last_attempted_mdblist_start = time.time()
+        # Set even on failure / missing metadata so the keep_alive loop does not retry this every 0.5 s for the whole playback.
+        self.mdblist_scrobble_started = True
+
     def _mdblist_stop_watching(self):
         if (
             not self.mdblist_enabled
@@ -1183,6 +1216,9 @@ class SerenPlayer(xbmc.Player):
             if not self.scrobble_started:
                 self._trakt_start_watching()
 
+            if not self.mdblist_scrobble_started:
+                self._mdblist_start_watching()
+
             if not self.simkl_scrobble_started:
                 self._simkl_start_watching()
 
@@ -1464,6 +1500,7 @@ class SerenPlayer(xbmc.Player):
             g.clear_kodi_bookmarks()
         except Exception:
             g.log_stacktrace()
+        self._write_service_bookmarks()
         try:
             if self.current_time == 0 or self.total_time == 0:
                 self.bookmark_sync.remove_bookmark(self.trakt_id)
@@ -1480,6 +1517,29 @@ class SerenPlayer(xbmc.Player):
                 self.bookmark_sync.remove_bookmark(self.trakt_id)
         except Exception:
             g.log("_handle_bookmark: DB unavailable at teardown — skipping bookmark sync", "warning")
+
+    def _write_service_bookmarks(self):
+        """Local resume point for MDBList and Simkl at a pause / stop, like _handle_bookmark does for Trakt (3.9.132). Only when the
+        service is on and scrobbling to it is on (otherwise the point never reaches the service and the next sync would drop it).
+        Simkl anime is skipped: its rows use cour numbering, a TMDb season / episode row would never match."""
+        try:
+            if self.mediatype not in ("movie", "episode") or not self.total_time:
+                return
+            from resources.lib.modules.resumeRefresh import write_local_bookmark
+
+            info = self.item_information["info"]
+            if self.mdblist_enabled and self.mdblist_scrobbling_enabled:
+                write_local_bookmark(
+                    "mdblist", self.mediatype, info, self.current_time, self.watched_percentage,
+                    self.mdblist_ignoreSecondsAtStart, self.mdblist_playCountMinimumPercent,
+                )
+            if self.simkl_enabled and self.simkl_scrobbling_enabled and not self.simkl_anime_used:
+                write_local_bookmark(
+                    "simkl", self.mediatype, info, self.current_time, self.watched_percentage,
+                    self.simkl_ignoreSecondsAtStart, self.simkl_playCountMinimumPercent,
+                )
+        except Exception:
+            g.log("_write_service_bookmarks: could not write the local resume point - skipping", "warning")
 
     def _is_file_playing(self):
         if not self.playback_started or self._playback_has_stopped() or self._running_path is None:
