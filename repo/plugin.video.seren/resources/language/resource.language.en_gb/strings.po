@@ -7533,3 +7533,11 @@ msgstr "Prefetch the next episode while you watch"
 msgctxt "#31647"
 msgid "About a minute into an episode, quietly scrape the torrent providers for the episode after it (the first of the next season at a season end), so the stored results are ready when it ends. Torrent search only: nothing is resolved or played. Uses some network while you stream. Needs the torrent cache."
 msgstr "About a minute into an episode, quietly scrape the torrent providers for the episode after it (the first of the next season at a season end), so the stored results are ready when it ends. Torrent search only: nothing is resolved or played. Uses some network while you stream. Needs the torrent cache."
+
+msgctxt "#31648"
+msgid "Torrent Probe Cache Check"
+msgstr "Torrent Probe Cache Check"
+
+msgctxt "#31649"
+msgid "Probe up to 10 unchecked torrents (best quality first) by adding each magnet to Real-Debrid and seeing whether it is already downloaded. Each probe is deleted again straight away. Skipped for background scrapes, while a video is playing and when Real-Debrid has few free download slots; pauses for ten minutes if Real-Debrid says too many requests. Torrents Real-Debrid blocks are remembered for 7 days."
+msgstr "Probe up to 10 unchecked torrents (best quality first) by adding each magnet to Real-Debrid and seeing whether it is already downloaded. Each probe is deleted again straight away. Skipped for background scrapes, while a video is playing and when Real-Debrid has few free download slots; pauses for ten minutes if Real-Debrid says too many requests. Torrents Real-Debrid blocks are remembered for 7 days."

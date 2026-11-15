@@ -1808,6 +1808,19 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
+				<setting id="realdebrid.torrentprobe" type="boolean" label="31648" help="31649" parent="">
+					<level>0</level>
+					<default>false</default>
+					<dependencies>
+						<dependency type="visible">
+							<and>
+								<condition operator="is" setting="realdebrid.enabled">true</condition>
+								<condition operator="is" setting="rd.torrents">true</condition>
+							</and>
+						</dependency>
+					</dependencies>
+					<control type="toggle"/>
+				</setting>
 				<setting id="realdebrid.storeall" type="boolean" label="30886" help="30893" parent="">
 					<level>0</level>
 					<default>false</default>

@@ -127,7 +127,7 @@
 			Rework for Seren 2.0
 		</news>
 	</extension>
-</addon><addon id="plugin.video.seren" version="3.9.125" name="Seren" provider-name="Nixgates">
+</addon><addon id="plugin.video.seren" version="3.9.126" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -194,6 +194,8 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.126
+            [NEW] Real-Debrid - New setting "Torrent Probe Cache Check" (Settings &gt; Real-Debrid, off by default). When it is on, Seren adds up to 10 unchecked torrents to Real-Debrid during a scrape, best quality first, to see which are already downloaded, and deletes each one again straight away. It stays out of background scrapes and of scrapes that start while a video is playing, skips itself when Real-Debrid has few free download slots, stops for ten minutes when Real-Debrid answers too many requests, and remembers torrents Real-Debrid blocks for 7 days. Torrents it proves are not cached are no longer listed as unverified sources.
             Changelog 3.9.125
             [FIX] Real-Debrid - When Real-Debrid refuses a torrent as a blocked (infringing) file, Seren no longer refreshes your Real-Debrid login and re-sends the same request, and no longer reports the torrent as "no longer cached". It now logs that Real-Debrid blocked it, remembers it as blocked for 7 days (later scrapes leave it out) and goes straight to the next source.
             Changelog 3.9.124

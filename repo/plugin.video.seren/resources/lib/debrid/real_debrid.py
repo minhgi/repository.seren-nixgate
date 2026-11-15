@@ -306,6 +306,120 @@ class RealDebrid:
 
         return hash_dict
 
+    # ── Scrape-time cache probe (realdebrid.torrentprobe) ─────────────────────
+    # Real-Debrid has no instant-availability call any more, so the only proof a hash is cached is to add its magnet
+    # and see whether the torrent is already 'downloaded'. Every call here goes straight through self.session with a
+    # short timeout and NEVER refreshes the token (post_url/get_url refresh on any non-OK reply, which on a 429 would
+    # start a refresh storm), and every torrent the probe creates is deleted again before it returns. A second add of
+    # the same hash makes a second torrent entry (live check 2026-11-14), so nothing is kept for the resolver to reuse.
+    PROBE_TIMEOUT = 5
+
+    def get_active_slots(self):
+        """(active, limit) from GET torrents/activeCount, or None if it cannot be read (no refresh, no retry)."""
+        if not self.token:
+            return None
+        try:
+            response = self.session.get(
+                self.base_url + "torrents/activeCount", headers=self._get_headers(), timeout=self.PROBE_TIMEOUT
+            )
+            if not response.ok:
+                return None
+            data = response.json()
+            return int(data["nb"]), int(data["limit"])
+        except Exception:
+            return None
+
+    def _probe_delete(self, torrent_id):
+        """Delete a probe torrent, one retry. True when Real-Debrid accepted the delete (or it was already gone)."""
+        for _ in range(2):
+            try:
+                response = self.session.delete(
+                    self.base_url + f"torrents/delete/{torrent_id}", headers=self._get_headers(), timeout=self.PROBE_TIMEOUT
+                )
+                if response.status_code in (200, 202, 204, 404):
+                    return True
+            except Exception:
+                pass
+        return False
+
+    def probe_cached(self, hash_value):
+        """
+        Add the magnet for one hash, see whether it is already downloaded, delete it again.
+
+        :return: dict {'verdict': ..., 'leftover': torrent id or None}
+                 verdict 'cached'   - already downloaded on Real-Debrid
+                         'uncached' - anything else that is not an error (including a metadata-less magnet)
+                         'blocked'  - HTTP 451 / error_code 35 (infringing file); no torrent exists
+                         'stop'     - 401/403/429 or no token: the caller must stop probing
+                                      (the result also carries 'rate_limited': True for a 429)
+                         'error'    - timeout, 5xx or an unexpected reply for this one hash
+                 leftover is set only when a created torrent could not be deleted (caller cleans it up later).
+        """
+        if not self.token:
+            return {"verdict": "stop", "leftover": None}
+        torrent_id = None
+        verdict = "error"
+        rate_limited = False
+        try:
+            headers = self._get_headers()
+            response = self.session.post(
+                self.base_url + "torrents/addMagnet",
+                data={"magnet": f"magnet:?xt=urn:btih:{hash_value}"},
+                headers=headers,
+                timeout=self.PROBE_TIMEOUT,
+            )
+            body = {}
+            try:
+                body = response.json()
+            except Exception:
+                pass
+            if response.status_code == 451 or (isinstance(body, dict) and str(body.get("error_code")) == "35"):
+                return {"verdict": "blocked", "leftover": None}
+            if response.status_code in (401, 403, 429):
+                g.log(f"RD probe: HTTP {response.status_code} on addMagnet - stopping the probe", "warning")
+                return {"verdict": "stop", "leftover": None, "rate_limited": response.status_code == 429}
+            if not response.ok or not isinstance(body, dict) or not body.get("id"):
+                return {"verdict": "error", "leftover": None}
+            torrent_id = body["id"]
+
+            info = self.session.get(
+                self.base_url + f"torrents/info/{torrent_id}", headers=headers, timeout=self.PROBE_TIMEOUT
+            )
+            data = info.json() if info.ok else {}
+            status = data.get("status") if isinstance(data, dict) else None
+            if status == "waiting_files_selection":
+                # Real-Debrid only reports 'downloaded' after a file selection, and only for torrents it already has.
+                selected = self.session.post(
+                    self.base_url + f"torrents/selectFiles/{torrent_id}",
+                    data={"files": "all"},
+                    headers=headers,
+                    timeout=self.PROBE_TIMEOUT,
+                )
+                if selected.status_code in (401, 403, 429):
+                    g.log(f"RD probe: HTTP {selected.status_code} on selectFiles - stopping the probe", "warning")
+                    verdict = "stop"
+                    rate_limited = selected.status_code == 429
+                else:
+                    info = self.session.get(
+                        self.base_url + f"torrents/info/{torrent_id}", headers=headers, timeout=self.PROBE_TIMEOUT
+                    )
+                    data = info.json() if info.ok else {}
+                    status = data.get("status") if isinstance(data, dict) else None
+                    verdict = "cached" if status == "downloaded" else "uncached"
+            elif status == "downloaded":
+                verdict = "cached"
+            elif status:
+                # magnet_conversion (no metadata yet), queued, downloading, error/dead states: not cached.
+                verdict = "uncached"
+        except Exception as e:
+            g.log(f"RD probe failed for {hash_value}: {e}", "warning")
+            verdict = "error"
+        finally:
+            leftover = None
+            if torrent_id and not self._probe_delete(torrent_id):
+                leftover = torrent_id
+        return {"verdict": verdict, "leftover": leftover, "rate_limited": rate_limited}
+
     def _get_url_no_refresh(self, url):
         """
         GET request that bypasses the automatic token-refresh cycle.

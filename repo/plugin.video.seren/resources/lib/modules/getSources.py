@@ -235,6 +235,17 @@ class Sources:
         self._cache_check_active_count = 0
         self._cache_check_done = threading.Event()
         self._cache_check_done.set()  # "no active check" = set
+        # Real-Debrid scrape-time torrent probe (realdebrid.torrentprobe): ONE budget shared by every tier batch of this
+        # scrape, because the tiers run _realdebrid_worker concurrently and a per-call cap would multiply.
+        self._rd_probe_lock = threading.Lock()
+        self._rd_probe_done = set()        # hashes already claimed by a probe this scrape
+        self._rd_probe_count = 0           # probes claimed so far
+        self._rd_probe_cached = 0          # probes that found a cached torrent
+        self._rd_probe_errors = 0          # failed probes (timeouts, 5xx, odd replies)
+        self._rd_probe_stopped = False     # 401/403/429, repeated errors, or no free download slots
+        self._rd_probe_started_at = None   # monotonic time of the first probe, for the wall-clock budget
+        self._rd_probe_slots_ok = None     # None = activeCount not read yet
+        self._rd_probe_leftovers = []      # probe torrents that could not be deleted
         # Set by _prem_terminate() when pre-termination stops the scrape on a cache hit.
         # _finalise_results() reads it to move the seed-backfill site lookups off the playback path.
         self._preterm_fired = False
@@ -3067,6 +3078,16 @@ class TorrentCacheCheck:
     _DL_PROBE_GOAL     = 10    # stop storing cached once this many found
     _DL_PROBE_IDS_KEY  = "debridlink.probe_ids"  # runtime-setting key for cleanup
 
+    _RD_PROBE_MAX_TOTAL    = 10    # probes per scrape, shared by all tier batches
+    _RD_PROBE_WORKERS      = 2     # concurrent probes (each is add + info + select + info + delete)
+    _RD_PROBE_CACHED_GOAL  = 5     # stop starting probes once this many cached were found
+    _RD_PROBE_BUDGET_S     = 5.0   # no new probe starts later than this after the first one
+    _RD_PROBE_MIN_HEADROOM = 4     # free Real-Debrid download slots required before probing at all
+    _RD_PROBE_MAX_ERRORS   = 3     # failed probes before the scrape stops probing
+    _RD_PROBE_IDS_KEY      = "realdebrid.probe_leftover_ids"  # probe torrents that could not be deleted
+    _RD_PROBE_COOLDOWN_KEY = "seren.rd_probe_cooldown_until"  # Home window property: no probing until this time
+    _RD_PROBE_COOLDOWN_S   = 600   # after a Real-Debrid 429
+
     @staticmethod
     def _ad_upload_sort_key(torrent):
         """Quality-then-seeds sort key for magnet/upload candidate list."""
@@ -3128,6 +3149,143 @@ class TorrentCacheCheck:
                 "info",
             )
             dl.delete_torrents_background(stale)
+
+    def _rd_cleanup_stale_probes(self):
+        """Delete probe torrents an earlier scrape could not delete (runtime setting, like _dl_cleanup_stale_probes)."""
+        stale = g.get_runtime_setting(self._RD_PROBE_IDS_KEY)
+        if not stale:
+            return
+        g.clear_runtime_setting(self._RD_PROBE_IDS_KEY)
+        if isinstance(stale, list) and stale:
+            g.log(f"RD TorrentProbe: deleting {len(stale)} leftover probe torrent(s) from an earlier scrape", "info")
+            for torrent_id in stale:
+                if not self.rd_api._probe_delete(torrent_id):
+                    g.log(f"RD TorrentProbe: could not delete leftover torrent {torrent_id}", "warning")
+
+    def _rd_probe_cache_check(self, candidates):
+        """
+        Scrape-time Real-Debrid cache probe (setting realdebrid.torrentprobe, off by default).
+
+        Adds the magnet of the best unchecked hashes to Real-Debrid, sees whether it is already 'downloaded' and deletes
+        it again (RealDebrid.probe_cached). Budgeted once per scrape through the shared state on scraper_class:
+        at most _RD_PROBE_MAX_TOTAL probes, _RD_PROBE_WORKERS at a time, no new probe after _RD_PROBE_BUDGET_S, nothing
+        when too few download slots are free, and a stop on 401/403/429 or repeated errors. A 429 also pauses probing
+        for _RD_PROBE_COOLDOWN_S. Background scrapes (prefetch, stale refresh) and scrapes that start while a video is
+        playing never probe.
+
+        :param candidates: torrents (sorted best first) that no earlier layer confirmed
+        :return: (cached_hashes, uncached_hashes, blocked_hashes), all lowercase. Cached torrents are already stored.
+        """
+        import concurrent.futures
+        sc = self.scraper_class
+        cached, uncached, blocked = set(), set(), set()
+        if getattr(sc, "background_refresh", False) or not candidates:
+            return cached, uncached, blocked
+        if xbmc.Player().isPlayingVideo():
+            return cached, uncached, blocked  # e.g. the Playing Next pre-scrape: keep Real-Debrid free for the stream
+        try:
+            cooldown_until = float(g.HOME_WINDOW.getProperty(self._RD_PROBE_COOLDOWN_KEY) or 0)
+        except (TypeError, ValueError):
+            cooldown_until = 0
+        if cooldown_until > time.time():
+            return cached, uncached, blocked
+
+        with sc._rd_probe_lock:
+            if sc._rd_probe_stopped:
+                return cached, uncached, blocked
+            if sc._rd_probe_slots_ok is None:
+                self.rd_api.try_refresh_token()  # honours the expiry time; no forced refresh
+                slots = self.rd_api.get_active_slots()
+                if slots is None:
+                    sc._rd_probe_slots_ok = False
+                    g.log("RD TorrentProbe: skipped - could not read torrents/activeCount", "info")
+                else:
+                    active, limit = slots
+                    sc._rd_probe_slots_ok = (limit - active) >= self._RD_PROBE_MIN_HEADROOM
+                    if not sc._rd_probe_slots_ok:
+                        g.log(
+                            f"RD TorrentProbe: skipped - only {limit - active} free download slots "
+                            f"({active}/{limit} active), need {self._RD_PROBE_MIN_HEADROOM}",
+                            "info",
+                        )
+            if not sc._rd_probe_slots_ok:
+                return cached, uncached, blocked
+            todo = []
+            for t in candidates:
+                h = t.get("hash", "").lower()
+                if not h or h in sc._rd_probe_done:
+                    continue
+                if sc._rd_probe_count + len(todo) >= self._RD_PROBE_MAX_TOTAL:
+                    break
+                todo.append(t)
+                sc._rd_probe_done.add(h)
+            sc._rd_probe_count += len(todo)
+            if not todo:
+                return cached, uncached, blocked
+            if sc._rd_probe_started_at is None:
+                sc._rd_probe_started_at = time.monotonic()
+            deadline = sc._rd_probe_started_at + self._RD_PROBE_BUDGET_S
+
+        def _one(torrent):
+            h = torrent["hash"].lower()
+            with sc._rd_probe_lock:
+                if (sc._rd_probe_stopped or sc._rd_probe_cached >= self._RD_PROBE_CACHED_GOAL
+                        or time.monotonic() > deadline):
+                    return h, None
+            result = self.rd_api.probe_cached(h)
+            with sc._rd_probe_lock:
+                if result["verdict"] == "cached":
+                    sc._rd_probe_cached += 1
+                elif result["verdict"] == "stop":
+                    sc._rd_probe_stopped = True
+                    if result.get("rate_limited"):
+                        g.HOME_WINDOW.setProperty(self._RD_PROBE_COOLDOWN_KEY, str(time.time() + self._RD_PROBE_COOLDOWN_S))
+                        g.log(
+                            f"RD TorrentProbe: Real-Debrid rate limit (429) - no probing for {self._RD_PROBE_COOLDOWN_S // 60} min",
+                            "warning",
+                        )
+                elif result["verdict"] == "error":
+                    sc._rd_probe_errors += 1
+                    if sc._rd_probe_errors >= self._RD_PROBE_MAX_ERRORS:
+                        sc._rd_probe_stopped = True
+                if result.get("leftover"):
+                    sc._rd_probe_leftovers.append(result["leftover"])
+            return h, result["verdict"]
+
+        by_hash = {t["hash"].lower(): t for t in todo}
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self._RD_PROBE_WORKERS) as executor:
+            results = list(executor.map(_one, todo))
+        # every probe has finished here (the with-block joined the pool)
+
+        for h, verdict in results:
+            if verdict == "cached":
+                by_hash[h]["debrid_provider"] = "real_debrid"
+                self.store_torrent(by_hash[h])
+                cached.add(h)
+            elif verdict == "uncached":
+                uncached.add(h)
+            elif verdict == "blocked":
+                blocked.add(h)
+        if blocked:
+            try:
+                from resources.lib.database.debridCache import DebridCache
+                DebridCache().set_infringing(list(blocked), "rd")
+            except Exception:
+                pass
+        with sc._rd_probe_lock:
+            leftovers, sc._rd_probe_leftovers = sc._rd_probe_leftovers, []
+        if leftovers:
+            existing = g.get_runtime_setting(self._RD_PROBE_IDS_KEY)
+            g.set_runtime_setting(
+                self._RD_PROBE_IDS_KEY, list(set((existing if isinstance(existing, list) else []) + leftovers))
+            )
+        g.log(
+            f"RD TorrentProbe: {len(cached)} cached, {len(uncached)} not cached, {len(blocked)} blocked "
+            f"from {len(todo)} claimed ({sc._rd_probe_count}/{self._RD_PROBE_MAX_TOTAL} used this scrape"
+            f"{', stopped' if sc._rd_probe_stopped else ''})",
+            "info",
+        )
+        return cached, uncached, blocked
 
     def _all_debrid_worker(self, torrent_list, info):
         try:
@@ -3295,6 +3453,8 @@ class TorrentCacheCheck:
 
     def _realdebrid_worker(self, torrent_list, info):
         try:
+            self._rd_cleanup_stale_probes()
+
             # ── Layer 1: DB cache ─────────────────────────────────────────────
             db_cached, unchecked = self._split_by_db_cache(torrent_list, 'rd')
             for i in db_cached:
@@ -3408,6 +3568,18 @@ class TorrentCacheCheck:
                         "info",
                     )
 
+            # ── Layer 4b: scrape-time torrent probe (realdebrid.torrentprobe, off by default) ─
+            # Adds the best still-unchecked magnets to Real-Debrid one by one and deletes them again, to learn which are
+            # already downloaded. Probed-uncached and blocked hashes are kept out of StoreAll, legacy Option A and (for
+            # blocked ones) the 4 h 'False' write below, which would overwrite their 7-day block.
+            probe_uncached = set()
+            probe_blocked = set()
+            if g.get_bool_setting('realdebrid.torrentprobe'):
+                _probe_candidates = [t for t in needs_check if t['hash'].lower() not in confirmed_cached]
+                _probe_candidates.sort(key=self._rd_storeall_sort_key, reverse=True)
+                _probe_cached, probe_uncached, probe_blocked = self._rd_probe_cache_check(_probe_candidates)
+                confirmed_cached |= _probe_cached
+
             # ── Layer 5: StoreAll (toggle-gated) + legacy Option A fallback ───
             # Two mutually-exclusive code paths:
             #
@@ -3435,6 +3607,8 @@ class TorrentCacheCheck:
                     _sa_candidates = [
                         t for t in needs_check
                         if t.get('hash', '').lower() not in confirmed_cached
+                        and t.get('hash', '').lower() not in probe_uncached
+                        and t.get('hash', '').lower() not in probe_blocked
                     ]
                     _sa_candidates.sort(key=self._rd_storeall_sort_key, reverse=True)
                     _sa_candidates = _sa_candidates[:_sa_limit]
@@ -3469,7 +3643,7 @@ class TorrentCacheCheck:
                 _legacy_added = 0
                 for i in needs_check:
                     h = i['hash'].lower()
-                    if h not in confirmed_cached:
+                    if h not in confirmed_cached and h not in probe_uncached and h not in probe_blocked:
                         i['debrid_provider'] = 'real_debrid'
                         self.store_torrent(i)
                         confirmed_cached.add(h)
@@ -3484,7 +3658,8 @@ class TorrentCacheCheck:
             # StoreAll candidates were never checked: record nothing for them (neither True nor False), so the
             # next scrape treats them as unchecked again instead of reading them back from the DB as cached.
             self._write_cache_results(
-                [t for t in unchecked if t['hash'].lower() not in unverified_stored], confirmed_cached, 'rd'
+                [t for t in unchecked if t['hash'].lower() not in unverified_stored
+                 and t['hash'].lower() not in probe_blocked], confirmed_cached, 'rd'
             )
         except Exception:
             g.log_stacktrace()
