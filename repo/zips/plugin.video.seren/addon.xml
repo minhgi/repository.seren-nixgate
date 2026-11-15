@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.video.seren" version="3.9.126" name="Seren" provider-name="Nixgates">
+<addon id="plugin.video.seren" version="3.9.127" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -66,6 +66,8 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.127
+            [FIX] Trakt Sync - Finishing an episode no longer freezes Seren for over a minute on slower devices (Shield). Right after an episode is marked watched Seren re-syncs your watched list, and one step of that sync (matching the watched episodes to your 160,000 stored episodes) ran as a full scan for every episode: about 12 seconds on a PC and over a minute on a Shield, with the sync database locked the whole time, so the next episode, the next-episode play and the watched mark of the episode just finished all waited. The step now uses the index and takes a fraction of a second. The same fix applies to the collected-episode and episode-rating syncs.
             Changelog 3.9.126
             [NEW] Real-Debrid - New setting "Torrent Probe Cache Check" (Settings > Real-Debrid, off by default). When it is on, Seren adds up to 10 unchecked torrents to Real-Debrid during a scrape, best quality first, to see which are already downloaded, and deletes each one again straight away. It stays out of background scrapes and of scrapes that start while a video is playing, skips itself when Real-Debrid has few free download slots, stops for ten minutes when Real-Debrid answers too many requests, and remembers torrents Real-Debrid blocks for 7 days. Torrents it proves are not cached are no longer listed as unverified sources.
             Changelog 3.9.125

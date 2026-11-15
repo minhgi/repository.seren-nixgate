@@ -245,8 +245,8 @@ class Database:
     def execute_sql(self, query, data=None):
         return _run_pooled(self._db_file, "execute_sql", query, data)
 
-    def create_temp_table(self, table_name, columns, primary_key=None):
-        return TempTable(self, table_name, columns, primary_key)
+    def create_temp_table(self, table_name, columns, primary_key=None, column_types=None):
+        return TempTable(self, table_name, columns, primary_key, column_types)
 
     # endregion
 
@@ -482,11 +482,16 @@ class MySqlConnection(_connection):
 
 
 class TempTable:
-    def __init__(self, database, table_name, columns, primary_key=None):
+    def __init__(self, database, table_name, columns, primary_key=None, column_types=None):
         self.database = database
         self.columns = columns
         self.table_name = table_name
         self.primary_key = primary_key
+        # Columns are VARCHAR unless told otherwise. A key column that is joined to an INTEGER column of a real table
+        # has to be INTEGER too, or SQLite cannot use the temp table's primary-key index for that join and scans the
+        # whole temp table for every row (163,000 episodes x 2,400 watched = 12 s on a PC, over a minute on a Shield,
+        # with the database write-locked the whole time).
+        self.column_types = column_types or {}
 
     def __enter__(self):
         self._drop_table()
@@ -508,7 +513,7 @@ class TempTable:
     def _create_table(self):
         self.database.execute_sql(
             f"""
-            CREATE TABLE IF NOT EXISTS [{self.table_name}] ({",".join(f"[{c}] VARCHAR" for c in self.columns)}{
+            CREATE TABLE IF NOT EXISTS [{self.table_name}] ({",".join(f"[{c}] {self.column_types.get(c, 'VARCHAR')}" for c in self.columns)}{
                 f',PRIMARY KEY ({self.primary_key}), UNIQUE ({self.primary_key})' if self.primary_key else ''
             })
             """

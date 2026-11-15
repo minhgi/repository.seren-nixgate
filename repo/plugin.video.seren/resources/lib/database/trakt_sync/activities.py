@@ -524,6 +524,7 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
                 "_episodes_watched",
                 ["trakt_show_id", "season", "episode", "last_watched_at", "watched"],
                 primary_key="trakt_show_id, season, episode",
+                column_types={"trakt_show_id": "INTEGER", "season": "INTEGER", "episode": "INTEGER"},
             ) as temp_table:
                 temp_table.insert_data(
                     [
@@ -593,6 +594,7 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
                 "_episodes_collected",
                 ["trakt_show_id", "season", "episode", "collected_at", "collected"],
                 primary_key="trakt_show_id, season, episode",
+                column_types={"trakt_show_id": "INTEGER", "season": "INTEGER", "episode": "INTEGER"},
             ) as temp_table:
                 temp_table.insert_data(
                     [
@@ -735,7 +737,7 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
                 )
 
             with self.create_temp_table(
-                "_episodes_rated", ["trakt_id", "user_rating"], primary_key="trakt_id"
+                "_episodes_rated", ["trakt_id", "user_rating"], primary_key="trakt_id", column_types={"trakt_id": "INT"}
             ) as temp_table:
                 temp_table.insert_data(
                     [
