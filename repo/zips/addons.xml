@@ -127,7 +127,7 @@
 			Rework for Seren 2.0
 		</news>
 	</extension>
-</addon><addon id="plugin.video.seren" version="3.9.137" name="Seren" provider-name="Nixgates">
+</addon><addon id="plugin.video.seren" version="3.9.138" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -194,6 +194,8 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.138
+            [FIX] Changelog - changelog.txt stopped at 3.9.111; it now lists every version up to this one.
             Changelog 3.9.137
             [FIX] Playback - If you stepped or seeked backward in the first seconds of a video, Seren could stop a stream that was playing fine and switch to another source, because it took the lower position for a frozen stream. A backward seek now just restarts the stall check.
             Changelog 3.9.136

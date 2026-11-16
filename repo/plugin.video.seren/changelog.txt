@@ -1,3 +1,88 @@
+[B]3.9.138[/B]
+- [FIX] Changelog - changelog.txt stopped at 3.9.111; it now lists every version up to this one.
+
+[B]3.9.137[/B]
+- [FIX] Playback - If you stepped or seeked backward in the first seconds of a video, Seren could stop a stream that was playing fine and switch to another source, because it took the lower position for a frozen stream. A backward seek now just restarts the stall check.
+
+[B]3.9.136[/B]
+- [NEW] MDBList / Simkl - New My Shows entries like Trakt's: Recent Episodes, Upcoming Episodes and Watched Episodes for MDBList and Simkl (from the shows you recently watched or have on your watchlist, watching or plan to watch), and MDBList Unfinished Shows in Collection. Recent Movies for MDBList and Simkl now pages through your whole watched history.
+
+[B]3.9.135[/B]
+- [FIX] MDBList - If your MDBList watchlist or collection is longer than one page, Seren no longer stores a cut-off copy; the Add/Remove options for that list stay hidden instead of offering Add for something already in it.
+
+[B]3.9.134[/B]
+- [NEW] MDBList - The MDBList item menu now has Add to / Remove from Collection and Add to / Remove from Watchlist for movies and shows, like the Trakt menu (only the option that applies is shown). They need one sync first to know what is already in your MDBList watchlist and collection; Seren keeps that list in a small new file (mdblistMembership.db) so your existing MDBList data is untouched.
+
+[B]3.9.133[/B]
+- [FIX] MDBList - Seren now tells MDBList when a video starts playing and when it resumes after a pause, the way it already did for Trakt and Simkl, so MDBList knows what you are watching (before it only heard about pauses and stops). Seeking sends nothing, as MDBList's and Simkl's documentation ask.
+
+[B]3.9.132[/B]
+- [FIX] MDBList / Simkl - Pausing or stopping a video now saves the resume point in Seren's own copy for MDBList and Simkl at once, the way it already did for Trakt, instead of waiting for the next sync (up to 15 minutes). Lists show the progress straight away, the Simkl In Progress menu is current, and the next play starts at that point. The check that drops a resume point cleared on another device leaves a point saved in the last 2 minutes alone, and Simkl's Clear Progress now also works for a point Seren saved itself.
+
+[B]3.9.131[/B]
+- [FIX] Resume - With the resume setting on "ask", the next episode of a playlist or auto-next no longer shows the Resume prompt (dismissing it cancelled playback and ended the run of episodes). It resumes at the newest saved point on its own. A play you start yourself still asks.
+
+[B]3.9.130[/B]
+- [FIX] Resume - The check for the newest resume point (added in 3.9.129 for the TMDb Helper route) now covers every movie and episode play unless resuming is switched off. Plays started from Seren's own lists no longer depend on the list's copy of the resume point (it was older, or missing when the pause was made on another device), and playlist and auto-next plays (the next episode after one finishes) now resume at the newest saved point instead of always starting at 0:00. A resume point that was finished or cleared on another device is dropped from Seren's copy for Trakt as well (before it was kept until the next sync, and Trakt's later pages are read to be sure it is gone). If a service is slow or cannot be reached, Seren uses its own copy as before.
+
+[B]3.9.129[/B]
+- [FIX] Resume - Playing an item right after you paused it on another device now resumes at that point. Seren used to read your resume points only from its own copy, which is refreshed about 45 seconds after Kodi starts and then every 15 minutes, so a play started sooner than that began at 0:00 or at an older point. When a play asks for a resume check (the TMDb Helper route), Seren now asks Trakt, MDBList and Simkl for the newest resume point of that item first (up to 8 seconds, all three at once) and resumes at the newest one. If a service is slow or cannot be reached, Seren uses its own copy as before. Plays started from Seren's own lists still use the list's copy.
+
+[B]3.9.128[/B]
+- [FIX] Playback - Pressing Back or Stop in the first minute of a stream no longer makes Seren treat it as a failed source and start the next one. When Kodi was slow to report the stop (for example while it saved the position of an Easynews stream, about 2.5 seconds) Seren gave up waiting after 2 seconds, blacklisted the source you were watching and began playing the next one until you pressed Back again. Seren now waits up to 10 seconds for Kodi to report the stop.
+
+[B]3.9.127[/B]
+- [FIX] Trakt Sync - Finishing an episode no longer freezes Seren for over a minute on slower devices (Shield). Right after an episode is marked watched Seren re-syncs your watched list, and one step of that sync (matching the watched episodes to your 160,000 stored episodes) ran as a full scan for every episode: about 12 seconds on a PC and over a minute on a Shield, with the sync database locked the whole time, so the next episode, the next-episode play and the watched mark of the episode just finished all waited. The step now uses the index and takes a fraction of a second. The same fix applies to the collected-episode and episode-rating syncs.
+
+[B]3.9.126[/B]
+- [NEW] Real-Debrid - New setting "Torrent Probe Cache Check" (Settings > Real-Debrid, off by default). When it is on, Seren adds up to 10 unchecked torrents to Real-Debrid during a scrape, best quality first, to see which are already downloaded, and deletes each one again straight away. It stays out of background scrapes and of scrapes that start while a video is playing, skips itself when Real-Debrid has few free download slots, stops for ten minutes when Real-Debrid answers too many requests, and remembers torrents Real-Debrid blocks for 7 days. Torrents it proves are not cached are no longer listed as unverified sources.
+
+[B]3.9.125[/B]
+- [FIX] Real-Debrid - When Real-Debrid refuses a torrent as a blocked (infringing) file, Seren no longer refreshes your Real-Debrid login and re-sends the same request, and no longer reports the torrent as "no longer cached". It now logs that Real-Debrid blocked it, remembers it as blocked for 7 days (later scrapes leave it out) and goes straight to the next source.
+
+[B]3.9.124[/B]
+- [NEW] Scraping - Prefetch the next episode while you watch (Settings > Scraping, on by default; needs the torrent cache): about a minute into an episode Seren quietly scrapes the torrent providers for the episode after it (the first of the next season at a season end). Torrent search only, nothing is resolved or played.
+- [NEW] Scraping - The idle prefetch of your next episode now also follows your MDBList and Simkl next-up when Trakt has nothing to prefetch.
+- [CHG] Scraping - The background refresh of old stored results after a play now covers every episode, not only episodes of airing shows (half of the 2 week storage time for other shows).
+
+[B]3.9.123[/B]
+- [NEW] Scraping - Prefetch sources for your next episode (Settings > Scraping, on by default; needs the torrent cache): while Kodi is idle Seren quietly scrapes the torrent providers for the next episode of the shows you watched most recently, so the stored results are ready when you press play. One show every 13-17 minutes, only when nothing is stored for it yet, never while a video is playing, and no pop-ups.
+
+[B]3.9.122[/B]
+- [FIX] Dialogs - The countdown line at the bottom of the Playing Next and Still Watching windows now stretches over the full width of the window (it only covered about half of it). When your accent colour is light (white, yellow ...) the line is drawn in red instead, because a white line disappeared on bright pictures; other accent colours are used as before.
+
+[B]3.9.121[/B]
+- [FIX] Dialogs - In the Playing Next and Still Watching windows the rating next to the title (for example 8.07) now sits on the same line as the title instead of dropping lower and being cut off by the picture. In the Stay seated card the description is no longer stretched into wide gaps.
+
+[B]3.9.120[/B]
+- [FIX] Dialogs - The focused button of the Playing Next, Still Watching, Skip and Stay seated windows is no longer white text on a white button when your accent colour is light (white, yellow, light green ...). The label of the focused button now turns dark on a light accent colour; dark accent colours keep the white label.
+
+[B]3.9.119[/B]
+- [CHANGE] Skipping - Auto-skip now counts down. When a segment type is set to skip by itself (Skip Intro, Recap, Credits or Preview), the Skip button counts down (for example "Skip Intro (5)") and the Close button becomes Cancel, so a wrongly timed skip can be stopped. The new setting Auto-skip countdown (seconds) sets the length, 5 by default (this changes how auto-skip behaves for everyone who had it on); set it to 0 for the old instant skip. The countdown waits while playback is paused, and a segment too short for it still skips at once.
+- [NEW] Playback - Stay seated card for films. When TMDB says a film has a scene during or after the credits, a card appears as the credits begin, with Keep watching and Stop (it closes by itself after 15 seconds). For those films the Skip Credits button is not shown. The credits start comes from TheIntroDB, so a film TheIntroDB has no credits time for gets no card. New setting Stay seated card (films), on by default.
+
+[B]3.9.118[/B]
+- [CHANGE] Real-Debrid external cache check - the DMM (Debrid Media Manager) part is switched off. debridmediamanager.com now refuses every request from tools to its availability endpoint with HTTP 403 (it points tools to a sponsor API that needs a paid API key), so each Real-Debrid scrape logged a 'DMM check failed: 403' warning and gained nothing. The check now asks Torrentio (and MediaFusion when a token is set) only, and the log line reads 'from Torrentio' instead of 'from Torrentio+DMM'. The DMM scraper in the a4kScrapers pack and the Zilean scraper are separate and unchanged. The old DMM function is left in the code, not called, in case a sponsor key is added later.
+
+[B]3.9.117[/B]
+- [FIX] Playback - When Seren rescrapes during playback (too many sources that do not match the title, or too many that are no longer cached on the debrid service), the new round no longer starts from scratch. It keeps counting the attempts already used (so one play request no longer tries up to twice the retry limit) and skips releases that already failed, instead of trying the same dead source again as 'Attempt 1/3'.
+
+[B]3.9.116[/B]
+- [FIX] Playback - A source that opened but then stopped delivering data was still committed when the video was held paused at the start (a4kSubtitles' subtitle dialog holds the video for up to about 35 seconds when it finds no subtitle): the stall timer is held while paused, so the dead stream was accepted and froze once the part Kodi had already buffered ran out. While the video is paused and you have not touched the remote, keyboard or mouse, Seren now watches Kodi's read-ahead cache: if it stops filling for the stall timeout (10 seconds) while it is neither full nor holding the whole video, the source counts as stalled and the next source is tried. A pause you made yourself is never judged, and if Kodi does not report the cache the old behaviour is unchanged. Limit: a link slower than about 1/1000 of the Kodi cache size per second (about 256 KB/s with a 256 MB cache) looks stalled.
+
+[B]3.9.115[/B]
+- [FIX] Scrobbling - Stopping or pausing a movie or episode between 80% and 90% watched made Seren ask Trakt to save a resume point that Trakt always refuses (HTTP 422 progress_too_high; Trakt only accepts a pause below 80%), and logged a warning each time. Seren now skips that request. Nothing else changes: the watched mark at 90% and above, the pause below 80% and the MDBList and Simkl resume points are as before.
+
+[B]3.9.114[/B]
+- [FIX] Playback - Choosing the file inside a pack for an anime episode that the cour mapping numbers inside the same season (Attack on Titan S4E20 is Part 2 episode 4): the pack's 'S04E04' was taken as the requested episode even when the pack is the earlier cour (S04E01-S04E16 only), so episode 20 played episode 4. A file that carries the requested number now wins, and a pack that already holds the episodes before the cour is not read through the cour numbering unless its path names a later part or cour.
+- [FIX] Playback - A stream that finished by itself inside the first seconds of playback (a very short clip, or a seek to the end) was treated as a failed source: it was blacklisted and the next source started. It is now a natural end: no blacklist and no other source.
+
+[B]3.9.113[/B]
+- [FIX] Scraping - The absolute episode number Seren hands to the scrapers was wrong: it counted the show's specials and ordered episodes by 'season * 10 + number', so Re:Zero episode 26 got 62 and Attack on Titan season 4 episode 20 got 116 (correct: 26 and 79). Anime scrapers therefore listed releases of other episodes (for example 'Re Zero - 62' for episode 26) as the requested one. The number now counts the regular episodes up to the requested one.
+
+[B]3.9.112[/B]
+- [FIX] Playback - Choosing the file inside a multi-season pack: a pack file named only '- 20' was picked from whichever season folder came first, so an episode of Season 4 could play Season 1's episode 20. Files now count only for the season of the folder they sit in (Season 4, Attack on Titan (Season 01), S4 Part 1), a file matched through the cour-corrected numbering must sit in the cour-corrected season's folder, OAD/OVA files are not taken for numbered episodes, and 'Season 4 - 60' no longer reads the 4 as episode 4. For an anime request whose pack has no matching file in the requested season's folder Seren now reports no file for that source (it moves on to the next) instead of playing another season's episode.
+
 [B]3.9.111[/B]
 - [FIX] Playback - When a play request could not be identified (the episode or movie is not in Trakt's data, or the request has no usable Trakt ID) Seren cancelled and, from 3.9.110, said so, but did not tell other add-ons: the 'seren.playback_result' signal that OpenInfo's single fallback player reads stayed empty, so the failure looked like the user backing out and no other player was tried. Seren now writes result 'failed' (with the TMDb id, season and episode of the request) in that case. The pop-up text is also shorter now ("Not found in Trakt's data"), because the longer 3.9.110 text was cut off on screen.
 
