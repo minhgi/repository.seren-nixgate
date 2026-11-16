@@ -125,6 +125,7 @@ def _probe_stream(link):
 _CACHE_FULL_LEVEL = 95  # a level at or above this is a full cache, not a stalled stream
 _CACHE_WHOLE_PROGRESS = 90  # Player.ProgressCache at or above this: the whole video is already cached (a short file)
 _PAUSE_RECENT_INPUT = 3.0  # seconds: input this close to the first hold reading is taken as the user pausing
+_BACKWARD_SEEK_MIN = 1.0  # seconds: a position this far below the best one seen is a backward seek, not a stall (Seren 3.9.137)
 
 
 class _CacheStallWatch:
@@ -820,6 +821,22 @@ class PlaybackWatchdog(xbmc.Player):
             except Exception:
                 self._await_stop_callback(_PLAYING_CALLBACK_WAIT)
                 return "error"
+
+            if last_time >= 0 and current < last_time - _BACKWARD_SEEK_MIN:
+                # The position went back: the user stepped back or seeked back (or Kodi re-seeked). last_time only moves up,
+                # so without re-basing every healthy second after the seek would count as "not advancing" until the
+                # position passed the old high-water mark, and a stream playing fine was stopped as stalled (3.9.136 log:
+                # forward seek to 194 s, back to 135 s, stopped 14 s later at 148 s). Start the stall check afresh from here.
+                g.log(
+                    f"Watchdog: Position moved back {last_time:.1f}s -> {current:.1f}s (a seek) — stall check re-based",
+                    "info",
+                )
+                last_time = current
+                stall_start = None
+                cache_watch.reset()
+                if self._monitor.waitForAbort(0.5):
+                    return "error"
+                continue
 
             if current > last_time + 0.5:
                 # Time is advancing — playback is healthy
