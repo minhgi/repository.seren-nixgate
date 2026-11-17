@@ -127,7 +127,7 @@
 			Rework for Seren 2.0
 		</news>
 	</extension>
-</addon><addon id="plugin.video.seren" version="3.9.141" name="Seren" provider-name="Nixgates">
+</addon><addon id="plugin.video.seren" version="3.9.144" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -194,6 +194,14 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.144
+            [FIX] Calendars - The Show Calendar (My Watch List) and the TV Shows Calendar now go by each episode's own air date for the shows on your Trakt calendar. Trakt's calendar can file an episode a week away from the day it airs, so an episode could be missing from its day (for example a Saturday episode filed under the Saturday before) and the watch list calendar could list an episode outside its 13 days back to 30 days ahead span while leaving one inside it out. Each week or span is now asked for with a few days to spare and the episodes are kept by their own air date.
+            Changelog 3.9.143
+            [FIX] MDBList - Next Up and In Progress Shows no longer offer the second half of a finale that TMDb lists as one episode (Star Trek: Deep Space Nine season 7 episode 26, already watched as episode 25). It is left out only when it comes right after TMDb's last episode of the season, Trakt gives it the same air date as the episode before it, and TMDb lists no later season for the show; anything else past TMDb's last episode is still offered.
+            Changelog 3.9.142
+            [FIX] MDBList - In Progress Shows no longer lists a show whose only resume point is on an episode MDBList already has as watched (for example a show you finished, then left an episode of paused at 70%): that pause is ignored, and the show is listed only while an aired episode of it is still unwatched. The fully watched shows in the list that were there only because of such a pause are gone.
+            [FIX] MDBList - Next Up (and Unfinished Shows in Collection) no longer offers an episode number that TMDb does not use inside a season: Star Trek: Enterprise season 1 has no episode 2 on TMDb (it lists 1 and 3 to 26), so Trakt's already watched 'Broken Bow (2)' came back as the next episode. Such an episode is now skipped. A number past TMDb's last episode of a season (the split second half of a finale, as for Star Trek: Deep Space Nine) is still offered.
+            [FIX] Trakt - Recent Episodes and Upcoming Episodes now go by each episode's own air date. Trakt's calendar can file an episode a week away from the day it airs, so Recent Episodes showed next week's episode as a red, future-dated row and Upcoming Episodes left that episode out. Both lists now ask Trakt for a wider span (Upcoming Episodes makes one extra request) and keep the episodes airing inside the span; Upcoming Episodes is now in date order.
             Changelog 3.9.141
             [FIX] Trakt - Next Up after a Trakt reset (rewatch): a show you reset on Trakt now continues after the furthest episode you have watched SINCE the reset. Before, the plays from before the reset still counted, so Next Up offered the episode after the old furthest one, or hid the show. Seren keeps each reset date in a small file next to its databases (traktResetWatching.json, rewritten at every Trakt watched sync); the episode checkmarks and watched counts are unchanged, and a show that was never reset behaves exactly as before. The new dates are used from the next Trakt watched sync.
             Changelog 3.9.140

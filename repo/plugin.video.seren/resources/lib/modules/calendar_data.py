@@ -47,6 +47,57 @@ def get_air_date(episode):
     return episode.get("air_date") or info.get("aired") or info.get("premiered")
 
 
+_CALENDAR_SLACK_DAYS = 8  # how far Trakt's calendar index can file an episode from its own air day (live: E8 of a weekly
+                          # show, airing on the 21st, sat under the 14th - a week early)
+_CALENDAR_MAX_DAYS = 33  # longest span calendars/my/shows answers in one request
+
+
+def local_air_day(row):
+    """Local air day ("YYYY-MM-DD") of a Trakt calendar row, from its first_aired (UTC), or "" when it has none or
+    it cannot be read."""
+    first_aired = row.get("first_aired")
+    if not first_aired:
+        return ""
+    try:
+        return (g.utc_to_local(first_aired) or "")[:10]
+    except (ValueError, TypeError, AttributeError):
+        return ""
+
+
+def fetch_my_calendar_days(trakt_api, first_day, days):
+    """Rows of Trakt's calendars/my/shows whose OWN local air day lies in first_day .. first_day + days - 1, oldest
+    first (3.9.142). Trakt's calendar index can file an episode a week away from the day it airs, so asking for exactly
+    that span lists an episode that airs later (a future-dated row under Recent Episodes) and misses one that airs inside
+    it (an episode absent from Upcoming Episodes). The span is therefore asked for with _CALENDAR_SLACK_DAYS more on
+    each side (in requests of at most _CALENDAR_MAX_DAYS days; an episode seen twice counts once) and each row is kept
+    by its own first_aired. A row without a readable first_aired is left out. A failed request contributes nothing, as
+    before.
+    :param trakt_api: TraktAPI
+    :param first_day: first local day wanted
+    :type first_day: datetime.date
+    :param days: number of days wanted
+    :type days: int
+    :return: calendar rows, as trakt_api.get_json(..., pull_all=True) returns them
+    :rtype: list"""
+    last_day = first_day + datetime.timedelta(days=days - 1)
+    start = first_day - datetime.timedelta(days=_CALENDAR_SLACK_DAYS)
+    end = last_day + datetime.timedelta(days=_CALENDAR_SLACK_DAYS)
+    rows = {}
+    while start <= end:
+        span = min(_CALENDAR_MAX_DAYS, (end - start).days + 1)
+        fetched = trakt_api.get_json(
+            f"calendars/my/shows/{start.strftime('%Y-%m-%d')}/{span}", extended="full", pull_all=True
+        )
+        for row in fetched or []:
+            rows.setdefault(row.get("trakt_id") or id(row), row)
+        start += datetime.timedelta(days=span)
+    first = first_day.strftime("%Y-%m-%d")
+    last = last_day.strftime("%Y-%m-%d")
+    inside = [row for row in rows.values() if first <= local_air_day(row) <= last]
+    inside.sort(key=lambda row: row.get("first_aired") or "")
+    return inside
+
+
 def get_calendar_episodes():
     """Returns one chronologically-sorted list of normalized episode rows
     spanning recent (13 days back) through upcoming (30 days forward)."""
@@ -140,20 +191,16 @@ def _annotate_union_ratings(extra_items, capped_ids, simkl_id_by_tmdb, providers
 
 
 def _fetch_raw_trakt_calendar(trakt_api, recent_start, tomorrow):
-    """Same two windows tvshowMenus.py already fetches - unchanged values,
-    just returned as raw Trakt objects instead of being handed straight to
-    mixed_episode_builder(). Hidden-shows filter matches my_recent_episodes()'s
-    own (tvshowMenus.py ~L525-536); my_upcoming_episodes() doesn't apply it
-    today, but a merged calendar view is one list, one filter, applied once."""
+    """Same two windows tvshowMenus.py already fetches (3.9.144: by each
+    episode's own air day, see fetch_my_calendar_days()), just returned as raw
+    Trakt objects instead of being handed straight to mixed_episode_builder().
+    Hidden-shows filter matches my_recent_episodes()'s own (tvshowMenus.py
+    ~L525-536); my_upcoming_episodes() doesn't apply it today, but a merged
+    calendar view is one list, one filter, applied once."""
     from resources.lib.database.trakt_sync.hidden import TraktSyncDatabase as HiddenDatabase
 
-    recent = trakt_api.get_json(
-        f"calendars/my/shows/{recent_start.strftime('%Y-%m-%d')}/14", extended="full", pull_all=True
-    ) or []
-
-    upcoming = trakt_api.get_json(
-        f"calendars/my/shows/{g.datetime_to_string(tomorrow)}/30", extended="full", pull_all=True
-    ) or []
+    recent = fetch_my_calendar_days(trakt_api, recent_start, 14)
+    upcoming = fetch_my_calendar_days(trakt_api, tomorrow, 30)
 
     hidden_shows = HiddenDatabase().get_hidden_items("calendar", "tvshow")
     return [i for i in (recent + upcoming) if i.get("trakt_show_id") not in hidden_shows]

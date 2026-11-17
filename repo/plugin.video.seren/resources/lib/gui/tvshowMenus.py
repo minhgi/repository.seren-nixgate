@@ -766,13 +766,12 @@ class Menus:
 
     @trakt_auth_guard
     def my_recent_episodes(self):
+        from resources.lib.modules.calendar_data import fetch_my_calendar_days
+
         hidden_shows = self.hidden_database.get_hidden_items("calendar", "tvshow")
-        date_string = datetime.datetime.now() - datetime.timedelta(days=13)
-        trakt_list = self.trakt_api.get_json(
-            f"calendars/my/shows/{date_string.strftime('%Y-%m-%d')}/14", extended="full", pull_all=True
-        )
-        if trakt_list is None:
-            trakt_list = []
+        # By each episode's own air day, not by where Trakt's calendar index files it (3.9.142: an episode airing next
+        # week could sit under last week's date and show here as a future-dated row).
+        trakt_list = fetch_my_calendar_days(self.trakt_api, datetime.date.today() - datetime.timedelta(days=13), 14)
         trakt_list = sorted(
             [i for i in trakt_list if i.get("trakt_show_id") not in hidden_shows],
             key=lambda t: (t.get("first_aired") or ""),
@@ -783,12 +782,13 @@ class Menus:
 
     @trakt_auth_guard
     def my_upcoming_episodes(self):
-        tomorrow = g.datetime_to_string(datetime.date.today() + datetime.timedelta(days=1))
-        upcoming_episodes = self.trakt_api.get_json(
-            f"calendars/my/shows/{tomorrow}/30", extended="full", pull_all=True
+        from resources.lib.modules.calendar_data import fetch_my_calendar_days
+
+        # By each episode's own air day (3.9.142): the calendar index can file an episode a week before it airs, which
+        # left it out of this list.
+        upcoming_episodes = fetch_my_calendar_days(
+            self.trakt_api, datetime.date.today() + datetime.timedelta(days=1), 30
         )
-        if upcoming_episodes is None:
-            upcoming_episodes = []
         start = (g.PAGE - 1) * self.page_limit
         page_slice = upcoming_episodes[start : start + self.page_limit]
         self.list_builder.mixed_episode_builder(

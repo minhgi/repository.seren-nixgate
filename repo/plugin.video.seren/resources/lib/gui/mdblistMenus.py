@@ -365,7 +365,7 @@ class Menus:
                 )
                 continue
             show_episodes = shows_db.get_episode_skeleton(trakt_show["trakt_id"])
-            next_episode = self._pick_next_unwatched(show_episodes, watched_set)
+            next_episode = self._pick_next_unwatched(show_episodes, watched_set, show_tmdb_id)
             if next_episode:
                 episodes.append(
                     {"trakt_id": next_episode["trakt_id"], "trakt_show_id": next_episode["trakt_show_id"]}
@@ -378,7 +378,40 @@ class Menus:
         self.list_builder.mixed_episode_builder(episodes, no_paging=True, hide_watched=False)
 
     @staticmethod
-    def _pick_next_unwatched(episodes, watched_set):
+    def _tmdb_season_numbers(tmdb_show_id, season):
+        """The episode numbers TMDb lists for one season of a show, as a set (raw TMDb season, cached 12 hours by the
+        anime bridge's TMDb reader), or None when TMDb could not be asked or listed nothing - the caller then keeps the
+        episode, so a failed lookup never hides one."""
+        try:
+            from resources.lib.modules.anime.bridge_entries import _tmdb_raw
+
+            data = _tmdb_raw(f"tv/{tmdb_show_id}/season/{season}")
+            numbers = {e.get("episode_number") for e in (data or {}).get("episodes") or [] if isinstance(e, dict)}
+            numbers.discard(None)
+            return numbers or None
+        except Exception as e:
+            g.log(f"MDBList menus: TMDb season {season} of tmdb_id {tmdb_show_id} not read: {type(e).__name__}", "debug")
+            return None
+
+    @staticmethod
+    def _tmdb_has_later_season(tmdb_show_id, season):
+        """True when TMDb lists a regular season after `season` for the show, False when it answered and lists none, None
+        when it could not be asked (raw 'tv/<id>', cached 12 hours by the anime bridge's TMDb reader)."""
+        try:
+            from resources.lib.modules.anime.bridge_entries import _tmdb_raw
+
+            data = _tmdb_raw(f"tv/{tmdb_show_id}")
+            seasons = [s.get("season_number") for s in (data or {}).get("seasons") or [] if isinstance(s, dict)]
+            seasons = [s for s in seasons if isinstance(s, int)]
+            if not seasons:
+                return None
+            return any(s > season for s in seasons)
+        except Exception as e:
+            g.log(f"MDBList menus: TMDb show {tmdb_show_id} not read: {type(e).__name__}", "debug")
+            return None
+
+    @staticmethod
+    def _pick_next_unwatched(episodes, watched_set, tmdb_show_id=None):
         """First already-aired, non-special episode not in watched_set, in season/number
         order (get_episode_list's own order). Specials (season 0) are skipped explicitly -
         get_episode_list only drops them when hide_specials is on, and season/number order
@@ -397,12 +430,26 @@ class Menus:
         a pre-existing (already Trakt-seeded) row via INNER JOIN before formatting can ever
         run - so this can't actually be None on a real row, and a fallback here would only
         reintroduce the type risk (info's copy can be a string from raw JSON) this fix
-        removes."""
+        removes.
+
+        tmdb_show_id (optional) guards against numbering that only Trakt has: watched_set holds MDBList's own (TMDb)
+        numbers, so a Trakt episode TMDb does not list (Star Trek: Enterprise's S1E2 - TMDb merges the pilot into E1 and
+        lists 1, 3-26) can never be in it and would come back as the 'next' episode of a show that is finished. Such an
+        episode is skipped once TMDb has answered for its season, does not list that number and lists a higher one (a
+        hole in TMDb's numbering). A number past TMDb's last episode is normally kept, because it cannot be told from the
+        real episodes of a season TMDb splits in two (or episodes TMDb has not listed yet). The one exception is the
+        second half of a finale TMDb merges into one episode (Star Trek: Deep Space Nine's S7E26 after E25): it is
+        skipped only when ALL of these hold - it comes right after TMDb's last episode of the season, Trakt dates it
+        the same day as the episode before it, and TMDb lists no later season. With no answer (no id, no network) every
+        episode counts as before."""
         import datetime
 
         from resources.lib.modules.calendar_data import get_air_date
 
         now = g.datetime_to_string(datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None))
+        tmdb_numbers = {}
+        air_dates = {(e.get("db_season"), e.get("db_number")): get_air_date(e) for e in episodes}
+        later_season = {}  # season -> TMDb has a later season; asked only when an overflow candidate turns up
         for episode in episodes:
             season = episode.get("db_season")
             number = episode.get("db_number")
@@ -413,6 +460,30 @@ class Menus:
             air_date = get_air_date(episode)
             if not air_date or air_date > now:
                 continue
+            if tmdb_show_id:
+                if season not in tmdb_numbers:
+                    tmdb_numbers[season] = Menus._tmdb_season_numbers(tmdb_show_id, season)
+                listed = tmdb_numbers[season]
+                if listed and number < max(listed) and number not in listed:
+                    g.log(
+                        f"MDBList menus: tmdb_id {tmdb_show_id} S{season}E{number} left out, TMDb skips that number",
+                        "debug",
+                    )
+                    continue
+                if (
+                    listed
+                    and number == max(listed) + 1
+                    and air_dates.get((season, number - 1)) == air_date
+                ):
+                    if season not in later_season:
+                        later_season[season] = Menus._tmdb_has_later_season(tmdb_show_id, season)
+                    if later_season[season] is False:
+                        g.log(
+                            f"MDBList menus: tmdb_id {tmdb_show_id} S{season}E{number} left out, "
+                            "second half of TMDb's last episode",
+                            "debug",
+                        )
+                        continue
             return episode
         return None
 
@@ -532,7 +603,9 @@ class Menus:
             trakt_show = self.trakt_api.search_by_tmdb_id(tmdb_id, "show")
             if not trakt_show or not trakt_show.get("trakt_id"):
                 continue
-            if self._pick_next_unwatched(shows_db.get_episode_skeleton(trakt_show["trakt_id"]), watched_set or set()):
+            if self._pick_next_unwatched(
+                shows_db.get_episode_skeleton(trakt_show["trakt_id"]), watched_set or set(), tmdb_id
+            ):
                 shows.append(trakt_show)
 
         g.log(f"MDBList menus: unfinished collection examined {examined} of {len(tmdb_ids)} shows, {len(shows)} listed", "debug")
@@ -619,14 +692,27 @@ class Menus:
         before each show) plus _IN_PROGRESS_SHOW_CAP rows."""
         from resources.lib.database.trakt_sync.shows import TraktSyncDatabase as ShowsDatabase
 
+        watched_by_show = {}
+        for row in self.mdblist_database.get_all_watched_episode_tmdb_keys():
+            watched_by_show.setdefault(row["show_tmdb_id"], set()).add((row["season"], row["number"]))
+
         activity = {}
         paused = set()
+        ignored_pauses = 0
         for row in self._live_playback_rows("episode"):
+            # A pause on an episode MDBList already has as watched (a rewatch left at 70%, or the resume point MDBList keeps
+            # after the episode was marked watched) is not an unfinished episode: it neither lists the show nor sets its
+            # activity time, so the show has to qualify through the watched-episode check below like any other.
+            if (row["season"], row["number"]) in watched_by_show.get(row["tmdb_id"], ()):
+                ignored_pauses += 1
+                continue
             paused.add(row["tmdb_id"])
             ts = str(row.get("paused_at") or "")[:19]
             if ts > activity.get(row["tmdb_id"], ""):
                 activity[row["tmdb_id"]] = ts
             activity.setdefault(row["tmdb_id"], ts)
+        if ignored_pauses:
+            g.log(f"MDBList menus: in-progress shows ignored {ignored_pauses} pause(s) on already watched episodes", "debug")
         for row in self.mdblist_database.get_recent_shows(_NEXT_UP_SCAN_CAP):
             ts = str(row["last_watched_at"] or "")[:19]
             if ts > activity.get(row["tmdb_id"], ""):
@@ -635,10 +721,6 @@ class Menus:
         if not activity:
             g.cancel_directory()
             return
-
-        watched_by_show = {}
-        for row in self.mdblist_database.get_all_watched_episode_tmdb_keys():
-            watched_by_show.setdefault(row["show_tmdb_id"], set()).add((row["season"], row["number"]))
 
         dropped = self._get_dropped_tmdb_ids()
         hidden_shows = self.hidden_database.get_hidden_items("progress_watched", "tvshow")
@@ -673,7 +755,7 @@ class Menus:
                 if not watched_set:
                     continue
                 show_episodes = shows_db.get_episode_skeleton(trakt_show["trakt_id"])
-                if not self._pick_next_unwatched(show_episodes, watched_set):
+                if not self._pick_next_unwatched(show_episodes, watched_set, tmdb_id):
                     continue
             shows.append(trakt_show)
 

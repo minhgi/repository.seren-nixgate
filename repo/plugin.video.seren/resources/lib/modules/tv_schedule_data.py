@@ -235,16 +235,21 @@ def _get_watchlist_layer(week_start_str, week_end_str):
     from resources.lib.modules.syncGateway import configured_providers
     from resources.lib.database.trakt_sync.shows import TraktSyncDatabase as ShowsDatabase
     from resources.lib.database.trakt_sync.hidden import TraktSyncDatabase as HiddenDatabase
-    from resources.lib.modules.calendar_data import _simkl_plantowatch_tmdb_ids, _mdblist_watchlist_tmdb_ids
+    from resources.lib.modules.calendar_data import (
+        _simkl_plantowatch_tmdb_ids,
+        _mdblist_watchlist_tmdb_ids,
+        fetch_my_calendar_days,
+    )
 
     providers = configured_providers()
 
     if "trakt" in providers:
         from resources.lib.indexers.trakt import TraktAPI
 
-        raw = TraktAPI().get_json(
-            _WATCHLIST_ENDPOINT.format(start_date=week_start_str, days=7), extended="full", pull_all=True
-        ) or []
+        # By each episode's own air day (3.9.144): Trakt's calendar index can file an episode a week away from the
+        # day it airs, so the plain 7-day request missed episodes that belong to this week.
+        week_start = datetime.datetime.strptime(week_start_str, "%Y-%m-%d").date()
+        raw = fetch_my_calendar_days(TraktAPI(), week_start, 7)
     else:
         raw = []
 
