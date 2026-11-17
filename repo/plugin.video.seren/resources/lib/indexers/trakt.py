@@ -325,6 +325,7 @@ class TraktAPI(ApiBase):
                 lambda t: g.validate_date(t),
             ),
             ("last_collected_at", "last_collected_at", lambda t: g.validate_date(t)),
+            ("reset_at", "reset_at", lambda t: g.validate_date(t)),
         ],
         Normalization,
     )

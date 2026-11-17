@@ -407,6 +407,8 @@ class TraktContextMenu:
             self.dialog_list.append(g.get_language_string(30284))
 
     def _handle_collected_options(self, item_information, trakt_id, display_type):
+        if item_information["info"]["mediatype"] == "episode":
+            return  # Trakt's collection holds movies and shows: on an episode the entry changed the whole show's collection state
         if item_information["info"]["mediatype"] == "movie":
             from resources.lib.database.trakt_sync.movies import TraktSyncDatabase
 
@@ -1609,6 +1611,8 @@ class TraktContextMenu:
         )
         from resources.lib.modules import cross_sync
 
+        # Simkl hides the resume point of a finished item by itself; Seren's own copy of it stayed until the next sync
+        cross_sync.clear_resume_simkl(item_information)
         cross_sync.mirror_watched("simkl", item_information, True)
         g.trigger_widget_refresh()
 

@@ -410,8 +410,10 @@ class SerenPlayer(xbmc.Player):
         :return: None
         :rtype: None
         """
-        seekOffset /= 1000
-        self._trakt_start_watching(offset=seekOffset, re_scrobble=True)
+        # Kodi gives the new position in milliseconds. The progress is taken from it before the start guard runs, so a jump
+        # to the end (credits skip) is judged at its new position and not at the one before the jump.
+        self._apply_seek_position(time / 1000)
+        self._trakt_start_watching(re_scrobble=True)
 
     def onPlayBackSeekChapter(self, chapter):
         """
@@ -703,6 +705,17 @@ class SerenPlayer(xbmc.Player):
             except TypeError:
                 pass
 
+    def _apply_seek_position(self, seconds):
+        """Takes current_time and watched_percentage from a seek's target position (seconds)."""
+        if not self._is_file_playing():
+            return
+        self.current_time = seconds
+        if self.total_time > 0:
+            try:
+                self.watched_percentage = min(tools.safe_round(float(seconds) / float(self.total_time) * 100, 2), 100)
+            except TypeError:
+                pass
+
     def _log_debug_information(self):
         g.log(f"PlaybackIdentifedAt: {self.getTime()}", "debug")
         g.log(f"IgnoringSecondsAtStart: {self.ignoreSecondsAtStart}", "debug")
@@ -718,7 +731,7 @@ class SerenPlayer(xbmc.Player):
         if (
             not self.trakt_enabled
             or not self.scrobbling_enabled
-            or (self.scrobbled and not re_scrobble)
+            or self.scrobbled  # a stop was already sent: the item is finished, a start would show it as playing again
             or (self.scrobble_started and not re_scrobble)
         ):
             return

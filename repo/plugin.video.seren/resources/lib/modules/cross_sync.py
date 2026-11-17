@@ -213,6 +213,7 @@ def _push_watched_to_mdblist(item_information, watched):
         from resources.lib.database.mdblist_sync import MDBListSyncDatabase
 
         MDBListSyncDatabase().write_watched_locally(item_information["mediatype"], item_information)
+        clear_resume_mdblist(item_information)
 
 
 def _push_watched_to_simkl(item_information, watched):
@@ -221,7 +222,72 @@ def _push_watched_to_simkl(item_information, watched):
     payload = _ids_payload(item_information)
     if payload is None:
         return
-    SimklAPI().post_json("sync/history" if watched else "sync/history/remove", payload)
+    response = SimklAPI().post_json("sync/history" if watched else "sync/history/remove", payload)
+    if watched and response:
+        clear_resume_simkl(item_information)
+
+
+def _resume_key(item_information):
+    """(media_type, tmdb_id, season, number) of a movie or an episode (the tmdb id of an episode is its show's), else None."""
+    mediatype = item_information.get("mediatype")
+    if mediatype == "movie":
+        key = ("movie", item_information.get("tmdb_id"), None, None)
+    elif mediatype == "episode":
+        key = ("episode", item_information.get("tmdb_show_id"), item_information.get("season"), item_information.get("episode"))
+    else:
+        return None
+    return key if key[1] and (key[0] == "movie" or (key[2] is not None and key[3] is not None)) else None
+
+
+def clear_resume_mdblist(item_information):
+    """A finished movie / episode must not keep a resume point on the target it was mirrored to as watched: MDBList's sync/watched
+    leaves the resume entry in place (only scrobble/stop clears it), so the item stayed in its In Progress list with its old
+    percentage (TMDb Helper 7.0.91). Clears the entry on the server and the local bookmark. Failures are logged only."""
+    key = _resume_key(item_information)
+    if key is None:
+        return
+    try:
+        from resources.lib.database.mdblist_sync import MDBListSyncDatabase
+        from resources.lib.indexers.mdblist import MDBListAPI
+
+        api = MDBListAPI()
+        playback = api.get_json("sync/playback")
+        if isinstance(playback, dict):
+            playback = playback.get("items")
+        if isinstance(playback, list):
+            for entry in playback:
+                if not isinstance(entry, dict) or entry.get("id") is None:
+                    continue
+                if key[0] == "movie":
+                    if str(((entry.get("movie") or {}).get("ids") or {}).get("tmdb")) != str(key[1]):
+                        continue
+                else:
+                    episode = entry.get("episode") or {}
+                    if (
+                        str(((entry.get("show") or {}).get("ids") or {}).get("tmdb")) != str(key[1])
+                        or episode.get("season") != key[2]
+                        or episode.get("number") != key[3]
+                    ):
+                        continue
+                api.post_json("scrobble/clear", {"id": entry["id"]})
+        MDBListSyncDatabase().remove_bookmark(key[1], key[0], key[2], key[3])
+    except Exception as e:
+        g.log(f"cross_sync: could not clear the MDBList resume point of a mirrored watched mark: {e}", "warning")
+
+
+def clear_resume_simkl(item_information):
+    """Simkl hides the playback entry of an item marked watched by itself, but Seren's local bookmark row stayed until the next
+    sync (up to 15 minutes): the movie / episode kept its old percentage in the In Progress list. Local row only: a DELETE right
+    after the history write would run into Simkl's 20 s write lock."""
+    key = _resume_key(item_information)
+    if key is None:
+        return
+    try:
+        from resources.lib.database.simkl_sync import SimklSyncDatabase
+
+        SimklSyncDatabase().remove_bookmark(key[1], key[0], key[2], key[3])
+    except Exception as e:
+        g.log(f"cross_sync: could not clear the Simkl resume point of a mirrored watched mark: {e}", "warning")
 
 
 # endregion

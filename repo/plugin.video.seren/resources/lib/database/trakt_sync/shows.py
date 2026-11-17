@@ -1,6 +1,6 @@
 from resources.lib.common.thread_pool import ThreadPool
 from resources.lib.database import trakt_sync
-from resources.lib.database.trakt_sync import _list_cache_key, list_cache_get, list_cache_set
+from resources.lib.database.trakt_sync import _list_cache_key, list_cache_get, list_cache_set, reset_watching
 from resources.lib.modules.globals import g
 from resources.lib.modules.guard_decorators import guard_against_none
 from resources.lib.modules.guard_decorators import guard_against_none_or_empty
@@ -1027,6 +1027,11 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
             order_by = "ORDER BY inner_episodes.last_watched_at DESC"
         else:
             order_by = "ORDER BY e.air_date DESC"
+        # A show reset on Trakt (rewatch) only counts the episodes watched since the reset; with no reset these are the plain
+        # `watched >= 1` / `watched = 0` conditions.
+        resets = reset_watching.load()
+        watched_plain = reset_watching.watched_sql(resets)
+        unwatched_e = reset_watching.unwatched_sql(resets, "e.")
         query = f"""
             SELECT e.trakt_id,
                    e.number  AS episode_x,
@@ -1072,7 +1077,7 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
                                                                                           Max(last_watched_at)
                                                                                                 AS last_watched_at
                                                                                    FROM episodes
-                                                                                   WHERE watched >= 1 AND season > 0
+                                                                                   WHERE {watched_plain} AND season > 0
                                                                                    GROUP BY trakt_show_id, season
                                                                        ) AS mw_ep
                                                                           ON mw_se.trakt_show_id = mw_ep.trakt_show_id
@@ -1081,14 +1086,14 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
                                                             ON e.trakt_show_id = mw.trakt_show_id
                                                   WHERE (e.season = mw.max_watched_season AND
                                                          e.number = mw.max_watched_episode_number + 1
-                                                      AND watched = 0)
+                                                      AND {unwatched_e})
                                                      OR (e.season = mw.max_watched_season + 1 AND e.number = 1)
                                                   GROUP BY e.trakt_show_id) AS nw
                                                  ON (e.trakt_show_id == nw.trakt_show_id
                                                      AND e.season == nw.season
                                                      AND e.number >= nw.number)
                                  WHERE e.season > 0
-                                   AND watched = 0
+                                   AND {unwatched_e}
                                    AND e.trakt_show_id NOT IN (SELECT trakt_id AS trakt_show_id
                                                                FROM hidden
                                                                WHERE SECTION IN ('progress_watched'))

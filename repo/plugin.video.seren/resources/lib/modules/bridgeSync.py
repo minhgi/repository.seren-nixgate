@@ -154,6 +154,9 @@ _SIMKL_LOCK_SECONDS = 21
 _SIMKL_PROGRESS_CAP = 20  # max Simkl resume posts per cycle (each one waits out the 21 s write lock)
 _RESUME_FAIL_RUNS = 2  # a Simkl resume point refused on this many runs in a row is not sent again for _RESUME_FAIL_SECONDS ...
 _RESUME_FAIL_SECONDS = 86400  # ... unless Trakt's copy of it changes (a title Simkl does not know answers 404 every time)
+_MIRROR_TOLERANCE = 2.0  # percent: a resume point within this of the other service's is the same point (a copy is stamped "now" on arrival)
+_MIRROR_MIN, _MIRROR_MAX = 4.0, 96.0  # percent: a resume point outside this is not mirrored (just started / as good as finished)
+_SEASON_TOLERANCE = 2  # episodes a season may differ by between TMDb and Simkl before the numbering is called different
 _PAGE_CAP = 200  # safety cap on Trakt pages per read
 _READ_TIMEOUT = 30  # seconds: a full-library page is far bigger than the 10 s default request budget was sized for
 _TARGET_NAMES = {"mdblist": "MDBList", "simkl": "Simkl", "trakt": "Trakt"}
@@ -325,6 +328,9 @@ class _Bridge:
         self._simkl_prepared = False
         self._simkl_last_write = 0.0
         self._stamps = {}  # {(media, item_key): newest last_watched_at seen on any service, Trakt included}
+        self._mdb_playback_raw = None  # this cycle's /sync/playback answers (lists), read once for the Trakt pass and the resume mirror
+        self._simkl_playback_raw = None
+        self._mirror_chosen = set()  # resume points the mirror chose this cycle; booked in meta only once their post was answered
         self._anime_stamps = {}  # {key: Simkl's watched_at} of the mapped anime episodes: the date they carry on Trakt, whichever service sends them
         self._anime_keys = set()  # Simkl anime episodes taken into this run's Simkl view (crosssync.anime on): only ever sources
         self._anime_cache = None  # (mapped {key: watched_at}, stats) of Simkl's anime episodes in TMDb numbering, one per run
@@ -2062,18 +2068,20 @@ class _Bridge:
         data = self._get_raw_json(f"sync/playback/{kind}")
         return data if isinstance(data, list) else None
 
-    def _resume_refused(self, row):
-        """True when Simkl refused this exact resume point (same Trakt paused_at) on the last runs and a day has not passed."""
-        rec = (self._meta_data().get("simkl_resume_failed") or {}).get(f"{row['media']}:{row['key']}")
+    def _resume_refused(self, row, book_name="simkl_resume_failed"):
+        """True when the target refused this exact resume point (same paused_at) on the last runs and a day has not passed.
+        book_name: 'simkl_resume_failed' (Simkl answered no usable answer) or 'mdblist_resume_skipped' (MDBList answered
+        action 'skip': it ignores a pause shortly after a watched mark and keeps nothing)."""
+        rec = (self._meta_data().get(book_name) or {}).get(f"{row['media']}:{row['key']}")
         return bool(
             rec and rec[0] == (row["paused_at"] or "") and rec[1] >= _RESUME_FAIL_RUNS and time.time() - rec[2] < _RESUME_FAIL_SECONDS
         )
 
-    def _resume_note(self, row, ok):
-        """Remember a Simkl resume post that got no usable answer (and forget it once it works), so an item Simkl does not
-        know is not posted again on every run. Entries older than a week go. Saved with the meta at the end of the run."""
+    def _resume_note(self, row, ok, book_name="simkl_resume_failed"):
+        """Remember a resume post the target did not take (and forget it once it works), so a point a service does not
+        keep is not posted again on every run. Entries older than a week go. Saved with the meta at the end of the run."""
         now = time.time()
-        book = self._meta_data().setdefault("simkl_resume_failed", {})
+        book = self._meta_data().setdefault(book_name, {})
         for old in [k for k, v in book.items() if now - v[2] > 7 * 86400]:
             del book[old]
         key = f"{row['media']}:{row['key']}"
@@ -2119,6 +2127,7 @@ class _Bridge:
             data = data.get("items")
         if not isinstance(data, list):
             return None
+        self._mdb_playback_raw = data  # the resume mirror reads the same answer (progress included) instead of asking again
         have = {}
         for item in data:
             if not isinstance(item, dict):
@@ -2145,6 +2154,7 @@ class _Bridge:
             data = data.get("items")
         if not isinstance(data, list):
             return None
+        self._simkl_playback_raw = data
         have = {}
         for item in data:
             if not isinstance(item, dict):
@@ -2208,21 +2218,242 @@ class _Bridge:
         except (TypeError, ValueError):
             return False
 
+    def _watched_since(self, media, item_key, paused_at):
+        """True when a service recorded the item as watched at or after `paused_at`: a finished item must not come back In Progress."""
+        stamp = self._stamps.get((media, item_key))
+        if not stamp or not isinstance(paused_at, str) or not _STAMP_RE.match(paused_at):
+            return False
+        return stamp[:19] >= paused_at[:19]
+
+    @staticmethod
+    def _playback_points(data, simkl):
+        """({('movie', tmdb) / ('episode', show tmdb, season, number): (progress, paused_at)}, anime entries left out) of one
+        service's /sync/playback answer. Simkl's anime entries (their own bucket, numbered per cour) are not read at all."""
+        points, anime = {}, 0
+        for item in data or []:
+            if not isinstance(item, dict):
+                continue
+            try:
+                progress = float(item.get("progress"))
+            except (TypeError, ValueError):
+                continue
+            at = item.get("paused_at") or item.get("updated_at")
+            if not isinstance(at, str) or not _STAMP_RE.match(at):
+                continue
+            if item.get("movie") or item.get("type") == "movie":
+                key = ("movie", ((item.get("movie") or {}).get("ids") or {}).get("tmdb"))
+            else:
+                if simkl and item.get("anime") and not item.get("show"):
+                    anime += 1
+                    continue
+                ep = item.get("episode") or {}
+                key = ("episode", ((item.get("show") or {}).get("ids") or {}).get("tmdb"), ep.get("season"), ep.get("number"))
+                if key[2] is None or key[3] is None:
+                    continue
+            try:
+                key = (key[0], int(key[1])) + tuple(int(i) for i in key[2:])
+            except (TypeError, ValueError):
+                continue
+            if key not in points or at > points[key][1]:
+                points[key] = (progress, at)
+        return points, anime
+
+    def _simkl_numbering_ok(self, tmdb_id, season):
+        """Simkl numbers seasons the TVDB way, TMDb / Trakt / MDBList their own way: True only when the season exists on both sides
+        with about the same episode count (one TMDb and two Simkl requests). Anything that cannot be checked (Specials, no Simkl
+        match, a failed request) is False. Remembered per show and season - a day when it did not agree or could not be checked,
+        two weeks when it did - so a point that stays due does not repeat the requests."""
+        now = time.time()
+        book = self._meta_data().setdefault("simkl_numbering", {})
+        for old in [k for k, v in book.items() if now - v[1] > 14 * 86400]:
+            del book[old]
+        key = f"{tmdb_id}:{season}"
+        rec = book.get(key)
+        if rec and now - rec[1] < (14 * 86400 if rec[0] else 86400):
+            return bool(rec[0])
+        ok = False
+        try:
+            season = int(season)
+            if season > 0:
+                from resources.lib.modules.anime import bridge_entries
+
+                details = bridge_entries._tmdb_raw(f"tv/{int(tmdb_id)}") or {}
+                tmdb_counts = {
+                    int(x["season_number"]): int(x.get("episode_count") or 0)
+                    for x in details.get("seasons") or []
+                    if x.get("season_number") is not None
+                }
+                found_ok, found = self._simkl_get_ok("search/id", tmdb=int(tmdb_id), type="show")
+                simkl_id = (((found[0] or {}).get("ids") or {}).get("simkl")) if found_ok and isinstance(found, list) and found else None
+                if simkl_id:
+                    eps_ok, episodes = self._simkl_get_ok(f"tv/episodes/{simkl_id}", extended="full")
+                    if eps_ok and isinstance(episodes, list):
+                        count = sum(
+                            1
+                            for e in episodes
+                            if (e.get("type") or "episode") == "episode" and e.get("season") is not None and int(e["season"]) == season
+                        )
+                        ok = season in tmdb_counts and count > 0 and abs(tmdb_counts[season] - count) <= _SEASON_TOLERANCE
+        except Exception as e:
+            g.log(f"bridgeSync: Simkl numbering check error: {e}", "warning")
+            ok = False
+        book[key] = [ok, now]
+        return ok
+
+    def _mirror_confirm(self, row):
+        """Called once a post of a mirrored point was answered: it is booked as mirrored just now. A failed post leaves no entry,
+        so the next cycle chooses the point again (a booked point is what tells a copy from a pause made later)."""
+        key = f"{'m' if row['media'] == 'movie' else 'e'}:{row['key']}"
+        if key in self._mirror_chosen:
+            self._meta_data().setdefault("resume_mirrored", {})[key] = time.time()
+
+    def _mirror_row(self, key, point):
+        """A resume point of MDBList / Simkl as a progress row (both payloads), in the shape of a Trakt resume point."""
+        if key[0] == "movie":
+            entry = {"progress": point[0], "paused_at": point[1], "movie": {"ids": {"tmdb": key[1]}}}
+            return self._progress_row("movie", entry)
+        entry = {
+            "progress": point[0],
+            "paused_at": point[1],
+            "show": {"ids": {"tmdb": key[1]}},
+            "episode": {"season": key[2], "number": key[3]},
+        }
+        return self._progress_row("episode", entry)
+
+    def _mirror_resume(self, trakt_movies, trakt_eps):
+        """MDBList <-> Simkl resume points that Trakt does not hold (the Trakt pass owns every point it holds, so nothing is
+        mirrored twice). Returns ([rows for Simkl], [rows for MDBList], log text), rows as _progress_row builds them.
+        A point goes to the other service only when it holds none (an episode on Simkl: none for the show) or the source is newer
+        AND the progress differs (the same progress is the same point: without that a mirrored point, stamped 'now' on arrival, would
+        be sent back, and back again). Not mirrored: anime (numbered per cour), points outside 4-96 %, items watched at or after the
+        pause on a service (a finished item must not come back In Progress), episodes whose Simkl season numbering is not confirmed.
+        Nothing is booked here: the posting code calls _mirror_confirm for each point whose post was answered."""
+        none = ([], [], "")
+        self._mirror_chosen = chosen = set()
+        m, s = self._mdb_playback_raw, self._simkl_playback_raw
+        if m is None or s is None:
+            return none
+        # watched stamps come from the watched passes: without both services' watched reads this cycle a finished item could not be told
+        if self._mdb_watched_raw() is None or self._simkl_state() is None:
+            return none
+        mp, _ = self._playback_points(m, False)
+        sp, skipped_anime = self._playback_points(s, True)
+        from calendar import timegm
+        from time import strptime
+
+        tol, low, high = _MIRROR_TOLERANCE, _MIRROR_MIN, _MIRROR_MAX
+        stats = {"anime": skipped_anime, "numbering": 0, "dropped": 0}
+        now = time.time()
+        sent = self._meta_data().setdefault("resume_mirrored", {})  # {'m:tmdb' / 'e:show:season:number': when a mirrored post was last answered}
+        # An entry lives as long as one service still holds a point for the item (its copy is what a clear on the other service must
+        # not bring back); it is forgotten two weeks after the last mirroring once neither service holds one.
+        held = {f"m:{k[1]}" if k[0] == "movie" else f"e:{k[1]}:{k[2]}:{k[3]}" for k in list(mp) + list(sp)}
+        for old in [k for k, v in sent.items() if now - v > 14 * 86400 and k not in held]:
+            del sent[old]
+
+        def epoch(at):
+            try:
+                return timegm(strptime(at[:19], "%Y-%m-%dT%H:%M:%S"))
+            except (ValueError, OverflowError):
+                return now
+
+        def due(point, have, key_str):
+            progress, at = point
+            if not (low <= progress <= high):
+                return False
+            if have is None:
+                # The other service holds nothing. If this item was mirrored before, a point that is only the copy that arrived
+                # (stamped within half an hour of the mirroring) means the original holder dropped it: cleared or finished there.
+                # A pause made after that is new and goes.
+                if key_str in sent and epoch(at) <= sent[key_str] + 1800:
+                    stats["dropped"] += 1
+                    return False
+                return True
+            return at[:19] > have[1][:19] and abs(progress - have[0]) > tol
+
+        def finished(kind, key, at):
+            return self._watched_since(kind, key, at)
+
+        to_simkl, to_mdb, simkl_eps = [], [], {}
+        for key, point in mp.items():  # MDBList -> Simkl
+            if key[0] == "movie":
+                if key[1] not in trakt_movies and due(point, sp.get(key), f"m:{key[1]}") and not finished("movie", str(key[1]), point[1]):
+                    row = self._mirror_row(key, point)
+                    if row:
+                        to_simkl.append(row)
+                        chosen.add(f"m:{key[1]}")
+        by_show = {}
+        for key, point in mp.items():
+            if key[0] == "episode" and key[1:] not in trakt_eps and not self._anime_known(key[1]):
+                by_show.setdefault(key[1], []).append((point[1], key, point))
+        for show, points in by_show.items():
+            at, key, point = max(points)
+            key_str = f"e:{show}:{key[2]}:{key[3]}"
+            theirs = [(v[1], k, v) for k, v in sp.items() if k[0] == "episode" and k[1] == show]  # Simkl keeps one point per show
+            if theirs:
+                their_at, their_key, their = max(theirs)
+                ok = low <= point[0] <= high and at[:19] > their_at[:19] and (their_key != key or abs(point[0] - their[0]) > tol)
+            else:
+                ok = due(point, None, key_str)
+            if ok and not finished("episode", f"{show}:{key[2]}:{key[3]}", at):
+                if self._simkl_numbering_ok(show, key[2]):
+                    row = self._mirror_row(key, point)
+                    if row:
+                        simkl_eps[show] = row
+                        chosen.add(key_str)
+                else:
+                    stats["numbering"] += 1
+        to_simkl.extend(simkl_eps.values())
+        for key, point in sp.items():  # Simkl -> MDBList
+            if key[0] == "movie":
+                if key[1] not in trakt_movies and due(point, mp.get(key), f"m:{key[1]}") and not finished("movie", str(key[1]), point[1]):
+                    row = self._mirror_row(key, point)
+                    if row:
+                        to_mdb.append(row)
+                        chosen.add(f"m:{key[1]}")
+            elif key[1:] not in trakt_eps and due(point, mp.get(key), f"e:{key[1]}:{key[2]}:{key[3]}") and not finished(
+                "episode", f"{key[1]}:{key[2]}:{key[3]}", point[1]
+            ):
+                if self._simkl_numbering_ok(key[1], key[2]):
+                    row = self._mirror_row(key, point)
+                    if row:
+                        to_mdb.append(row)
+                        chosen.add(f"e:{key[1]}:{key[2]}:{key[3]}")
+                else:
+                    stats["numbering"] += 1
+        text = ""
+        if to_simkl or to_mdb or stats["anime"] or stats["numbering"] or stats["dropped"]:
+            n = lambda rows, media: sum(1 for r in rows if r["media"] == media)
+            text = (
+                f"bridgeSync (resume mirror): MDBList -> Simkl {n(to_simkl, 'movie')} movie + {n(to_simkl, 'episode')} episode, "
+                f"Simkl -> MDBList {n(to_mdb, 'movie')} movie + {n(to_mdb, 'episode')} episode; not mirrored: {stats['anime']} Simkl "
+                f"anime, {stats['numbering']} with unconfirmed Simkl numbering, {stats['dropped']} dropped where they began"
+            )
+        return to_simkl, to_mdb, text
+
     def _sync_progress(self):
-        """Trakt resume points -> MDBList and Simkl (the reverse is not possible: Trakt's playback is read-only)."""
-        if "trakt" not in self.services or not (g.get_setting("trakt.auth") and g.get_bool_setting("trakt.enabled", False)):
+        """Trakt resume points -> MDBList and Simkl (the reverse is not possible: Trakt's playback is read-only); the points only
+        MDBList or only Simkl holds are mirrored between those two (_mirror_resume)."""
+        trakt_on = "trakt" in self.services and bool(g.get_setting("trakt.auth") and g.get_bool_setting("trakt.enabled", False))
+        mirror_on = "mdblist" in self.services and "simkl" in self.services
+        if not trakt_on and not mirror_on:
             return
         if "mdblist" not in self.services and "simkl" not in self.services:
             return
-        try:
-            movies = self._trakt_playback("movies")
-            episodes = self._trakt_playback("episodes")
-        except Exception as e:
-            g.log(f"bridgeSync: progress read failed: {e}", "error")
-            return
-        if movies is None or episodes is None:
-            g.log("bridgeSync: Trakt resume points could not be read - none sent this cycle", "info")
-            return
+        self._mdb_playback_raw = self._simkl_playback_raw = None
+        self._mirror_chosen = set()
+        if trakt_on:  # a failed Trakt read ends the pass (what Trakt holds is then unknown: nothing is sent or mirrored)
+            try:
+                movies = self._trakt_playback("movies")
+                episodes = self._trakt_playback("episodes")
+            except Exception as e:
+                g.log(f"bridgeSync: progress read failed: {e}", "error")
+                return
+            if movies is None or episodes is None:
+                g.log("bridgeSync: Trakt resume points could not be read - none sent this cycle", "info")
+                return
+        else:
+            movies, episodes = [], []  # Trakt is not in use: it holds no resume points; MDBList and Simkl are still mirrored
         if movies:
             g.log(f"bridgeSync: trakt playback movie entry keys: {sorted(movies[0].keys())}", "debug")
         if episodes:
@@ -2240,53 +2471,88 @@ class _Bridge:
         # progress made there since. A target whose resume points cannot be read is skipped this run.
         failed = {"mdblist": 0, "simkl": 0}  # a post that got no usable answer: counted and logged, never silent
         sends = {"mdblist": [], "simkl": []}
-        if "mdblist" in self.services:
-            have = self._mdb_playback()
-            if have is None:
-                g.log("bridgeSync: MDBList resume points could not be read - none sent to it this cycle", "info")
-            else:
-                threshold = g.get_int_setting("mdblist.playCountMinimumPercent", 80)
-                sends["mdblist"] = [
-                    r
-                    for r in rows
-                    if not self._finished_elsewhere(r, threshold) and self._resume_due(have.get(r["mdb_have"]), r["paused_at"])
-                ]
-        if "simkl" in self.services:
-            have = self._simkl_playback()
-            if have is None:
-                g.log("bridgeSync: Simkl resume points could not be read - none sent to it this cycle", "info")
-            else:
-                threshold = g.get_int_setting("simkl.playCountMinimumPercent", 80)
-                # Simkl keeps one resume point per show, so of a show's episodes only the one Trakt saved last goes
-                # to it (sent in turn, the last of them would win whichever was newest)
-                newest = {}
-                chosen = []
-                for r in rows:
-                    if self._finished_elsewhere(r, threshold):
-                        continue
-                    if r["media"] == "movie":
-                        chosen.append(r)
-                    elif r["show"] not in newest or (r["paused_at"] or "") > (newest[r["show"]]["paused_at"] or ""):
-                        newest[r["show"]] = r
-                chosen.extend(newest.values())
-                due = [r for r in chosen if self._resume_due(have.get(r["simkl_have"]), r["paused_at"])]
-                refused = [r for r in due if self._resume_refused(r)]
-                if refused:
-                    g.log(
-                        f"bridgeSync: {len(refused)} Trakt resume point(s) not sent to Simkl - it refused them on the last runs "
-                        f"and they have not changed (tried again in a day)",
-                        "info",
-                    )
-                sends["simkl"] = sorted(
-                    (r for r in due if r not in refused),
-                    key=lambda r: r["paused_at"] or "",
-                    reverse=True,
-                )[:_SIMKL_PROGRESS_CAP]
+        mdb_have = self._mdb_playback() if "mdblist" in self.services else None
+        simkl_have = self._simkl_playback() if "simkl" in self.services else None
+        if "mdblist" in self.services and mdb_have is None:
+            g.log("bridgeSync: MDBList resume points could not be read - none sent to it this cycle", "info")
+        if "simkl" in self.services and simkl_have is None:
+            g.log("bridgeSync: Simkl resume points could not be read - none sent to it this cycle", "info")
+
+        # The points only MDBList or only Simkl holds go to the other one (Trakt-held points are the Trakt pass's)
+        mirror_simkl, mirror_mdb = [], []
+        if mdb_have is not None and simkl_have is not None:
+            trakt_movies = {int(r["key"]) for r in rows if r["media"] == "movie"}
+            trakt_eps = {tuple(int(i) for i in r["key"].split(":")) for r in rows if r["media"] == "episode"}
+            try:
+                mirror_simkl, mirror_mdb, text = self._mirror_resume(trakt_movies, trakt_eps)
+            except Exception as e:
+                mirror_simkl, mirror_mdb, text = [], [], ""
+                self._mirror_chosen = set()
+                g.log(f"bridgeSync: resume mirror error: {e}", "warning")
+            if text:
+                g.log(text, "info")
+
+        if mdb_have is not None:
+            threshold = g.get_int_setting("mdblist.playCountMinimumPercent", 80)
+            due = [
+                r
+                for r in rows
+                if not self._finished_elsewhere(r, threshold) and self._resume_due(mdb_have.get(r["mdb_have"]), r["paused_at"])
+            ]
+            due.extend(mirror_mdb)
+            # A point MDBList answered with action 'skip' (it ignores a pause shortly after a watched mark and keeps nothing) on
+            # the last runs, with the source's copy unchanged, is not posted again for a day: it was one useless POST per run
+            skipped = [r for r in due if self._resume_refused(r, "mdblist_resume_skipped")]
+            if skipped:
+                g.log(
+                    f"bridgeSync: {len(skipped)} resume point(s) not sent to MDBList - it ignored them on the last runs "
+                    f"(watched there just before) and they have not changed (tried again in a day)",
+                    "info",
+                )
+            sends["mdblist"] = [r for r in due if r not in skipped]
+        if simkl_have is not None:
+            threshold = g.get_int_setting("simkl.playCountMinimumPercent", 80)
+            # Simkl keeps one resume point per show, so of a show's episodes only the one Trakt saved last goes
+            # to it (sent in turn, the last of them would win whichever was newest)
+            newest = {}
+            chosen = []
+            for r in rows:
+                if self._finished_elsewhere(r, threshold):
+                    continue
+                if r["media"] == "movie":
+                    chosen.append(r)
+                elif r["show"] not in newest or (r["paused_at"] or "") > (newest[r["show"]]["paused_at"] or ""):
+                    newest[r["show"]] = r
+            chosen.extend(newest.values())
+            due = [r for r in chosen if self._resume_due(simkl_have.get(r["simkl_have"]), r["paused_at"])]
+            # a mirrored episode joins only when Trakt has none of the show to send (Trakt's copy wins: one post per show)
+            trakt_shows = {r["show"] for r in due if r["media"] == "episode"}
+            for r in mirror_simkl:
+                if r["media"] == "movie" or r["show"] not in trakt_shows:
+                    due.append(r)
+            refused = [r for r in due if self._resume_refused(r)]
+            if refused:
+                g.log(
+                    f"bridgeSync: {len(refused)} resume point(s) not sent to Simkl - it refused them on the last runs "
+                    f"and they have not changed (tried again in a day)",
+                    "info",
+                )
+            sends["simkl"] = sorted(
+                (r for r in due if r not in refused),
+                key=lambda r: r["paused_at"] or "",
+                reverse=True,
+            )[:_SIMKL_PROGRESS_CAP]
 
         for target in ("mdblist", "simkl"):
             for row in sends[target]:
-                ok, _data = self._post(target, "scrobble/pause", row[target])
+                ok, data = self._post(target, "scrobble/pause", row[target])
                 failed[target] += not ok
+                if ok:
+                    skip = target == "mdblist" and data.get("action") == "skip"
+                    if target == "mdblist":
+                        self._resume_note(row, not skip, "mdblist_resume_skipped")
+                    if not skip:
+                        self._mirror_confirm(row)
                 if target == "simkl":
                     self._resume_note(row, ok)
             if sends[target]:

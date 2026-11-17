@@ -5,7 +5,7 @@ import xbmc
 import xbmcgui
 
 from resources.lib.database import trakt_sync
-from resources.lib.database.trakt_sync import hidden
+from resources.lib.database.trakt_sync import hidden, reset_watching
 from resources.lib.modules.exceptions import ActivitySyncFailure
 from resources.lib.modules.global_lock import GlobalLock
 from resources.lib.modules.globals import g
@@ -517,6 +517,14 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
                 trakt_watched.extend(paged_items)
             if not trakt_watched:
                 return
+            # shows reset on Trakt (rewatch): Next Up counts only the episodes watched since the reset (see reset_watching)
+            reset_watching.save(
+                {
+                    int(show.get("trakt_id")): get(show, "reset_at")
+                    for show in trakt_watched
+                    if show.get("trakt_id") and get(show, "reset_at")
+                }
+            )
             self.insert_trakt_shows(trakt_watched)
             self._mill_if_needed(trakt_watched, self._queue_with_progress)
 

@@ -1,3 +1,15 @@
+[B]3.9.141[/B]
+[FIX] Trakt - Next Up after a Trakt reset (rewatch): a show you reset on Trakt now continues after the furthest episode you have watched SINCE the reset. Before, the plays from before the reset still counted, so Next Up offered the episode after the old furthest one, or hid the show. Seren keeps each reset date in a small file next to its databases (traktResetWatching.json, rewritten at every Trakt watched sync); the episode checkmarks and watched counts are unchanged, and a show that was never reset behaves exactly as before. The new dates are used from the next Trakt watched sync.
+
+[B]3.9.140[/B]
+[FIX] Trakt - A jump to the end of a video (for example a credits skip) is now judged at its new position before Seren tells Trakt playback started: before, the check used the position from before the jump, so Trakt could be sent a start at about 100% and show the finished item as playing again. A jump out of the first seconds, or back from the end, now starts it as it should, and no start is sent after Seren has already sent the stop.
+
+[B]3.9.139[/B]
+[NEW] Cross-service sync - Resume points are now also passed between MDBList and Simkl. A movie or episode you paused on one of them and that Trakt does not hold continues from the same place on the other (Trakt's resume points already went to both). Only a point that is missing on the other service, or older and clearly different (more than 2 %), is sent, so the two never keep overwriting each other. Points under 4 % or over 96 %, items you watched after the pause, and anime (Simkl numbers every cour from 1) are left alone; Simkl keeps one resume point per show, so only the newest MDBList episode of a show is sent, and an episode is passed in either direction only for a show whose season has the same episode numbers on both. A point you clear on the service it started on is not copied back from the other one. It also runs when Trakt is not in use. The log line "bridgeSync (resume mirror)" lists what was sent and what was left out.
+[FIX] Cross-service sync - A Trakt resume point that MDBList ignores (it keeps nothing for an item it has just marked watched) is no longer sent again at every run.
+[FIX] MDBList / Simkl - A movie or episode marked watched on one service and mirrored to MDBList no longer keeps its resume point there (MDBList's watched call leaves it in place, so the item stayed in In Progress with its old percentage). Marking an item watched on Simkl also drops Seren's own copy of its resume point at once instead of at the next sync.
+[FIX] Trakt - The Trakt item menu no longer offers Add to / Remove from Collection on an episode (it changed the whole show's collection state); movies and shows keep it.
+
 [B]3.9.138[/B]
 - [FIX] Changelog - changelog.txt stopped at 3.9.111; it now lists every version up to this one.
 
