@@ -90,7 +90,7 @@ SCRAPER_TIERS = {
 }
 
 # Scrapers to skip entirely — these providers are ignored even if installed in the package
-SCRAPER_BLACKLIST = {'aiostreams'}
+SCRAPER_BLACKLIST = {'aiostreams', 'dmm'}  # dmm: debridmediamanager.com answers tools 403 (sponsor API key only), 3.9.145
 
 _TORRENT_CLEAN_RE = re.compile(r"[:''\u2019\u2018\u2013\u2014&!★√…\?\.]")
 _PARENS_RE = re.compile(r"\s*\([^)]*\)")

@@ -127,7 +127,7 @@
 			Rework for Seren 2.0
 		</news>
 	</extension>
-</addon><addon id="plugin.video.seren" version="3.9.144" name="Seren" provider-name="Nixgates">
+</addon><addon id="plugin.video.seren" version="3.9.145" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -194,6 +194,8 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.145
+            [CHANGE] Scrapers - DMM (Debrid Media Manager) is switched off. debridmediamanager.com now refuses every request from tools (HTTP 403) and only answers paying sponsors who have an API key, so its scraper returned nothing and only cost a request. It joins AIOStreams on the list of scrapers Seren skips; the DMM scraper itself stays inside the a4kScrapers pack.
             Changelog 3.9.144
             [FIX] Calendars - The Show Calendar (My Watch List) and the TV Shows Calendar now go by each episode's own air date for the shows on your Trakt calendar. Trakt's calendar can file an episode a week away from the day it airs, so an episode could be missing from its day (for example a Saturday episode filed under the Saturday before) and the watch list calendar could list an episode outside its 13 days back to 30 days ahead span while leaving one inside it out. Each week or span is now asked for with a few days to spare and the episodes are kept by their own air date.
             Changelog 3.9.143
