@@ -27,6 +27,7 @@ class TraktContextMenu:
 
         if scope == "trakt" and g.get_setting("trakt.auth") and g.get_bool_setting("trakt.enabled", False):
             self._handle_watched_options(item_information, item_type)
+            self._handle_unwatched_pickers("trakt", item_information, item_type)
             self._handle_collected_options(item_information, trakt_id, display_type)
             self._handle_watchlist_options(item_information, item_type, trakt_id)
             self._handle_favorited_options(item_information, item_type, trakt_id)
@@ -73,6 +74,14 @@ class TraktContextMenu:
                     },
                     g.get_language_string(30279): {
                         "method": self._mark_unwatched,
+                        "info_key": "info",
+                    },
+                    g.get_language_string(31664): {
+                        "method": self._trakt_unwatched_seasons,
+                        "info_key": "info",
+                    },
+                    g.get_language_string(31665): {
+                        "method": self._trakt_unwatched_episodes,
                         "info_key": "info",
                     },
                     g.get_language_string(30280): {
@@ -134,6 +143,7 @@ class TraktContextMenu:
                     watched_count = MDBListSyncDatabase().get_watched_episode_count(info.get("tmdb_id"))
                 watched = total > 0 and watched_count >= total
             self.dialog_list.append(g.get_language_string(30955 if watched else 30954))
+            self._handle_unwatched_pickers("mdblist", item_information, item_type)
 
             # Collection and Watchlist (3.9.134), placed after the watched toggle like Trakt's own order (watched, collected,
             # watchlisted). Gated on the local membership store only: the single applicable option, nothing before the
@@ -196,6 +206,14 @@ class TraktContextMenu:
                     },
                     g.get_language_string(30955): {
                         "method": self._mdblist_mark_unwatched,
+                        "info_key": "info",
+                    },
+                    g.get_language_string(31664): {
+                        "method": self._mdblist_unwatched_seasons,
+                        "info_key": "info",
+                    },
+                    g.get_language_string(31665): {
+                        "method": self._mdblist_unwatched_episodes,
                         "info_key": "info",
                     },
                     g.get_language_string(31044): {
@@ -423,6 +441,45 @@ class TraktContextMenu:
             self.dialog_list.append(g.get_language_string(30275).format(display_type))
         else:
             self.dialog_list.append(g.get_language_string(30274).format(display_type))
+
+    def _handle_unwatched_pickers(self, service, item_information, item_type):
+        """Unwatched Seasons / Unwatched Episodes, directly after the watched toggle of the Trakt and MDBList menus (shows, seasons and
+        episodes). Gated on that service's LOCAL data only: shown when it holds something watched for the show, no request is made."""
+        if item_type not in ("tvshow", "season", "episode"):
+            return
+        from resources.lib.modules import unwatched_picker
+
+        info = item_information["info"]
+        try:
+            if service == "trakt":
+                has_watched = unwatched_picker.trakt_has_watched(self._get_show_id(info))
+            else:
+                has_watched = unwatched_picker.mdblist_has_watched(
+                    info.get("tmdb_id") if item_type == "tvshow" else info.get("tmdb_show_id")
+                )
+        except Exception:
+            g.log_stacktrace()
+            return
+        if has_watched:
+            self.dialog_list.extend([g.get_language_string(31664), g.get_language_string(31665)])
+
+    def _run_unwatched_picker(self, service, info, kind):
+        from resources.lib.modules import unwatched_picker
+
+        api = self.trakt_api if service == "trakt" else self.mdblist_api
+        unwatched_picker.run(service, info, kind, api, f"{g.ADDON_NAME}: {self.header_text}")
+
+    def _trakt_unwatched_seasons(self, info):
+        self._run_unwatched_picker("trakt", info, "seasons")
+
+    def _trakt_unwatched_episodes(self, info):
+        self._run_unwatched_picker("trakt", info, "episodes")
+
+    def _mdblist_unwatched_seasons(self, info):
+        self._run_unwatched_picker("mdblist", info, "seasons")
+
+    def _mdblist_unwatched_episodes(self, info):
+        self._run_unwatched_picker("mdblist", info, "episodes")
 
     def _handle_watched_options(self, item_information, item_type):
         if item_type in ["movie", "episode"]:

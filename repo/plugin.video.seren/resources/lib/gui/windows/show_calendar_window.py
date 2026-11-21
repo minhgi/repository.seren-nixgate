@@ -5,20 +5,24 @@ import xbmc
 import xbmcgui
 
 from resources.lib.gui.windows.base_window import BaseWindow
+from resources.lib.gui.windows.calendar_busy import DelayedBusyDialog, close_busy_now
 from resources.lib.modules import calendar_view as view
+from resources.lib.modules.calendar_stamp import sync_stamp
 from resources.lib.modules.globals import g
 
 """ The My Watch List Calendar and the TV Shows Calendar, one window class for both.
 
 Both are one scrollable page: a header row per show with that show's episodes under it (air time, date, aired / today /
 in N days / watched, a Premiere badge, a tick on watched episodes). Select on a show lists that show's unwatched
-episodes (the Back button or the back key returns to the page); Select on an episode plays it.
+episodes (the Back button or the back key returns to the page); Select on an episode opens its information dialog (Kodi's, with Play).
 
-MODE_WATCHLIST: your episodes from 13 days back to 30 days ahead (calendar_data.get_calendar_episodes()).
+MODE_WATCHLIST: your episodes from 14 days back to 30 days ahead (calendar_data.get_calendar_episodes()).
 MODE_DAY: every show airing on ONE day (tv_schedule_data.get_schedule_week(), cached per week for as long as the window
 is open); Left / Right or the < > buttons change the day, Today jumps back. Days are LOCAL days: stored air dates are UTC,
 so a day can need rows from the neighbouring UTC week (see calendar_view.py).
 """
+
+ACTION_CONTEXT_MENU = 117
 
 LIST_ID = 1000
 CLOSE_BUTTON_ID = 2999
@@ -26,6 +30,8 @@ PREV_BUTTON_ID = 3001
 NEXT_BUTTON_ID = 3002
 BACK_BUTTON_ID = 3003
 TODAY_BUTTON_ID = 3004
+SCROLLBAR_ID = 1111
+ROWS_PER_PAGE = 11  # the list is 880 px high, a row 80 px: the scrollbar (showonepage=false) is there only for a longer list
 
 ACTION_MOVE_LEFT = 1
 ACTION_MOVE_RIGHT = 2
@@ -36,14 +42,14 @@ MODE_DAY = "day"
 VIEW_SHOWS = "shows"
 VIEW_UNWATCHED = "unwatched"
 
-WATCHLIST_DAYS_BACK = 13   # calendar_data.get_calendar_episodes()'s window: 13 days back through 30 days ahead
+WATCHLIST_DAYS_BACK = 14   # calendar_data.get_calendar_episodes()'s window: 14 days back through 30 days ahead
 WATCHLIST_DAYS_AHEAD = 30
 
 _PREFETCH_FORWARD_DELAY = 3.0   # land on a week, fetch the next one after this
 _PREFETCH_BACKWARD_DELAY = 8.0  # ...then the previous one 5s after that (3s + 5s)
 
 
-def _prefetch_week(week_start):
+def _prefetch_week(week_start, stamp=None):
     """threading.Timer callback - module-level and takes only a plain datetime.date, never a bound window method
     or `self`: a Timer holding the window instance would keep it alive past the opener's `del window`, and a stray
     callback firing after close() would risk touching torn-down controls."""
@@ -52,7 +58,7 @@ def _prefetch_week(week_start):
     try:
         from resources.lib.modules.tv_schedule_data import prefetch_schedule_week
 
-        prefetch_schedule_week(week_start)
+        prefetch_schedule_week(week_start, stamp)
         g.log(f"show_calendar_window: prefetched week of {week_start}", "debug")
     except Exception as e:
         g.log(f"show_calendar_window: prefetch of week {week_start} failed: {e}", "warning")
@@ -73,16 +79,23 @@ class ShowCalendarWindow(BaseWindow):
         self._view = VIEW_SHOWS
         self._rows = []             # the row entries behind the list control's items, same order
         self._saved_position = 0
+        self._unwatched_row = None  # the show row whose unwatched list is open
         self._watchlist_episodes = None
-        self._weeks = {}            # week_start -> get_schedule_week() rows, fetched once per window
+        self._weeks = {}            # week_start -> get_schedule_week() rows, fetched once per window (until a sync brings new watched data)
+        self._data_stamp = None     # sync_stamp() read just before the weeks / watchlist rows above were loaded
         self._prefetch_timers = []
         self._prefetch_week_start = None
+        self._initialised = False   # closing the episode information dialog calls onInit again: that one must change nothing
         self._time_format = xbmc.getRegion("time")
         self._date_format = xbmc.getRegion("dateshort")
+        self._clear_kept_weeks()  # a window left without close() (Home) must not hand its kept weeks / watchlist layer to this one
 
     # region window life-cycle
 
     def onInit(self):
+        if self._initialised:
+            return
+        self._initialised = True
         self.list_control = self.getControlList(LIST_ID)
         self.setProperty("window_title", g.get_language_string(31539 if self.mode == MODE_DAY else 31472))
         if self.mode == MODE_DAY:
@@ -92,11 +105,25 @@ class ShowCalendarWindow(BaseWindow):
         finally:
             # closes any busy dialog - must run even if population raises
             super().onInit()
+            # the dialog that _open() showed before the window: BaseWindow.onInit closes it with the plain close, which leaves it on screen for about
+            # a second and swallows the dialog of a press right after opening; the forced close removes it at once
+            close_busy_now()
         self._schedule_prefetch()
 
     def close(self):
         self._cancel_prefetch()
+        self._clear_kept_weeks()
         super().close()
+
+    @staticmethod
+    def _clear_kept_weeks():
+        """The weeks the prefetch kept in memory (tv_schedule_data) go wherever this window's own weeks go"""
+        try:
+            from resources.lib.modules.tv_schedule_data import clear_memo
+
+            clear_memo()
+        except Exception as e:
+            g.log(f"show_calendar_window: could not clear the kept weeks: {e}", "warning")
 
     def _schedule_prefetch(self):
         """Rolling background prefetch (day mode): land on a week, warm the adjacent weeks' TvScheduleDatabase
@@ -111,8 +138,9 @@ class ShowCalendarWindow(BaseWindow):
             return
         self._cancel_prefetch()
         self._prefetch_week_start = week_start
-        fwd_timer = threading.Timer(_PREFETCH_FORWARD_DELAY, _prefetch_week, args=(shift_week(week_start, 1),))
-        back_timer = threading.Timer(_PREFETCH_BACKWARD_DELAY, _prefetch_week, args=(shift_week(week_start, -1),))
+        # the window's sync stamp (a plain tuple) goes along: the prefetch keeps the week's rows in memory for it (3.9.151)
+        fwd_timer = threading.Timer(_PREFETCH_FORWARD_DELAY, _prefetch_week, args=(shift_week(week_start, 1), self._data_stamp))
+        back_timer = threading.Timer(_PREFETCH_BACKWARD_DELAY, _prefetch_week, args=(shift_week(week_start, -1), self._data_stamp))
         fwd_timer.daemon = True
         back_timer.daemon = True
         self._prefetch_timers = [fwd_timer, back_timer]
@@ -128,7 +156,24 @@ class ShowCalendarWindow(BaseWindow):
 
     # region data
 
+    def _drop_stale_data(self):
+        """A background sync (Trakt / MDBList / Simkl) that finished since the weeks / rows were loaded brought in new watched data: they are
+        loaded again (the stamp is read BEFORE loading, so a sync that lands during a load is caught by the next one). Returns True when they
+        were dropped."""
+        stamp = sync_stamp()
+        if stamp == self._data_stamp:
+            return False
+        dropped = self._data_stamp is not None and (bool(self._weeks) or self._watchlist_episodes is not None)
+        self._data_stamp = stamp
+        if dropped:
+            g.log("Calendar: a sync brought in new watched data, the calendar is loaded again")
+            self._weeks = {}
+            self._watchlist_episodes = None
+            self._clear_kept_weeks()
+        return dropped
+
     def _load_episodes(self):
+        self._drop_stale_data()
         if self.mode == MODE_DAY:
             return self._day_episodes()
         if self._watchlist_episodes is None:
@@ -140,7 +185,7 @@ class ShowCalendarWindow(BaseWindow):
     def _day_episodes(self):
         """Episodes airing on self.day LOCAL time. Stored air dates are UTC, so the local day can hold rows from the
         UTC day before or after: load the weeks that the local day's UTC dates fall in (once per window - the watchlist layer of
-        get_schedule_week() is never cached and costs live lookups) and keep the rows whose local day matches."""
+        get_schedule_week()'s watchlist layer still costs a Trakt request per week) and keep the rows whose local day matches."""
         from resources.lib.modules.tv_schedule_data import get_schedule_week, week_start_for
 
         starts = sorted({week_start_for(d) for d in view.utc_dates_of_local_day(self.day)})
@@ -199,8 +244,9 @@ class ShowCalendarWindow(BaseWindow):
             rows = []
         self._set_rows(rows, empty_text, position)
 
-    def _show_unwatched(self, show_row, position):
+    def _show_unwatched(self, show_row, position, select=0):
         self._saved_position = position
+        self._unwatched_row = show_row
         self._view = VIEW_UNWATCHED
         self.setProperty("view_unwatched", "True")
         self.setProperty("center_label", f"{show_row['title']} - {g.get_language_string(31586)}")
@@ -210,7 +256,7 @@ class ShowCalendarWindow(BaseWindow):
         except Exception as exc:
             g.log(f"show_calendar_window: could not load the unwatched episodes of {show_row.get('trakt_show_id')}: {exc}", "error")
             rows = []
-        self._set_rows(rows, g.get_language_string(31585))
+        self._set_rows(rows, g.get_language_string(31585), select)
 
     def _set_rows(self, rows, empty_text, position=0):
         self._rows = rows
@@ -219,8 +265,8 @@ class ShowCalendarWindow(BaseWindow):
         if rows:
             self.clearProperty("empty_text")
             self.setFocusId(LIST_ID)
-            if 0 < position < len(rows):
-                self.list_control.selectItem(position)
+            if position > 0:
+                self.list_control.selectItem(min(position, len(rows) - 1))
         else:
             self.setProperty("empty_text", empty_text)
             # an empty list cannot take focus: land on the day buttons (an empty day is common), else on Close
@@ -230,12 +276,12 @@ class ShowCalendarWindow(BaseWindow):
         self._go_to_day(self.day + datetime.timedelta(days=delta))
 
     def _go_to_day(self, day):
-        g.show_busy_dialog()
+        busy = DelayedBusyDialog().start()  # appears only when the page takes longer than a moment to load
         try:
             self.day = day
             self._show_overview()
         finally:
-            g.close_busy_dialog()
+            busy.stop()
         self._schedule_prefetch()
 
     # endregion
@@ -304,6 +350,13 @@ class ShowCalendarWindow(BaseWindow):
         ):
             self._navigate_day(-1 if action_id == ACTION_MOVE_LEFT else 1)
             return
+        if action_id == ACTION_CONTEXT_MENU and self.getFocusId() == LIST_ID:
+            self._context_menu()
+            return
+        # Everywhere else Right on the list goes to the scrollbar at the right edge of the page (Left from the scrollbar is wired back to the list in the skin file)
+        if action_id == ACTION_MOVE_RIGHT and self.getFocusId() == LIST_ID and len(self._rows) > ROWS_PER_PAGE:
+            self.setFocusId(SCROLLBAR_ID)
+            return
         super().onAction(action)
 
     def handle_action(self, action_id, control_id=None):
@@ -323,10 +376,16 @@ class ShowCalendarWindow(BaseWindow):
             self._select()
 
     def _go_back(self):
-        if self._view == VIEW_UNWATCHED:
-            self._show_overview(self._saved_position)
-        else:
+        if self._view != VIEW_UNWATCHED:
             self.close()
+            return
+        # after a manager option, or a sync that brought in new watched data, the stored page data is dropped and the page is loaded again, which takes
+        # seconds; with the data still stored it is shown at once. The dialog appears only when the load really takes a moment.
+        busy = DelayedBusyDialog().start()
+        try:
+            self._show_overview(self._saved_position)
+        finally:
+            busy.stop()
 
     def _select(self):
         position = self.list_control.getSelectedPosition()
@@ -334,14 +393,46 @@ class ShowCalendarWindow(BaseWindow):
             return
         row = self._rows[position]
         if row["type"] == "show":
-            self._show_unwatched(row, position)
+            busy = DelayedBusyDialog().start()
+            try:
+                self._show_unwatched(row, position)
+            finally:
+                busy.stop()
             return
         args = row["episode"].get("args")
         if not args:
             return
-        self.close()
-        url = g.create_url(g.BASE_URL, {"action": "getSources", "action_args": args})
-        xbmc.executebuiltin(f'RunPlugin("{url}")')
+        # Kodi's information dialog of the episode (plot, artwork, rating) with its Play button, as in the other lists; the calendar stays as it is.
+        # The row's list item is built without a path (bulk add hands the url over separately) and its Play button plays that path, so it gets the
+        # url the old Select ran, and the playable flag the episode lists give theirs.
+        item = self.list_control.getListItem(position)
+        item.setPath(g.create_url(g.BASE_URL, {"action": "getSources", "action_args": args}))
+        item.setProperty("IsPlayable", "true")
+        xbmcgui.Dialog().info(item)
+
+    def _context_menu(self):
+        """Context Menu key on a row: the Trakt / MDBList / Simkl manager of that show (or of that episode in a show's
+        unwatched list). When an option ran, the page is rebuilt from the changed data (the stored weeks are dropped)."""
+        from resources.lib.gui.windows import calendar_context_menu as manager
+
+        position = self.list_control.getSelectedPosition()
+        if position < 0 or position >= len(self._rows):
+            return
+        row = self._rows[position]
+        args = manager.show_args(row.get("trakt_show_id")) if row["type"] == "show" else row["episode"].get("args")
+        if not manager.open_manager(args):
+            return
+        self._weeks = {}
+        self._watchlist_episodes = None
+        self._clear_kept_weeks()
+        busy = DelayedBusyDialog().start()
+        try:
+            if self._view == VIEW_UNWATCHED:
+                self._show_unwatched(self._unwatched_row, self._saved_position, position)
+            else:
+                self._show_overview(position)
+        finally:
+            busy.stop()
 
     # endregion
 
@@ -351,11 +442,13 @@ def _open(mode):
 
     g.show_busy_dialog()
     window = ShowCalendarWindow(*SkinManager().confirm_skin_path("show_calendar.xml"), mode=mode)
+    g.begin_calendar_window()
     try:
         window.doModal()
     finally:
         g.close_busy_dialog()
         del window
+        g.end_calendar_window()
 
 
 def open_watchlist_calendar():

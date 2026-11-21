@@ -160,6 +160,58 @@ def mirror_watched(source, item_information, watched):
             g.log(f"cross_sync: failed to mirror watched={watched} from {source} to {target}: {e}", "error")
 
 
+def mirror_bulk_unwatched(source, show_tmdb_id, seasons, episodes, whole=False):
+    """One removal request per target for several seasons / episodes of ONE show (the Unwatched Seasons / Unwatched Episodes pickers,
+    resources/lib/modules/unwatched_picker.py): looping mirror_watched over the ticked items would be one write each and run into
+    Trakt's write rate limit. seasons = season numbers removed whole, episodes = {season: [numbers]}, whole = the show's whole history.
+    Local writes follow the same rule as the single-item mirror: only after the target answered."""
+    from resources.lib.modules import unwatched_picker
+
+    payload = unwatched_picker.tmdb_payload(show_tmdb_id, seasons, episodes, whole)
+    if payload is None:
+        return
+    for target in _targets(source):
+        try:
+            if target == "trakt":
+                _push_bulk_unwatched_to_trakt(payload, show_tmdb_id, seasons, episodes, whole)
+            elif target == "mdblist":
+                from resources.lib.indexers.mdblist import MDBListAPI
+
+                if MDBListAPI().post_json("sync/watched/remove", payload):
+                    unwatched_picker.mdblist_clear_local(show_tmdb_id, seasons, episodes, whole)
+            elif target == "simkl":
+                from resources.lib.indexers.simkl import SimklAPI
+
+                SimklAPI().post_json("sync/history/remove", payload)
+        except Exception as e:
+            g.log(f"cross_sync: failed to mirror a bulk unwatched removal from {source} to {target}: {e}", "error")
+
+
+def _push_bulk_unwatched_to_trakt(payload, show_tmdb_id, seasons, episodes, whole):
+    from resources.lib.indexers.trakt import TraktAPI
+
+    response = TraktAPI().post_json("sync/history/remove", payload)
+    if not response:
+        g.log("cross_sync: trakt bulk unwatched push got no response, skipping local write", "warning")
+        return
+    trakt_id = _resolve_trakt_id({"mediatype": "season", "tmdb_show_id": show_tmdb_id})
+    if not trakt_id:
+        return
+    from resources.lib.database.trakt_sync.shows import TraktSyncDatabase
+
+    db = TraktSyncDatabase()
+    if whole:
+        db.mark_show_watched(trakt_id, 0)
+        return
+    for season in seasons:
+        db.mark_season_watched(trakt_id, int(season), 0)
+    for season, numbers in episodes.items():
+        if int(season) in {int(s) for s in seasons}:
+            continue
+        for number in numbers:
+            db.mark_episode_unwatched(trakt_id, int(season), int(number))
+
+
 def _push_watched_to_trakt(item_information, watched):
     from resources.lib.indexers.trakt import TraktAPI
 

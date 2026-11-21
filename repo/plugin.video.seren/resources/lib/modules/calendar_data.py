@@ -100,7 +100,7 @@ def fetch_my_calendar_days(trakt_api, first_day, days):
 
 def get_calendar_episodes():
     """Returns one chronologically-sorted list of normalized episode rows
-    spanning recent (13 days back) through upcoming (30 days forward)."""
+    spanning recent (14 days back, 3.9.162; was 13) through upcoming (30 days forward)."""
     from resources.lib.modules.syncGateway import configured_providers
     from resources.lib.database.trakt_sync.shows import TraktSyncDatabase as ShowsDatabase
     from resources.lib.indexers.trakt import TraktAPI
@@ -117,7 +117,7 @@ def get_calendar_episodes():
         # the empty result every other zero-provider path already gives.
         return []
 
-    recent_start = datetime.date.today() - datetime.timedelta(days=13)
+    recent_start = datetime.date.today() - datetime.timedelta(days=14)
     tomorrow = datetime.date.today() + datetime.timedelta(days=1)
 
     if "trakt" in providers:
@@ -199,7 +199,7 @@ def _fetch_raw_trakt_calendar(trakt_api, recent_start, tomorrow):
     calendar view is one list, one filter, applied once."""
     from resources.lib.database.trakt_sync.hidden import TraktSyncDatabase as HiddenDatabase
 
-    recent = fetch_my_calendar_days(trakt_api, recent_start, 14)
+    recent = fetch_my_calendar_days(trakt_api, recent_start, 15)  # recent_start .. today
     upcoming = fetch_my_calendar_days(trakt_api, tomorrow, 30)
 
     hidden_shows = HiddenDatabase().get_hidden_items("calendar", "tvshow")
@@ -208,7 +208,7 @@ def _fetch_raw_trakt_calendar(trakt_api, recent_start, tomorrow):
 
 def _fetch_public_trakt_calendar(trakt_api, recent_start, tomorrow):
     """Trakt-off fallback covering the same combined window
-    _fetch_raw_trakt_calendar() does (recent_start through tomorrow+29, 44
+    _fetch_raw_trakt_calendar() does (recent_start through tomorrow+29, 45
     days total) - calendars/all/shows is the same public, non-authenticated
     endpoint movie_calendar_data.py's own base layer already uses (confirmed
     live: still serves data with Trakt disabled), so this only replaces the

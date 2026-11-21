@@ -7611,3 +7611,53 @@ msgstr "Simkl - Watched Episodes"
 msgctxt "#31663"
 msgid "Every TV episode you have watched on Simkl, newest first (anime is not included)"
 msgstr "Every TV episode you have watched on Simkl, newest first (anime is not included)"
+
+#: /resources/lib/modules/unwatched_picker.py
+msgctxt "#31664"
+msgid "Unwatched Seasons"
+msgstr "Unwatched Seasons"
+
+#: /resources/lib/modules/unwatched_picker.py
+msgctxt "#31665"
+msgid "Unwatched Episodes"
+msgstr "Unwatched Episodes"
+
+#: /resources/lib/modules/unwatched_picker.py
+msgctxt "#31666"
+msgid "Seasons to mark as unwatched"
+msgstr "Seasons to mark as unwatched"
+
+#: /resources/lib/modules/unwatched_picker.py
+msgctxt "#31667"
+msgid "Episodes to mark as unwatched"
+msgstr "Episodes to mark as unwatched"
+
+#: /resources/lib/modules/unwatched_picker.py
+msgctxt "#31668"
+msgid "Season {} ({} watched)"
+msgstr "Season {} ({} watched)"
+
+#: /resources/lib/modules/unwatched_picker.py
+msgctxt "#31669"
+msgid "Specials ({} watched)"
+msgstr "Specials ({} watched)"
+
+#: /resources/lib/modules/unwatched_picker.py
+msgctxt "#31670"
+msgid "Season {} (marked watched as a whole)"
+msgstr "Season {} (marked watched as a whole)"
+
+#: /resources/lib/modules/unwatched_picker.py
+msgctxt "#31671"
+msgid "Specials (marked watched as a whole)"
+msgstr "Specials (marked watched as a whole)"
+
+#: /resources/lib/modules/unwatched_picker.py
+msgctxt "#31672"
+msgid "Whole show (marked watched as a whole)"
+msgstr "Whole show (marked watched as a whole)"
+
+#: /resources/lib/gui/windows/calendar_context_menu.py
+msgctxt "#31673"
+msgid "No options are available for this item"
+msgstr "No options are available for this item"

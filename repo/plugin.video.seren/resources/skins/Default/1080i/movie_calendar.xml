@@ -76,31 +76,34 @@
 
 		<control type="group">
 			<top>25</top>
-			<left>1630</left>
+			<left>1410</left>
 
 			<control type="button" id="3001">
-				<width>50</width>
+				<left>160</left>
+				<width>70</width>
 				<height>50</height>
-				<font>font32</font>
+				<font>font12</font>
 				<label>&lt;</label>
 				<align>center</align>
+				<textoffsetx>0</textoffsetx>
 				<aligny>center</aligny>
 				<texturefocus colordiffuse="$INFO[Window().Property(settings.color)]">white.png</texturefocus>
-				<texturenofocus colordiffuse="22000000">white.png</texturenofocus>
+				<texturenofocus colordiffuse="33FFFFFF">white.png</texturenofocus>
 				<onright>3002</onright>
 				<ondown>1000</ondown>
 			</control>
 
 			<control type="button" id="3002">
-				<left>60</left>
-				<width>50</width>
+				<left>240</left>
+				<width>70</width>
 				<height>50</height>
-				<font>font32</font>
+				<font>font12</font>
 				<label>&gt;</label>
 				<align>center</align>
+				<textoffsetx>0</textoffsetx>
 				<aligny>center</aligny>
 				<texturefocus colordiffuse="$INFO[Window().Property(settings.color)]">white.png</texturefocus>
-				<texturenofocus colordiffuse="22000000">white.png</texturenofocus>
+				<texturenofocus colordiffuse="33FFFFFF">white.png</texturenofocus>
 				<onleft>3001</onleft>
 				<onright>2999</onright>
 				<ondown>1000</ondown>
@@ -108,15 +111,15 @@
 
 			<!-- Close -->
 			<control type="button" id="2999">
-				<left>130</left>
-				<width>140</width>
+				<left>320</left>
+				<width>150</width>
 				<height>50</height>
 				<font>font12</font>
-				<textoffsetx>20</textoffsetx>
 				<texturefocus colordiffuse="$INFO[Window().Property(settings.color)]">white.png</texturefocus>
-				<texturenofocus colordiffuse="22000000">white.png</texturenofocus>
+				<texturenofocus colordiffuse="33FFFFFF">white.png</texturenofocus>
 				<label>$ADDON[plugin.video.seren 30459]</label>
-				<align>right</align>
+				<align>center</align>
+				<textoffsetx>0</textoffsetx>
 				<aligny>center</aligny>
 				<textcolor>FFFFFFFF</textcolor>
 				<onleft>3002</onleft>
@@ -126,11 +129,11 @@
 
 		<!-- Scrollbar -->
 		<control type="scrollbar" id="1111">
-			<left>10</left>
+			<left>1890</left>
 			<top>170</top>
 			<width>20</width>
 			<height>860</height>
-			<onright>1000</onright>
+			<onleft>1000</onleft>
 			<showonepage>false</showonepage>
 			<texturesliderbackground colordiffuse="99362e33">white.png</texturesliderbackground>
 			<texturesliderbar colordiffuse="66FFFFFF">white.png</texturesliderbar>
@@ -161,6 +164,9 @@
 			<height>860</height>
 
 			<itemlayout width="230" height="400">
+				<control type="group">
+					<left>0</left>
+					<top>5</top>
 				<control type="image">
 					<left>10</left>
 					<top>0</top>
@@ -337,15 +343,19 @@
 					<aligny>center</aligny>
 					<label>$INFO[ListItem.Property(rating_display)]</label>
 				</control>
+				</control>
 			</itemlayout>
 
 			<focusedlayout width="230" height="400">
-				<!-- accent glow behind the poster -->
+				<control type="group">
+					<left>0</left>
+					<top>5</top>
+				<!-- accent frame around the poster only: 5 px on every side (poster 10..220 x 0..315); the date / rating bars start at 320, below it. The group is moved down 5 so the frame's top edge is inside the grid -->
 				<control type="image">
-					<left>4</left>
-					<top>-4</top>
-					<width>222</width>
-					<height>327</height>
+					<left>5</left>
+					<top>-5</top>
+					<width>220</width>
+					<height>325</height>
 					<texture colordiffuse="$INFO[Window().Property(settings.color)]">white.png</texture>
 				</control>
 
@@ -518,6 +528,7 @@
 					<align>right</align>
 					<aligny>center</aligny>
 					<label>$INFO[ListItem.Property(rating_display)]</label>
+				</control>
 				</control>
 			</focusedlayout>
 		</control>

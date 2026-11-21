@@ -1,3 +1,63 @@
+[B]3.9.165[/B]
+[IMPROVE] TV Shows Daily Calendar - the Trakt calendar answer of the week next to the one you are on is now fetched in the background together with the rest of that week, so paging into it no longer waits for Trakt (a week-boundary press about 0.2 s shorter).
+
+[B]3.9.164[/B]
+[FIX] Movie Calendar - Select on a movie now opens the movie's information dialog (with Play), as in TMDb Helper's calendars and Seren's TV calendars, instead of starting playback at once; the calendar stays open behind it.
+
+[B]3.9.163[/B]
+[FIX] Calendars - Select on an episode in the My Watch List and TV Shows calendars now opens the episode's information dialog (with Play), as in TMDb Helper's calendars, instead of starting playback at once; the calendar stays open behind it.
+
+[B]3.9.162[/B]
+[FIX] Calendars - Aligned with the TMDb Helper calendars: the Movie Calendar tiles show the release date as day and month name (06 Nov) instead of the numeric regional date; the scrollbar of the TV and Movie calendars is at the right edge of the page (Right on a long list moves to it); the My Watch List calendar starts 14 days back (was 13).
+
+[B]3.9.161[/B]
+[FIX] TV Shows Daily Calendar - Paging into a new week is faster: the Simkl and MDBList watchlist shows and their ratings do not depend on the week, so they are now looked up once and kept while the calendar stays open (for at most 10 minutes, and only while nothing was synced); they are read again after a sync, after a context-menu option and each time the calendar is opened.
+
+[B]3.9.160[/B]
+[FIX] Movie Calendar - Paging to another month is faster: the Simkl and MDBList watchlist movies and their ratings do not depend on the month, so they are now looked up once and kept while the calendar stays open (for at most 10 minutes, and only while nothing was synced); they are read again after a sync, after a context-menu option and each time the calendar is opened.
+
+[B]3.9.159[/B]
+[FIX] Calendars - Paging a month or day right after opening the TV Shows or Movie calendar now shows the busy dialog when the load takes a moment; before, the dialog shown while the calendar was opening stayed on screen for about a second after the calendar was ready and hid it. The calendar also shows about a second sooner.
+
+[B]3.9.158[/B]
+[FIX] Calendars - The busy dialog in the TV Shows, My Watch List and Movie calendars now appears when a page takes longer than half a second to load (was 0.3 seconds), so a short load, such as opening a show's unwatched episodes, no longer flashes it.
+
+[B]3.9.157[/B]
+[FIX] Calendars - The busy dialog in the TV Shows, My Watch List and Movie calendars now appears whenever a page takes longer than a moment to load (it is no longer decided beforehand), including when you open a show's unwatched episodes; a page that loads at once shows no dialog.
+
+[B]3.9.156[/B]
+[FIX] Calendars - The frame around the highlighted poster in the Movie Calendar goes around the poster only (the release date and rating bar are outside it again) and is the same width on all four sides.
+
+[B]3.9.155[/B]
+[FIX] Calendars - The frame around the highlighted poster in the Movie Calendar is now the same width on all four sides, also wraps the release date and rating bars, and is no longer cut off at the top of the first row.
+
+[B]3.9.154[/B]
+[FIX] Calendars - The Movie Calendar closes its busy dialog (paging to another month, coming back from a manager) at once when the month is loaded. Before it stayed on screen for about another second.
+
+[B]3.9.153[/B]
+[FIX] Calendars - A busy dialog that the TV Shows Calendar and My Watch List Calendar show while loading (paging into a week that is not loaded yet, coming back from a manager) is now closed at once when the load is done. Before it stayed on screen for about another second.
+
+[B]3.9.152[/B]
+[FIX] Calendars - Paging to another day in the TV Shows Calendar and My Watch List Calendar no longer shows the busy dialog when the day is already loaded (nothing has to be fetched or built), so the press is not held for another second by a dialog that only flashes. The busy dialog is still shown when the day needs a week that is not loaded yet or after a sync changed your watched data.
+
+[B]3.9.151[/B]
+[FIX] Calendars - Paging the TV Shows Calendar into a week that the background prefetch already built is quicker: the prefetch now keeps that week's episodes in memory (until a sync changes your watched data, an action in the calendar's context menu, or 10 minutes), so the press no longer builds them again. Before, only the database bookkeeping of the next and previous week was prepared and the episodes were built again when you paged there. The part that asks Trakt / Simkl / MDBList for your own watch list of that week is still done when you page there.
+
+[B]3.9.150[/B]
+[FIX] Calendars - The buttons of the My Watch List Calendar, the TV Shows Calendar and the Movies Calendar are laid out like the buttons of TMDb Helper's calendars: the Today, Back and Close buttons are the same size with centered text (the Today button read 'T...' and Close was pushed to the right edge in skins whose buttons have a wide text margin), the previous / next buttons are the same height and width in the TV and Movies calendars, all of them end at the same right edge as the list, and a button that is not focused is now a visible grey button instead of nearly invisible.
+
+[B]3.9.149[/B]
+[FIX] Calendars - The My Watch List Calendar and the TV Shows Calendar keep the weeks they loaded while the window is open, so an episode marked watched elsewhere (the website, another device, a sync of another service) and brought in by a background sync could still show as unwatched until you closed the window. The calendar now notices that a Trakt, MDBList or Simkl sync brought in new watched data and loads the page again the next time you change the day or go back from a show's unwatched list (with the busy dialog, as when you change the day). The Movies Calendar was not affected: it reads its data again on every month.
+
+[B]3.9.148[/B]
+[NEW] Calendars - The My Watch List Calendar, the TV Shows Calendar and the Movies Calendar now have the Context Menu: press the Context Menu key (or long-press Select) on a show, an episode in a show's unwatched list, or a movie tile to open its Trakt, MDBList or Simkl manager (the ones that are set up), including Unwatched Seasons and Unwatched Episodes. After an option runs the page is rebuilt with the change, keeping your place. The widget refresh the manager asks for is held until you close the calendar, so the window does not wait on it.
+
+[B]3.9.147[/B]
+[NEW] Trakt and MDBList menus - Unwatched Seasons and Unwatched Episodes, next to Mark as Unwatched on a show, season or episode: tick the watched seasons or episodes of the show you want to mark as unwatched. The list comes from the service's synced data, the removal is sent as one request, and with cross-sync on it is mirrored to the other connected services (Simkl included) in one request each.
+
+[B]3.9.146[/B]
+[FIX] Calendars - On the Show Calendar and the TV Shows Calendar you can now reach the scrollbar with the remote: press Left on the list (when there is more than a page) and Right to come back. On the TV Shows Calendar the day page still uses Left and Right to change the day, so there the scrollbar stays out of reach.
+
 [B]3.9.145[/B]
 [CHANGE] Scrapers - DMM (Debrid Media Manager) is switched off. debridmediamanager.com now refuses every request from tools (HTTP 403) and only answers paying sponsors who have an API key, so its scraper returned nothing and only cost a request. It joins AIOStreams on the list of scrapers Seren skips; the DMM scraper itself stays inside the a4kScrapers pack.
 

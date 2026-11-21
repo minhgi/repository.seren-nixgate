@@ -21,6 +21,11 @@ get_mixed_episode_list(), which re-validates staleness against Trakt's own
 metadata-cache TTL on every call, same as calendar_data.py's existing
 Trakt-calendar path.
 
+The month/week-independent part of the watchlist layer - which shows the user's Simkl plan-to-watch and MDBList watchlist hold,
+those shows resolved on Trakt, and their Simkl/MDBList ratings - is kept in memory too (3.9.161, _get_union_layer()): it cost about
+0.4 s of every week-boundary press. The Trakt "my calendar" answer of a week is kept too once the rolling prefetch has asked for it
+(3.9.165, _fetch_my_calendar()); its hydration and the pick of the episodes that air in the week are still done for each week.
+
 Dedupe key is (trakt_show_id, season, episode) - NOT show id alone. The
 global layer can carry every episode of a show airing that week; the
 watchlist layer's Simkl/MDBList-only resolution (_pick_episodes_in_week)
@@ -28,9 +33,11 @@ does the same for consistency, unlike calendar_data.py's own
 _pick_relevant_episode() (single nearest-to-today episode), which answers a
 different question and would silently drop a real second airing here.
 """
+import copy
 import datetime
 from functools import lru_cache
 import threading
+import time
 
 import xbmc
 
@@ -42,6 +49,139 @@ _UNION_CAP = 25  # matches calendar_data.py's own cap - same per-show live-resol
 
 _fetch_locks_guard = threading.Lock()
 _fetch_locks = {}  # week_start (YYYY-MM-DD) -> threading.Lock, created on first use, never evicted
+
+# The hydrated global layer of a week, kept in memory so that paging into a week the rolling prefetch already built does not hydrate it
+# again on the main thread (3.9.151). Valid only while sync_stamp() (calendar_stamp.py) is the value read before it was built and for
+# _MEMO_SECONDS; the window throws it all away with clear_memo() wherever it throws its own weeks away (an action in the context menu
+# changes watched data without moving that stamp). _memo_generation makes a prefetch that started before a clear_memo() unable to store its
+# older rows afterwards. A stamp of None (unreadable) never stores or serves anything: that is the behaviour before 3.9.151.
+_MEMO_SECONDS = 600
+_MEMO_MAX = 4
+_memo_lock = threading.Lock()
+_memo = {}  # week_start (YYYY-MM-DD) -> (time stored, stamp, rows)
+_memo_generation = 0
+
+
+def _copy_rows(rows):
+    """Rows and their nested dicts copied one level: get_schedule_week() annotates rows in place and a caller may keep them"""
+    return [{k: (dict(v) if isinstance(v, dict) else v) for k, v in r.items()} for r in rows]
+
+
+def _memo_fresh(week_start_str, stamp):
+    if stamp is None:
+        return False
+    with _memo_lock:
+        entry = _memo.get(week_start_str)
+        return entry is not None and time.time() - entry[0] < _MEMO_SECONDS and entry[1] == stamp
+
+
+def _memo_get(week_start_str, stamp):
+    if stamp is None:
+        return None
+    with _memo_lock:
+        entry = _memo.get(week_start_str)
+        if entry is not None and (time.time() - entry[0] >= _MEMO_SECONDS or entry[1] != stamp):
+            _memo.pop(week_start_str, None)
+            entry = None
+        rows = entry[2] if entry is not None else None
+    if rows is None:
+        return None
+    g.log(f"tv_schedule_data: global layer of week {week_start_str} served from memory ({len(rows)} rows)", "debug")
+    return _copy_rows(rows)
+
+
+def _memo_put(week_start_str, stamp, generation, rows):
+    if stamp is None:
+        return
+    copied = _copy_rows(rows)
+    with _memo_lock:
+        if generation != _memo_generation:  # clear_memo() ran while this was being built: these rows may predate what it was called for
+            return
+        _memo[week_start_str] = (time.time(), stamp, copied)
+        while len(_memo) > _MEMO_MAX:
+            _memo.pop(min(_memo, key=lambda k: _memo[k][0]))
+    g.log(f"tv_schedule_data: global layer of week {week_start_str} kept in memory ({len(rows)} rows)", "debug")
+
+
+# The week-independent part of the watchlist layer (3.9.161): [time stored, sync stamp, providers key, capped tmdb ids, simkl id by tmdb id,
+# resolved shows, ratings or None]. Read and written on the main thread only (SimklMenus()._resolve() is never run off it); the rolling
+# prefetch never touches it. The ratings are fetched the first time a week needs them (only a week with a Simkl/MDBList-only show does).
+_union = None
+
+
+# The Trakt "my calendar" answer of a week (3.9.165): the one request still left in a week-boundary press. The rolling prefetch asks for it
+# in the background for the adjacent weeks, so that the press finds it here. Same rules as the kept global layer: valid for _MEMO_SECONDS
+# under the sync stamp it was fetched with, dropped by clear_memo(), never stored for a stamp of None, never stored when empty (an empty
+# answer may be a failed request: fetch_my_calendar_days() turns a failure into no rows) and handed out as a copy.
+_my_calendar = {}  # week_start (YYYY-MM-DD) -> (time stored, stamp, rows)
+
+
+def clear_memo():
+    """Forget every kept week, the kept watchlist-union layer and the kept Trakt calendar answers (the window calls this when it drops its own weeks)"""
+    global _memo_generation, _union
+    with _memo_lock:
+        _memo_generation += 1
+        _memo.clear()
+        _my_calendar.clear()
+        _union = None
+
+
+def _my_calendar_fresh(week_start_str, stamp):
+    if stamp is None:
+        return False
+    with _memo_lock:
+        entry = _my_calendar.get(week_start_str)
+        return entry is not None and time.time() - entry[0] < _MEMO_SECONDS and entry[1] == stamp
+
+
+def _my_calendar_get(week_start_str, stamp):
+    if stamp is None:
+        return None
+    with _memo_lock:
+        entry = _my_calendar.get(week_start_str)
+        if entry is not None and (time.time() - entry[0] >= _MEMO_SECONDS or entry[1] != stamp):
+            _my_calendar.pop(week_start_str, None)
+            entry = None
+        rows = entry[2] if entry is not None else None
+    if rows is None:
+        return None
+    g.log(f"tv_schedule_data: Trakt calendar of week {week_start_str} served from memory ({len(rows)} rows)", "debug")
+    return copy.deepcopy(rows)
+
+
+def _fetch_my_calendar(week_start_str, stamp):
+    """Trakt's calendars/my/shows rows that air in the week (calendar_data.fetch_my_calendar_days), from memory when the prefetch (or an earlier
+    visit) kept them. A per-week lock of its own, so that a press and the prefetch asking for the same week do not both go to Trakt."""
+    from resources.lib.modules.calendar_data import fetch_my_calendar_days
+    from resources.lib.indexers.trakt import TraktAPI
+
+    with _fetch_lock("my:" + week_start_str):
+        kept = _my_calendar_get(week_start_str, stamp)
+        if kept is not None:
+            return kept
+        with _memo_lock:
+            generation = _memo_generation
+        week_start = datetime.datetime.strptime(week_start_str, "%Y-%m-%d").date()
+        raw = fetch_my_calendar_days(TraktAPI(), week_start, 7)
+        if raw and stamp is not None:
+            copied = copy.deepcopy(raw)
+            with _memo_lock:
+                if generation == _memo_generation:  # clear_memo() ran during the request: these rows may predate what it was called for
+                    _my_calendar[week_start_str] = (time.time(), stamp, copied)
+                    while len(_my_calendar) > _MEMO_MAX:
+                        _my_calendar.pop(min(_my_calendar, key=lambda k: _my_calendar[k][0]))
+            g.log(f"tv_schedule_data: Trakt calendar of week {week_start_str} kept in memory ({len(raw)} rows)", "debug")
+    return raw
+
+
+def _warm_my_calendar(week_start_str, stamp):
+    """Prefetch side of _fetch_my_calendar(): only for a Trakt user, only when it is not kept already. Trakt only: the Simkl/MDBList part of the
+    watchlist layer is never touched off the main thread."""
+    from resources.lib.modules.syncGateway import configured_providers
+
+    if "trakt" not in configured_providers() or _my_calendar_fresh(week_start_str, stamp):
+        return
+    _fetch_my_calendar(week_start_str, stamp)
 
 
 def _fetch_lock(week_start_str):
@@ -60,15 +200,15 @@ def _fetch_lock(week_start_str):
         return lock
 
 
-def prefetch_schedule_week(week_start):
+def prefetch_schedule_week(week_start, stamp=None):
     """Background-safe entry point for the rolling-prefetch timer (see
     show_calendar_window.py) - warms TvScheduleDatabase's bookkeeping for
     week_start via the same self-contained _get_global_layer()
     get_schedule_week() itself uses, without ever touching
     _get_watchlist_layer()'s SimklMenus()._resolve() call. That call is never
     exercised off the main thread anywhere in this codebase, and the
-    watchlist layer it resolves is never cached anyway (see module
-    docstring), so skipping it here loses nothing prefetch could keep. Return
+    watchlist layer it resolves is only kept for the foreground (see module
+    docstring and _get_union_layer()), so skipping it here loses nothing. Return
     value discarded - callers only care about the
     TvScheduleDatabase.mark_week_fetched() side effect inside
     _get_global_layer().
@@ -87,9 +227,16 @@ def prefetch_schedule_week(week_start):
     from resources.lib.database.tvSchedule import TvScheduleDatabase
 
     week_start_str = week_start.strftime("%Y-%m-%d")
+    week_end_str = (week_start + datetime.timedelta(days=6)).strftime("%Y-%m-%d")
+    if stamp is not None:
+        # 3.9.151: also build a week whose bookkeeping is cached - the rows are kept in memory for the window (stamp = the window's
+        # sync_stamp(), a plain tuple handed over by the timer: this thread does not read the sync databases itself)
+        if not _memo_fresh(week_start_str, stamp):
+            _get_global_layer(week_start_str, week_end_str, stamp)
+        _warm_my_calendar(week_start_str, stamp)  # 3.9.165: the week's Trakt "my calendar" answer too
+        return
     if TvScheduleDatabase().get_week(week_start_str) is not None:
         return
-    week_end_str = (week_start + datetime.timedelta(days=6)).strftime("%Y-%m-%d")
     _get_global_layer(week_start_str, week_end_str)
 
 
@@ -104,8 +251,14 @@ def get_schedule_week(week_start):
     week_start_str = week_start.strftime("%Y-%m-%d")
     week_end_str = (week_start + datetime.timedelta(days=6)).strftime("%Y-%m-%d")
 
-    global_rows = _get_global_layer(week_start_str, week_end_str)
-    watchlist_rows = _get_watchlist_layer(week_start_str, week_end_str)
+    try:
+        from resources.lib.modules.calendar_stamp import sync_stamp
+
+        stamp = sync_stamp()
+    except Exception:
+        stamp = None
+    global_rows = _get_global_layer(week_start_str, week_end_str, stamp)
+    watchlist_rows = _get_watchlist_layer(week_start_str, week_end_str, stamp)
 
     # watchlist-sourced rows win on conflict - both layers hydrate through the
     # same get_mixed_episode_list()/get_episode_list() calls, so the row shape
@@ -173,7 +326,7 @@ def _episode_key(row):
     return show_id, season, number
 
 
-def _get_global_layer(week_start_str, week_end_str):
+def _get_global_layer(week_start_str, week_end_str, stamp=None):
     from resources.lib.database.tvSchedule import TvScheduleDatabase
     from resources.lib.database.trakt_sync.shows import TraktSyncDatabase as ShowsDatabase
 
@@ -181,6 +334,12 @@ def _get_global_layer(week_start_str, week_end_str):
     shows_db = ShowsDatabase()
 
     with _fetch_lock(week_start_str):
+        # inside the lock: a caller that waited for a prefetch of this week now finds what that prefetch kept
+        kept = _memo_get(week_start_str, stamp)
+        if kept is not None:
+            return kept
+        with _memo_lock:
+            generation = _memo_generation
         cached = db.get_week(week_start_str)
 
         if cached is None:
@@ -228,38 +387,26 @@ def _get_global_layer(week_start_str, week_end_str):
                 ],
             )
 
+        _memo_put(week_start_str, stamp, generation, hydrated)
+
     return hydrated
 
 
-def _get_watchlist_layer(week_start_str, week_end_str):
-    from resources.lib.modules.syncGateway import configured_providers
-    from resources.lib.database.trakt_sync.shows import TraktSyncDatabase as ShowsDatabase
-    from resources.lib.database.trakt_sync.hidden import TraktSyncDatabase as HiddenDatabase
-    from resources.lib.modules.calendar_data import (
-        _simkl_plantowatch_tmdb_ids,
-        _mdblist_watchlist_tmdb_ids,
-        fetch_my_calendar_days,
-    )
+def _get_union_layer(providers, stamp):
+    """The week-independent part of the watchlist layer: [time, stamp, providers key, capped tmdb ids, simkl id by tmdb id, resolved shows,
+    ratings or None]. Kept for _MEMO_SECONDS under the sync stamp it was read with (a stamp that cannot be read keeps nothing), main thread
+    only. Nothing is kept when there is no candidate (an empty answer may be a failed lookup). The returned entry is shared: callers read it and
+    only _get_union_ratings() adds the ratings. Never raises because of the memo."""
+    global _union
+    from resources.lib.modules.calendar_data import _simkl_plantowatch_tmdb_ids, _mdblist_watchlist_tmdb_ids
 
-    providers = configured_providers()
-
-    if "trakt" in providers:
-        from resources.lib.indexers.trakt import TraktAPI
-
-        # By each episode's own air day (3.9.144): Trakt's calendar index can file an episode a week away from the
-        # day it airs, so the plain 7-day request missed episodes that belong to this week.
-        week_start = datetime.datetime.strptime(week_start_str, "%Y-%m-%d").date()
-        raw = fetch_my_calendar_days(TraktAPI(), week_start, 7)
-    else:
-        raw = []
-
-    hidden_shows = HiddenDatabase().get_hidden_items("calendar", "tvshow")
-    raw = [i for i in raw if i.get("trakt_show_id") not in hidden_shows]
-    covered_show_ids = {i["trakt_show_id"] for i in raw if i.get("trakt_show_id")}
-
-    shows_db = ShowsDatabase()
-    trakt_items = shows_db.get_mixed_episode_list(raw, hide_unaired=False, hide_watched=False) if raw else []
-    trakt_items = [i for i in trakt_items if i is not None]
+    key = tuple(sorted(providers))
+    with _memo_lock:
+        generation = _memo_generation
+        kept = _union
+        if stamp is not None and kept is not None and kept[1] == stamp and kept[2] == key and time.time() - kept[0] < _MEMO_SECONDS:
+            g.log("tv_schedule_data: watchlist-union layer served from memory", "debug")
+            return kept
 
     candidate_tmdb_ids = {}  # dict (not set) purely to preserve first-seen order for the cap
     simkl_id_by_tmdb = {}
@@ -277,15 +424,66 @@ def _get_watchlist_layer(week_start_str, week_end_str):
     if dropped > 0:
         g.log(f"tv_schedule_data: union cap reached, dropped {dropped} Simkl/MDBList-only show(s) this fetch", "warning")
 
-    extra_items = _resolve_extra_shows_in_week(capped_ids, covered_show_ids, shows_db, week_start_str, week_end_str)
-    _annotate_union_ratings(extra_items, capped_ids, simkl_id_by_tmdb, providers)
+    resolved_shows = _resolve_union_shows(capped_ids)
+    layer = [time.time(), stamp, key, capped_ids, simkl_id_by_tmdb, resolved_shows, None]
+    if stamp is not None and capped_ids:
+        with _memo_lock:
+            if generation == _memo_generation:  # clear_memo() ran during the load: these may predate what it was called for
+                _union = layer
+    return layer
+
+
+def _resolve_union_shows(capped_ids):
+    if not capped_ids:
+        return []
+
+    from resources.lib.gui.simklMenus import Menus as SimklMenus
+
+    return SimklMenus()._resolve(capped_ids, "show")
+
+
+def _get_union_ratings(layer, providers):
+    """(MDBList ratings, Simkl ratings) of the layer's candidates: fetched the first time a week needs them, then kept with the layer"""
+    if layer[6] is None:
+        from resources.lib.modules.calendar_ratings import fetch_union_ratings
+
+        layer[6] = fetch_union_ratings(layer[3], layer[4], "show", providers)
+    return layer[6]
+
+
+def _get_watchlist_layer(week_start_str, week_end_str, stamp=None):
+    from resources.lib.modules.syncGateway import configured_providers
+    from resources.lib.database.trakt_sync.shows import TraktSyncDatabase as ShowsDatabase
+    from resources.lib.database.trakt_sync.hidden import TraktSyncDatabase as HiddenDatabase
+
+    providers = configured_providers()
+
+    if "trakt" in providers:
+        # By each episode's own air day (3.9.144): Trakt's calendar index can file an episode a week away from the
+        # day it airs, so the plain 7-day request missed episodes that belong to this week. Kept in memory when the
+        # prefetch already asked for it (3.9.165, _fetch_my_calendar()).
+        raw = _fetch_my_calendar(week_start_str, stamp)
+    else:
+        raw = []
+
+    hidden_shows = HiddenDatabase().get_hidden_items("calendar", "tvshow")
+    raw = [i for i in raw if i.get("trakt_show_id") not in hidden_shows]
+    covered_show_ids = {i["trakt_show_id"] for i in raw if i.get("trakt_show_id")}
+
+    shows_db = ShowsDatabase()
+    trakt_items = shows_db.get_mixed_episode_list(raw, hide_unaired=False, hide_watched=False) if raw else []
+    trakt_items = [i for i in trakt_items if i is not None]
+
+    layer = _get_union_layer(providers, stamp)
+    extra_items = _pick_extra_shows_in_week(layer[5], covered_show_ids, shows_db, week_start_str, week_end_str)
+    _annotate_union_ratings(extra_items, layer, providers)
     return trakt_items + extra_items
 
 
-def _annotate_union_ratings(extra_items, capped_ids, simkl_id_by_tmdb, providers):
+def _annotate_union_ratings(extra_items, layer, providers):
     """Attaches _schedule_rating_override onto each Simkl/MDBList-union
     episode (never onto the global/watchlist Trakt-sourced rows - those never
-    go through _resolve_extra_shows_in_week(), so they never carry a
+    go through _pick_extra_shows_in_week(), so they never carry a
     _source_tmdb_id tag to match against). _annotate() prefers this over
     info["rating"] when present; mirrors calendar_data.py's own
     _annotate_union_ratings(), adapted for this module's per-week candidate
@@ -293,9 +491,9 @@ def _annotate_union_ratings(extra_items, capped_ids, simkl_id_by_tmdb, providers
     if not extra_items:
         return
 
-    from resources.lib.modules.calendar_ratings import fetch_union_ratings, pick_best_rating
+    from resources.lib.modules.calendar_ratings import pick_best_rating
 
-    mdblist_ratings, simkl_ratings = fetch_union_ratings(capped_ids, simkl_id_by_tmdb, "show", providers)
+    mdblist_ratings, simkl_ratings = _get_union_ratings(layer, providers)
     if not mdblist_ratings and not simkl_ratings:
         return
 
@@ -306,14 +504,13 @@ def _annotate_union_ratings(extra_items, capped_ids, simkl_id_by_tmdb, providers
             item["_schedule_rating_override"] = rating
 
 
-def _resolve_extra_shows_in_week(tmdb_ids, covered_show_ids, shows_db, week_start_str, week_end_str):
-    if not tmdb_ids:
+def _pick_extra_shows_in_week(resolved_shows, covered_show_ids, shows_db, week_start_str, week_end_str):
+    """The episodes of the resolved Simkl/MDBList-only shows that air in the week (per week: reads the local episode table)"""
+    if not resolved_shows:
         return []
 
-    from resources.lib.gui.simklMenus import Menus as SimklMenus
     from resources.lib.modules.calendar_data import _format_picks
 
-    resolved_shows = SimklMenus()._resolve(tmdb_ids, "show")
     seen_show_ids = set(covered_show_ids)
     picks = []  # (skeleton row, source tmdb_id)
     for show in resolved_shows:

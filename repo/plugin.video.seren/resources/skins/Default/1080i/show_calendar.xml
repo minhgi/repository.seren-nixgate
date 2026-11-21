@@ -67,16 +67,17 @@
 		<!-- Buttons -->
 		<control type="group">
 			<top>25</top>
-			<left>1470</left>
+			<left>1410</left>
 			<control type="button" id="3004">
 				<left>0</left>
-				<width>140</width>
+				<width>150</width>
 				<height>50</height>
 				<font>font12</font>
 				<texturefocus colordiffuse="$INFO[Window().Property(settings.color)]">white.png</texturefocus>
-				<texturenofocus colordiffuse="22000000">white.png</texturenofocus>
+				<texturenofocus colordiffuse="33FFFFFF">white.png</texturenofocus>
 				<label>$ADDON[plugin.video.seren 31582]</label>
 				<align>center</align>
+				<textoffsetx>0</textoffsetx>
 				<aligny>center</aligny>
 				<textcolor>FFFFFFFF</textcolor>
 				<onleft>3003</onleft>
@@ -85,14 +86,15 @@
 				<visible>String.IsEqual(Window.Property(day_mode),True) + String.IsEmpty(Window.Property(view_unwatched)) + !String.IsEmpty(Window.Property(not_today))</visible>
 			</control>
 			<control type="button" id="3001">
-				<left>150</left>
-				<width>50</width>
+				<left>160</left>
+				<width>70</width>
 				<height>50</height>
-				<font>font32</font>
+				<font>font12</font>
 				<texturefocus colordiffuse="$INFO[Window().Property(settings.color)]">white.png</texturefocus>
-				<texturenofocus colordiffuse="22000000">white.png</texturenofocus>
+				<texturenofocus colordiffuse="33FFFFFF">white.png</texturenofocus>
 				<label>&lt;</label>
 				<align>center</align>
+				<textoffsetx>0</textoffsetx>
 				<aligny>center</aligny>
 				<textcolor>FFFFFFFF</textcolor>
 				<onleft>3004</onleft>
@@ -101,14 +103,15 @@
 				<visible>String.IsEqual(Window.Property(day_mode),True) + String.IsEmpty(Window.Property(view_unwatched))</visible>
 			</control>
 			<control type="button" id="3002">
-				<left>210</left>
-				<width>50</width>
+				<left>240</left>
+				<width>70</width>
 				<height>50</height>
-				<font>font32</font>
+				<font>font12</font>
 				<texturefocus colordiffuse="$INFO[Window().Property(settings.color)]">white.png</texturefocus>
-				<texturenofocus colordiffuse="22000000">white.png</texturenofocus>
+				<texturenofocus colordiffuse="33FFFFFF">white.png</texturenofocus>
 				<label>&gt;</label>
 				<align>center</align>
+				<textoffsetx>0</textoffsetx>
 				<aligny>center</aligny>
 				<textcolor>FFFFFFFF</textcolor>
 				<onleft>3001</onleft>
@@ -117,15 +120,15 @@
 				<visible>String.IsEqual(Window.Property(day_mode),True) + String.IsEmpty(Window.Property(view_unwatched))</visible>
 			</control>
 			<control type="button" id="3003">
-				<left>120</left>
-				<width>140</width>
+				<left>160</left>
+				<width>150</width>
 				<height>50</height>
 				<font>font12</font>
-				<textoffsetx>20</textoffsetx>
 				<texturefocus colordiffuse="$INFO[Window().Property(settings.color)]">white.png</texturefocus>
-				<texturenofocus colordiffuse="22000000">white.png</texturenofocus>
+				<texturenofocus colordiffuse="33FFFFFF">white.png</texturenofocus>
 				<label>$ADDON[plugin.video.seren 31583]</label>
-				<align>right</align>
+				<align>center</align>
+				<textoffsetx>0</textoffsetx>
 				<aligny>center</aligny>
 				<textcolor>FFFFFFFF</textcolor>
 				<onright>2999</onright>
@@ -133,15 +136,15 @@
 				<visible>!String.IsEmpty(Window.Property(view_unwatched))</visible>
 			</control>
 			<control type="button" id="2999">
-				<left>270</left>
-				<width>140</width>
+				<left>320</left>
+				<width>150</width>
 				<height>50</height>
 				<font>font12</font>
-				<textoffsetx>20</textoffsetx>
 				<texturefocus colordiffuse="$INFO[Window().Property(settings.color)]">white.png</texturefocus>
-				<texturenofocus colordiffuse="22000000">white.png</texturenofocus>
+				<texturenofocus colordiffuse="33FFFFFF">white.png</texturenofocus>
 				<label>$ADDON[plugin.video.seren 30459]</label>
-				<align>right</align>
+				<align>center</align>
+				<textoffsetx>0</textoffsetx>
 				<aligny>center</aligny>
 				<textcolor>FFFFFFFF</textcolor>
 				<onleft>3002</onleft>
@@ -223,11 +226,11 @@
 
 		<!-- Scrollbar -->
 		<control type="scrollbar" id="1111">
-			<left>10</left>
+			<left>1890</left>
 			<top>130</top>
 			<width>20</width>
 			<height>880</height>
-			<onright>1000</onright>
+			<onleft>1000</onleft>
 			<showonepage>false</showonepage>
 			<texturesliderbackground colordiffuse="99362e33">white.png</texturesliderbackground>
 			<texturesliderbar colordiffuse="66FFFFFF">white.png</texturesliderbar>

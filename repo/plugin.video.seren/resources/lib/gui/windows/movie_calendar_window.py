@@ -2,9 +2,10 @@ import calendar
 import datetime
 import threading
 
-import xbmc
+import xbmcgui
 
 from resources.lib.gui.windows.base_window import BaseWindow
+from resources.lib.gui.windows.calendar_busy import DelayedBusyDialog, close_busy_now
 from resources.lib.modules.globals import g
 
 PREV_BUTTON_ID = 3001
@@ -14,6 +15,7 @@ CLOSE_BUTTON_ID = 2999
 
 ACTION_MOVE_LEFT = 1
 ACTION_MOVE_RIGHT = 2
+ACTION_CONTEXT_MENU = 117
 
 _PREFETCH_FORWARD_DELAY = 3.0   # land on a month, fetch the next one after this
 _PREFETCH_BACKWARD_DELAY = 8.0  # ...then the previous one 5s after that (3s + 5s)
@@ -43,8 +45,13 @@ class MovieCalendarWindow(BaseWindow):
         today = datetime.date.today()
         self.year, self.month = today.year, today.month
         self._prefetch_timers = []
+        self._initialised = False  # closing the movie information dialog calls onInit again: that one must change nothing
+        self._clear_kept_months()  # a new window starts without the watchlist layer of an earlier one
 
     def onInit(self):
+        if self._initialised:
+            return
+        self._initialised = True
         self.grid_control = self.getControlList(GRID_ID)
         try:
             self._populate_grid()
@@ -53,6 +60,9 @@ class MovieCalendarWindow(BaseWindow):
         finally:
             # closes any busy dialog - must run even if population raises, matching ShowCalendarWindow
             super().onInit()
+            # the dialog that _open() showed before the window: BaseWindow.onInit closes it with the plain close, which leaves it on screen for about
+            # a second and swallows the dialog of a press right after opening; the forced close removes it at once
+            close_busy_now()
 
         self._schedule_prefetch()
 
@@ -83,8 +93,20 @@ class MovieCalendarWindow(BaseWindow):
             timer.cancel()
         self._prefetch_timers = []
 
+    @staticmethod
+    def _clear_kept_months():
+        """The watchlist-union layer is kept while this window is open (movie_calendar_data._get_union_layer()); forget it on
+        open, on close and after a context-menu option ran. A failure here must never stop the window."""
+        try:
+            from resources.lib.modules.movie_calendar_data import clear_union_memo
+
+            clear_union_memo()
+        except Exception as e:  # pylint: disable=broad-except
+            g.log(f"movie_calendar_window: the kept watchlist layer could not be cleared: {e}", "warning")
+
     def close(self):
         self._cancel_prefetch()
+        self._clear_kept_months()
         super().close()
 
     def _populate_grid(self):
@@ -120,13 +142,13 @@ class MovieCalendarWindow(BaseWindow):
     def _navigate_month(self, delta):
         from resources.lib.modules.movie_calendar_data import shift_month
 
-        g.show_busy_dialog()
+        busy = DelayedBusyDialog().start()  # appears only when the month takes longer than a moment to load
         try:
             self.year, self.month = shift_month(self.year, self.month, delta)
             self._populate_grid()
             self.set_default_focus(self.grid_control, NEXT_BUTTON_ID, control_list_reset=True)
         finally:
-            g.close_busy_dialog()
+            busy.stop()
         # After the busy dialog closes, not before - the 3s/8s clock should start
         # when the user is actually looking at the new month.
         self._schedule_prefetch()
@@ -147,6 +169,9 @@ class MovieCalendarWindow(BaseWindow):
             self._navigate_month(1)
             return
 
+        if action_id == ACTION_CONTEXT_MENU and control_id == GRID_ID:
+            self._context_menu()
+            return
         if action_id != 7:
             return
         if control_id == CLOSE_BUTTON_ID:
@@ -156,18 +181,44 @@ class MovieCalendarWindow(BaseWindow):
         elif control_id == NEXT_BUTTON_ID:
             self._navigate_month(1)
         elif control_id == GRID_ID:
-            self._play_selected()
+            self._select()
 
-    def _play_selected(self):
+    def _context_menu(self):
+        """Context Menu key on a tile: the Trakt / MDBList / Simkl manager of that movie. When an option ran, the month
+        is rebuilt from the changed data, keeping the selected tile."""
+        from resources.lib.gui.windows import calendar_context_menu as manager
+
         position = self.grid_control.getSelectedPosition()
-        if position < 0:
+        if position < 0 or position >= len(self.movies):
+            return
+        if not manager.open_manager(self.movies[position].get("args")):
+            return
+        self._clear_kept_months()  # the option may have changed a watchlist: the rebuild must read it again
+        busy = DelayedBusyDialog().start()
+        try:
+            self._populate_grid()
+            if self.movies:
+                self.setFocusId(GRID_ID)
+                self.grid_control.selectItem(min(position, len(self.movies) - 1))
+            else:
+                self.set_default_focus(self.grid_control, NEXT_BUTTON_ID, control_list_reset=True)
+        finally:
+            busy.stop()
+
+    def _select(self):
+        position = self.grid_control.getSelectedPosition()
+        if position < 0 or position >= len(self.movies):
             return
         args = self.movies[position].get("args")
         if not args:
             return
-        self.close()
-        url = g.create_url(g.BASE_URL, {"action": "getSources", "action_args": args})
-        xbmc.executebuiltin(f'RunPlugin("{url}")')
+        # Kodi's information dialog of the movie (plot, artwork, rating) with its Play button, as in the other lists; the calendar stays as it is.
+        # The tile's list item is built without a path (bulk add hands the url over separately) and its Play button plays that path, so it gets the
+        # url the old Select ran, and the playable flag the movie lists give theirs (same as ShowCalendarWindow._select).
+        item = self.grid_control.getListItem(position)
+        item.setPath(g.create_url(g.BASE_URL, {"action": "getSources", "action_args": args}))
+        item.setProperty("IsPlayable", "true")
+        xbmcgui.Dialog().info(item)
 
 
 def open_movie_calendar():
@@ -175,8 +226,10 @@ def open_movie_calendar():
 
     g.show_busy_dialog()
     window = MovieCalendarWindow(*SkinManager().confirm_skin_path("movie_calendar.xml"))
+    g.begin_calendar_window()
     try:
         window.doModal()
     finally:
         g.close_busy_dialog()
         del window
+        g.end_calendar_window()

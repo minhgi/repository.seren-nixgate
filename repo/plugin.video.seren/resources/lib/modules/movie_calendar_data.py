@@ -16,15 +16,20 @@ The Trakt-sourced layer is fetch-bookkept per month by MovieCalendarDatabase (se
 resources/lib/database/movieCalendar) - re-paging to an already-fetched month skips
 the live Trakt call and re-hydrates from the shared trakt_sync table instead, same
 pattern tv_schedule_data.py's own TvScheduleDatabase already uses for weeks. The
-Simkl/MDBList watchlist-union layer is deliberately never cached - it's already
-capped at _UNION_CAP live-resolve calls and stays live on every month view, matching
-tv_schedule_data.py's own watchlist layer.
+Simkl/MDBList watchlist-union layer (the watchlist lookup, its resolve and the
+ratings of its candidates) does not depend on the month, so it is kept in memory for the
+life of the calendar window (_get_union_layer(): at most _MEMO_SECONDS, only under the
+sync stamp it was read with, emptied by clear_union_memo() when the window closes and
+after a context-menu option ran). It used to be live on every month view (about 0.8 s
+of every month press); the per-month part - dropping the movies Trakt's own calendar
+already covers - is still done on every view. It is capped at _UNION_CAP live-resolve
+calls. tv_schedule_data.py's own watchlist layer is still live.
 """
 import calendar
+import copy
 import datetime
-from functools import lru_cache
-import re
 import threading
+import time
 
 import xbmc
 
@@ -55,11 +60,76 @@ def _fetch_lock(month_key):
         return lock
 
 
+_MEMO_SECONDS = 600  # how long the watchlist-union layer is kept while the window stays open
+_memo_lock = threading.Lock()
+_memo = None  # (time, sync stamp, providers key, layer)
+_memo_generation = 0
+
+
+def clear_union_memo():
+    """Forget the kept watchlist-union layer (window closed; a context-menu option ran and may have changed a watchlist).
+    A load that started before the clear cannot store its older layer afterwards."""
+    global _memo, _memo_generation
+    with _memo_lock:
+        _memo_generation += 1
+        _memo = None
+
+
+def _read_stamp():
+    try:
+        from resources.lib.modules.calendar_stamp import sync_stamp
+
+        return sync_stamp()
+    except Exception as exc:  # pylint: disable=broad-except
+        g.log(f"movie_calendar_data: the sync stamp could not be read, the watchlist layer is not kept: {exc}", "warning")
+        return None
+
+
+def _get_union_layer(providers):
+    """The month-independent part of a foreground month view: (resolved watchlist movies, capped tmdb ids,
+    simkl id by tmdb id, MDBList ratings, Simkl ratings). Called on the main thread only (SimklMenus()._resolve()
+    is never run off it), never by the prefetch. Kept for _MEMO_SECONDS while the sync stamp it was read under is
+    unchanged; a stamp that cannot be read keeps nothing. Callers get their own copies: the movies go into
+    get_movie_list() and the month loop annotates what comes back. A layer without any candidate (nothing to save,
+    and an empty answer may be a failed lookup) is never kept."""
+    global _memo
+    stamp = _read_stamp()
+    key = tuple(sorted(providers))
+    generation = None
+    with _memo_lock:
+        generation = _memo_generation
+        kept = _memo
+        if stamp is not None and kept is not None and kept[2] == key and kept[1] == stamp and time.time() - kept[0] < _MEMO_SECONDS:
+            try:
+                layer = copy.deepcopy(kept[3])
+            except Exception as exc:  # pylint: disable=broad-except
+                g.log(f"movie_calendar_data: the kept watchlist layer could not be copied, reading it live: {exc}", "warning")
+                _memo = None
+            else:
+                g.log("movie_calendar_data: watchlist-union layer served from memory", "debug")
+                return layer
+    from resources.lib.modules.calendar_ratings import fetch_union_ratings
+
+    resolved, capped_ids, simkl_id_by_tmdb = _resolve_watchlist_movies(providers)
+    mdblist_ratings, simkl_ratings = fetch_union_ratings(capped_ids, simkl_id_by_tmdb, "movie", providers)
+    layer = (resolved, capped_ids, simkl_id_by_tmdb, mdblist_ratings, simkl_ratings)
+    if stamp is not None and capped_ids:
+        try:
+            to_keep = copy.deepcopy(layer)  # the caller keeps (and annotates) `layer`
+        except Exception as exc:  # pylint: disable=broad-except
+            g.log(f"movie_calendar_data: the watchlist layer could not be copied, not keeping it: {exc}", "warning")
+        else:
+            with _memo_lock:
+                if generation == _memo_generation:
+                    _memo = (time.time(), stamp, key, to_keep)
+    return layer
+
+
 def get_movie_calendar_month(year, month, prefetch=False):
     """prefetch=True is for the background rolling-prefetch timer only - it
     warms MovieCalendarDatabase's bookkeeping (the Trakt-sourced layer) without
-    touching _get_watchlist_movies()'s Simkl/MDBList union layer. That layer is
-    deliberately never cached (see module docstring) and resolves through
+    touching the Simkl/MDBList union layer. That layer is kept per window by
+    _get_union_layer() (see module docstring) and resolves through
     SimklMenus()._resolve(), a GUI menu class never exercised off the main
     thread anywhere in this codebase - skipping it here means prefetch never
     has to answer that thread-safety question, and the work would be discarded
@@ -112,8 +182,10 @@ def get_movie_calendar_month(year, month, prefetch=False):
         covered_trakt_ids = {i.get("trakt_id") for i in raw_items if i.get("trakt_id")}
         if prefetch:
             extra_items, capped_ids, simkl_id_by_tmdb = [], [], {}
+            mdblist_ratings, simkl_ratings = {}, {}
         else:
-            extra_items, capped_ids, simkl_id_by_tmdb = _get_watchlist_movies(providers, covered_trakt_ids)
+            resolved, capped_ids, simkl_id_by_tmdb, mdblist_ratings, simkl_ratings = _get_union_layer(providers)
+            extra_items = _drop_covered(resolved, covered_trakt_ids)
         extra_trakt_ids = {i.get("trakt_id") for i in extra_items if i.get("trakt_id")}
 
         all_items = raw_items + extra_items
@@ -161,7 +233,7 @@ def get_movie_calendar_month(year, month, prefetch=False):
             # trakt_id bookkept here with no underlying trakt_sync row would otherwise crash
             # metadataHandler.format_db_object() on every future open of this month, forever,
             # since this branch normally never re-inserts. Capped and sorted the same way
-            # _get_watchlist_movies()'s _UNION_CAP is - bounds a single month-open to a fixed
+            # _resolve_watchlist_movies()'s _UNION_CAP is - bounds a single month-open to a fixed
             # number of live re-fetches and converges across repeat opens instead of hanging
             # on a large rebuild. Uses its own _REPAIR_CAP (not _UNION_CAP) since this repair
             # and the watchlist union resolve above are independent live-call budgets that can
@@ -189,12 +261,7 @@ def get_movie_calendar_month(year, month, prefetch=False):
                         g.log(f"movie_calendar_data: repair failed for trakt_id {trakt_id}: {e}", "warning")
         hydrated = movies_db.get_movie_list(all_items, hide_unaired=False, hide_watched=False)
 
-        from resources.lib.modules.calendar_ratings import fetch_union_ratings, pick_best_rating
-
-        if prefetch:
-            mdblist_ratings, simkl_ratings = {}, {}
-        else:
-            mdblist_ratings, simkl_ratings = fetch_union_ratings(capped_ids, simkl_id_by_tmdb, "movie", providers)
+        from resources.lib.modules.calendar_ratings import pick_best_rating
 
         result = []
         newly_fetched_ids = []
@@ -223,7 +290,7 @@ def get_movie_calendar_month(year, month, prefetch=False):
                 # get_movie_list()'s SELECT never lists tmdb_id as its own column
                 # (only trakt_id is - confirmed by reading its SQL directly), so
                 # a hydrated movie has no top-level tmdb_id at all, unlike the
-                # pre-hydration resolved object _get_watchlist_movies() returned.
+                # pre-hydration resolved object _resolve_watchlist_movies() returned.
                 # It's still there, just nested - format_meta()'s upsert writes
                 # tmdb_id into the info blob itself (confirmed via
                 # _update_movies()'s own i["info"].get("tmdb_id") read), and
@@ -277,9 +344,10 @@ def retention_cutoff():
     return f"{cutoff_year:04d}-{cutoff_month:02d}"
 
 
-def _get_watchlist_movies(providers, covered_trakt_ids):
-    """Simkl plan-to-watch + MDBList watchlist movies not already covered by Trakt's
-    own calendar. Candidates are capped BEFORE their release date is known (a bare
+def _resolve_watchlist_movies(providers):
+    """Simkl plan-to-watch + MDBList watchlist movies, resolved. Does not depend on the
+    month (_drop_covered() removes the ones Trakt's own calendar already covers for a
+    given month). Candidates are capped BEFORE their release date is known (a bare
     tmdb_id carries no date - it only appears after resolving against Trakt, and even
     then not until after hydration - see get_movie_calendar_month()), so the cap bounds
     live-resolve cost, not month-relevance: a watchlist larger than _UNION_CAP can leave
@@ -307,7 +375,12 @@ def _get_watchlist_movies(providers, covered_trakt_ids):
 
     from resources.lib.gui.simklMenus import Menus as SimklMenus
 
-    resolved = SimklMenus()._resolve(capped_ids, "movie")
+    return SimklMenus()._resolve(capped_ids, "movie"), capped_ids, simkl_id_by_tmdb
+
+
+def _drop_covered(resolved, covered_trakt_ids):
+    """The resolved watchlist movies that Trakt's own calendar for this month does not
+    already carry (the first occurrence of a trakt id wins)"""
     seen_trakt_ids = set(covered_trakt_ids)
     items = []
     for movie in resolved:
@@ -316,7 +389,7 @@ def _get_watchlist_movies(providers, covered_trakt_ids):
             continue
         seen_trakt_ids.add(trakt_id)
         items.append(movie)
-    return items, capped_ids, simkl_id_by_tmdb
+    return items
 
 
 def _add_candidate(candidate_tmdb_ids, tmdb_id):
@@ -445,22 +518,20 @@ def _format_countdown(released):
         return ""
 
 
-@lru_cache(maxsize=1)
-def _calendar_date_format():
-    # Drop the year - the calendar's own month/year header already carries it.
-    # Regex-strip (not a hardcoded "%m/%d") to keep whatever day/month order
-    # the user's Kodi region actually uses. Cached for the process lifetime -
-    # Kodi's system region format does not change without a restart, same
-    # assumption locale_playback._stream_language_names() already makes.
-    return re.sub(r"[/.\-]?%[Yy][/.\-]?", "", xbmc.getRegion("dateshort"), count=1)
+def _month_short(month):
+    # Kodi's own short month names (string ids 51-62) in the interface language; strftime's English name only when Kodi gives none
+    return xbmc.getLocalizedString(51 + month - 1) or calendar.month_abbr[month]
 
 
 def _format_release_date(released):
+    """The tile's date as "06 Nov" (3.9.162: was the region's numeric "11/06"; TMDb Helper's All Movies Calendar shows the same form).
+    The calendar's own month/year header already carries the year."""
     if not released:
         return ""
     try:
         from resources.lib.common import tools
 
-        return tools.parse_datetime(released).strftime(_calendar_date_format())
+        day = tools.parse_datetime(released)
+        return f"{day.day:02d} {_month_short(day.month)}"
     except (ValueError, TypeError):
         return released

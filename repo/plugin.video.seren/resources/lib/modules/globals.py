@@ -1779,7 +1779,33 @@ class GlobalVariables:
     def offcloud_enabled(self):
         return self._offcloud_enabled
 
+    # A calendar window (gui/windows/calendar_context_menu.py) runs the Trakt / MDBList / Simkl manager on top of itself. The
+    # manager's Container.Refresh would re-run whatever list is behind the dialog (a calendar opened as a Videos directory would
+    # open again), and trigger_widget_refresh() would wait for the Home window - which cannot come while the modal window is
+    # open - and freeze it. While the flag is set the Container.Refresh is dropped (the window rebuilds its own page, and the
+    # menu behind it holds no data) and the widget refresh is only noted; end_calendar_window() runs it once the window is
+    # closed. In-process on purpose: a flag that outlives its interpreter (a crash) would silently suppress every refresh.
+    _calendar_window_open = False
+    _calendar_widget_pending = None  # None, or the if_playing value of the deferred widget refresh
+    calendar_option_ran = False  # set by either refresh below while a calendar window is open: an option changed something
+
+    def begin_calendar_window(self):
+        self._calendar_window_open = True
+        self._calendar_widget_pending = None
+        self.calendar_option_ran = False
+
+    def end_calendar_window(self):
+        """Run the widget refresh that was held back while the calendar window was open (the window is closed by now)."""
+        self._calendar_window_open = False
+        widget_if_playing = self._calendar_widget_pending
+        self._calendar_widget_pending = None
+        if widget_if_playing is not None:
+            self.trigger_widget_refresh(if_playing=widget_if_playing, bridge=False)
+
     def container_refresh(self):
+        if self._calendar_window_open:
+            self.calendar_option_ran = True
+            return None
         return xbmc.executebuiltin("Container.Refresh")
 
     def trigger_widget_refresh(self, if_playing=True, bridge=True):
@@ -1805,6 +1831,10 @@ class GlobalVariables:
             from resources.lib.modules.bridgeTrigger import request_run
 
             request_run()
+        if self._calendar_window_open:  # held back until the calendar window is closed (see begin_calendar_window)
+            self._calendar_widget_pending = if_playing and (self._calendar_widget_pending is not False)
+            self.calendar_option_ran = True
+            return
         player = xbmc.Player()
         if (
             self.get_bool_runtime_setting("widget_refreshing")
