@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.video.seren" version="3.9.165" name="Seren" provider-name="Nixgates">
+<addon id="plugin.video.seren" version="3.9.166" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -66,6 +66,8 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.166
+            [IMPROVE] Menus and lists - every start of the add-on read the whole time zone table first (about 600 files opened to check them) just to find the local time zone, which added about 0.2 s before any menu showed. Only the one zone file that is needed is read now.
             Changelog 3.9.165
             [IMPROVE] TV Shows Daily Calendar - the Trakt calendar answer of the week next to the one you are on is now fetched in the background together with the rest of that week, so paging into it no longer waits for Trakt (a week-boundary press about 0.2 s shorter).
             Changelog 3.9.164

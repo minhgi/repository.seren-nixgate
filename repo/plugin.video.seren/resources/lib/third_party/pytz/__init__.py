@@ -178,7 +178,7 @@ def timezone(zone):
 
     zone = _case_insensitive_zone_lookup(_unmunge_zone(zone))
     if zone not in _tzinfo_cache:
-        if zone in all_timezones_set:  # noqa
+        if _zone_is_shipped(zone):
             fp = open_resource(zone)
             try:
                 _tzinfo_cache[zone] = build_tzinfo(zone, fp)
@@ -206,6 +206,16 @@ def _case_insensitive_zone_lookup(zone):
         _all_timezones_lower_to_standard = dict((tz.lower(), tz) for tz in _all_timezones_unchecked)  # noqa
         del _all_timezones_unchecked
     return _all_timezones_lower_to_standard.get(zone.lower()) or zone  # noqa
+
+
+def _zone_is_shipped(zone):
+    """Same answer as `zone in all_timezones_set`, for the zone name that _case_insensitive_zone_lookup() has just put in its standard case:
+    the name is one pytz lists and its zone file exists. Building all_timezones_set opens all ~600 zone files (about 0.2 s, on every start of
+    a fresh Python); this opens only the one asked for. (Seren 3.9.166 change to the vendored pytz; all_timezones_set itself is unchanged.)"""
+    known = _all_timezones_lower_to_standard
+    if known is None or known.get(zone.lower()) != zone:
+        return False
+    return resource_exists(zone)
 
 
 ZERO = datetime.timedelta(0)
