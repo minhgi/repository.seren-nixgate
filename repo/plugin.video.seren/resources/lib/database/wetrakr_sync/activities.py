@@ -215,6 +215,8 @@ class WeTrakrSyncDatabase(wetrakr_sync.WeTrakrSyncDatabase):
                     g.log(f"Failed to sync WeTrakr ratings: {e}", "error")
             if watched_count or playback_count or ratings_count:
                 g.log(f"WeTrakrSync: {watched_count} watched marks, {playback_count} resume points and {ratings_count} ratings stored", "info")
+            if watched_count or playback_count:
+                g.notification_unless_playing(g.ADDON_NAME, g.get_language_string(31748).format(watched_count, playback_count))
 
     # region lists
     def _read(self, path):

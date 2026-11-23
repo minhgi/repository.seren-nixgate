@@ -188,6 +188,16 @@
 					<colordiffuse>AAFFFFFF</colordiffuse>
 				</control>
 
+				<!-- watched: the whole poster dimmed (drawn before the title bar, so the title stays readable); the eye badge is drawn below -->
+				<control type="image">
+					<left>10</left>
+					<top>0</top>
+					<width>210</width>
+					<height>315</height>
+					<texture colordiffuse="B3262626">white.png</texture>
+					<visible>Integer.IsGreater(ListItem.PlayCount,0)</visible>
+				</control>
+
 				<!-- movie title, poster bottom - only shown when there's no real watch
 				     progress (percentplayed unset), so the wash below always wins once a
 				     movie has actually been started -->
@@ -255,6 +265,46 @@
 					<height>315</height>
 					<texture colordiffuse="CC262626">white.png</texture>
 					<visible>Integer.IsGreater(ListItem.Property(percentplayed),80)</visible>
+				</control>
+
+				<!-- how much of the movie was watched (a movie with a resume point that is not watched): red badge, top-left corner, the size of the day badge on the right; the whole number comes from percent_display (movie_calendar_window.py) -->
+				<control type="image">
+					<left>18</left>
+					<top>8</top>
+					<width>40</width>
+					<height>40</height>
+					<texture colordiffuse="FFD32F2F">white.png</texture>
+					<visible>Integer.IsGreater(ListItem.Property(percentplayed),0) + !Integer.IsGreater(ListItem.PlayCount,0)</visible>
+				</control>
+				<control type="label">
+					<left>18</left>
+					<top>8</top>
+					<width>40</width>
+					<height>40</height>
+					<font>font13</font>
+					<textcolor>FFFFFFFF</textcolor>
+					<align>center</align>
+					<aligny>center</aligny>
+					<label>$INFO[ListItem.Property(percent_display)]</label>
+					<visible>Integer.IsGreater(ListItem.Property(percentplayed),0) + !Integer.IsGreater(ListItem.PlayCount,0)</visible>
+				</control>
+				<!-- watched: red badge with an eye, same corner and size -->
+				<control type="image">
+					<left>18</left>
+					<top>8</top>
+					<width>40</width>
+					<height>40</height>
+					<texture colordiffuse="FFD32F2F">white.png</texture>
+					<visible>Integer.IsGreater(ListItem.PlayCount,0)</visible>
+				</control>
+				<control type="image">
+					<left>22</left>
+					<top>12</top>
+					<width>32</width>
+					<height>32</height>
+					<aspectratio>keep</aspectratio>
+					<texture>eye.png</texture>
+					<visible>Integer.IsGreater(ListItem.PlayCount,0)</visible>
 				</control>
 
 				<!-- day badge, top-right corner of the poster - one white.png-style
@@ -378,6 +428,16 @@
 					<visible>!String.IsEmpty(ListItem.Art(poster))</visible>
 				</control>
 
+				<!-- watched: the whole poster dimmed (drawn before the title bar, so the title stays readable); the eye badge is drawn below -->
+				<control type="image">
+					<left>10</left>
+					<top>0</top>
+					<width>210</width>
+					<height>315</height>
+					<texture colordiffuse="B3262626">white.png</texture>
+					<visible>Integer.IsGreater(ListItem.PlayCount,0)</visible>
+				</control>
+
 				<!-- movie title, poster bottom - only shown when there's no real watch
 				     progress (percentplayed unset), so the wash below always wins once a
 				     movie has actually been started -->
@@ -445,6 +505,46 @@
 					<height>315</height>
 					<texture colordiffuse="CC262626">white.png</texture>
 					<visible>Integer.IsGreater(ListItem.Property(percentplayed),80)</visible>
+				</control>
+
+				<!-- how much of the movie was watched (a movie with a resume point that is not watched): red badge, top-left corner, the size of the day badge on the right; the whole number comes from percent_display (movie_calendar_window.py) -->
+				<control type="image">
+					<left>18</left>
+					<top>8</top>
+					<width>40</width>
+					<height>40</height>
+					<texture colordiffuse="FFD32F2F">white.png</texture>
+					<visible>Integer.IsGreater(ListItem.Property(percentplayed),0) + !Integer.IsGreater(ListItem.PlayCount,0)</visible>
+				</control>
+				<control type="label">
+					<left>18</left>
+					<top>8</top>
+					<width>40</width>
+					<height>40</height>
+					<font>font13</font>
+					<textcolor>FFFFFFFF</textcolor>
+					<align>center</align>
+					<aligny>center</aligny>
+					<label>$INFO[ListItem.Property(percent_display)]</label>
+					<visible>Integer.IsGreater(ListItem.Property(percentplayed),0) + !Integer.IsGreater(ListItem.PlayCount,0)</visible>
+				</control>
+				<!-- watched: red badge with an eye, same corner and size -->
+				<control type="image">
+					<left>18</left>
+					<top>8</top>
+					<width>40</width>
+					<height>40</height>
+					<texture colordiffuse="FFD32F2F">white.png</texture>
+					<visible>Integer.IsGreater(ListItem.PlayCount,0)</visible>
+				</control>
+				<control type="image">
+					<left>22</left>
+					<top>12</top>
+					<width>32</width>
+					<height>32</height>
+					<aspectratio>keep</aspectratio>
+					<texture>eye.png</texture>
+					<visible>Integer.IsGreater(ListItem.PlayCount,0)</visible>
 				</control>
 
 				<control type="image">

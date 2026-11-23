@@ -7969,8 +7969,8 @@ msgstr "Watched marks to WeTrakr"
 
 #: /resources/settings.xml
 msgctxt "#31735"
-msgid "Copies the watched movies and episodes that Trakt, MDBList and Simkl hold to your WeTrakr account, one way only: nothing is read back from WeTrakr into the other services and nothing is removed from it, and a title you unwatch on WeTrakr is not sent again. Specials (season 0) are left out. Up to 100 movies and 300 episodes are sent per run, so a large library takes several runs. Log only writes what would be sent to the Kodi log and sends nothing. Needs Cross-Service Sync on and a WeTrakr sign-in."
-msgstr "Copies the watched movies and episodes that Trakt, MDBList and Simkl hold to your WeTrakr account, one way only: nothing is read back from WeTrakr into the other services and nothing is removed from it, and a title you unwatch on WeTrakr is not sent again. Specials (season 0) are left out. Up to 100 movies and 300 episodes are sent per run, so a large library takes several runs. Log only writes what would be sent to the Kodi log and sends nothing. Needs Cross-Service Sync on and a WeTrakr sign-in."
+msgid "Copies the watched movies and episodes that Trakt, MDBList and Simkl hold to your WeTrakr account, one way only: nothing is read back from WeTrakr into the other services, and a title you unwatch on WeTrakr is not sent again. A title this bridge itself copied is taken off WeTrakr again once it is unwatched on all the other services (needs the removals setting \"also watched history\"); what WeTrakr already had is never removed. Specials (season 0) are left out. Up to 100 movies and 300 episodes are sent per run, so a large library takes several runs. Log only writes what would be sent to the Kodi log and sends nothing. Needs Cross-Service Sync on and a WeTrakr sign-in."
+msgstr "Copies the watched movies and episodes that Trakt, MDBList and Simkl hold to your WeTrakr account, one way only: nothing is read back from WeTrakr into the other services, and a title you unwatch on WeTrakr is not sent again. A title this bridge itself copied is taken off WeTrakr again once it is unwatched on all the other services (needs the removals setting \"also watched history\"); what WeTrakr already had is never removed. Specials (season 0) are left out. Up to 100 movies and 300 episodes are sent per run, so a large library takes several runs. Log only writes what would be sent to the Kodi log and sends nothing. Needs Cross-Service Sync on and a WeTrakr sign-in."
 
 #: /resources/lib/gui/wetrakr_manager.py
 msgctxt "#31736"
@@ -8031,3 +8031,8 @@ msgstr "Wait this many seconds into playback before sending any watch progress t
 msgctxt "#31747"
 msgid "WeTrakr"
 msgstr "WeTrakr"
+
+#: /addon.xml
+msgctxt "#31748"
+msgid "WeTrakr Sync: {0} watched, {1} in-progress synced"
+msgstr "WeTrakr Sync: {0} watched, {1} in-progress synced"

@@ -115,7 +115,8 @@ Domain coverage:
 - WeTrakr (setting crosssync.wetrakr: 0 off, 1 log only (default), 2 on; same pass as TMDb Helper 7.5.5): watched
   movies and episodes only, ONE WAY into WeTrakr. It runs after the watched reconcile of each media type, on the
   views of Trakt, MDBList and Simkl as that run left them, and copies what they hold to WeTrakr. WeTrakr is never a
-  source, never a removal target and never read back into the other services (it is not in configured_providers()).
+  source and never read back into the other services (it is not in configured_providers()); since 3.9.183 it is a removal
+  target for the titles the bridge itself sent (not for what WeTrakr already had).
   It keeps its own snapshots (watched|wetrakr|movie / episode), so a title the user unwatched on WeTrakr is not sent
   again; a title leaves the snapshot once no source lists it. Nothing is asked of WeTrakr unless something is new;
   the push is POST /sync/tracking with allow_rewatch false and the play's own date, confirmed by reading WeTrakr's
@@ -200,6 +201,9 @@ _WETRAKR_PATHS = {"movie": "/sync/tracking/watched/movies", "episode": "/sync/tr
 _WETRAKR_CAP = {"movie": 100, "episode": 300}  # pushes per run (a first run copies a large library over several runs; WeTrakr's quota is shared per app key)
 _WETRAKR_CHUNK = 100  # items per POST /sync/tracking (a 120-item batch was accepted live)
 _WETRAKR_TRIES = 3  # runs a pushed title may stay missing from WeTrakr's list before it is given up
+_WETRAKR_REMOVE_CAP = {"movie": 10, "episode": 40}  # titles taken off WeTrakr per run (3.9.183)
+_WETRAKR_REMOVE_TRIES = 3  # runs a removal may stay listed on WeTrakr before it is given up
+_WETRAKR_MASS_SECONDS = 900  # a loss as large as the mass-vanish limit must have lasted this long (an incomplete read does not last 15 minutes)
 _WETRAKR_LOG_SECONDS = 6 * 3600  # log-only mode reads WeTrakr at most this often per media type
 
 
@@ -287,6 +291,13 @@ def _pending_removals():
                 at = (seen.get(label) or {}).get(key)
                 if at and now - at <= 2 * _REMOVE_CONFIRM_SECONDS:
                     return True
+        for items in (meta.get("wetrakr_gone") or {}).values():  # 3.9.183: a title taken for gone on WeTrakr's side waits for its second check too
+            for rec in (items or {}).values():
+                try:
+                    if now - float(rec[0]) <= 2 * _REMOVE_CONFIRM_SECONDS:
+                        return True
+                except (TypeError, ValueError, IndexError):
+                    continue
     except Exception:
         pass
     return False
@@ -2434,7 +2445,9 @@ class _Bridge:
 
     # region WeTrakr: watched marks, one way (setting crosssync.wetrakr)
     # Runs after the watched reconcile of a media type, on its result: what Trakt, MDBList and Simkl hold now (the `current` views, already updated by
-    # this run's pushes) is copied to WeTrakr. Never a source, never a removal target, never read back into the others.
+    # this run's pushes) is copied to WeTrakr. Never a source, never read back into the others. 3.9.183: a title the BRIDGE itself sent there (meta
+    # `wetrakr_sent`, only titles whose push was confirmed) is taken off again once no other service lists it any more, see _wetrakr_remove
+    # (settings: crosssync.wetrakr On and crosssync.removals 'also watched history'); what WeTrakr already had, or the user marked there, is never removed.
     #  - snapshot-delta like the rest of the bridge, with its own labels: a title in the WeTrakr snapshot is accounted for and is not sent again, so
     #    one the user unwatched on WeTrakr is not put back. A title leaves the snapshot once no source lists it (a later re-watch is then new again),
     #    but only while every source could be read.
@@ -2567,6 +2580,108 @@ class _Bridge:
             rejected |= self._wetrakr_rejected(media, chunk, data if isinstance(data, dict) else {})
         return posted, rejected
 
+    @staticmethod
+    def _wetrakr_remove_payload(media, items):
+        """Body of POST /sync/tracking/remove/all: the same shape the context menu sends (movies by TMDb id, episodes nested by number), no dates."""
+        if media == "movie":
+            return {"movies": [{"ids": {"tmdb": int(tmdb_id)}, "status": "watched"} for _, tmdb_id in sorted(items.items())]}
+        shows = {}
+        for key, show_id in sorted(items.items()):
+            _, season, number = key.split(":")
+            shows.setdefault(int(show_id), {}).setdefault(int(season), []).append({"number": int(number)})
+        return {
+            "shows": [
+                {"ids": {"tmdb": show_id}, "status": "watched", "seasons": [{"number": season, "episodes": episodes} for season, episodes in sorted(seasons.items())]}
+                for show_id, seasons in sorted(shows.items())
+            ]
+        }
+
+    def _wetrakr_remove(self, media, label, union, out_held, complete, push_mode):
+        """3.9.183: take a title off WeTrakr again once the bridge's own copy of it is the only one left. Candidates are only titles the bridge SENT
+        (meta `wetrakr_sent`, filled from confirmed pushes), never what WeTrakr already had or the user marked there. A title counts as gone only when
+        no other service lists it, every service could be read, it is no mapped anime episode, and it stayed gone on two runs and at least
+        _REMOVE_CONFIRM_SECONDS (_WETRAKR_MASS_SECONDS when as many vanish at once as the mass-vanish limit). Sent to WeTrakr in small batches
+        (POST /sync/tracking/remove/all) and counted done only when WeTrakr's list no longer shows them; the saved watched stamp is dropped after
+        that, so the calendars read the change. Settings: crosssync.wetrakr On (2) and crosssync.removals 1 (log only) or 3 (also watched history)."""
+        meta = self._meta_data()
+        sent_all = meta.setdefault("wetrakr_sent", {})
+        gone_all = meta.setdefault("wetrakr_gone", {})
+        tries_all = meta.setdefault("wetrakr_remove_tries", {})
+        sent = sent_all.get(label) or {}
+        removal_mode = self._removal_mode()
+        if push_mode != 2 or removal_mode not in (1, 3) or not sent or not complete:
+            if gone_all.pop(label, None):
+                self._meta_save()
+            return
+        now = time.time()
+        lost = {}
+        for key, value in sent.items():
+            if key in union or key in out_held:
+                continue
+            if media == "episode" and (key in self._anime_keys or key in self._anime_gone):
+                continue  # a mapped anime episode: its mapping can change with the index, so it never counts as an un-watch
+            lost[key] = value
+        gone = gone_all.setdefault(label, {})
+        dirty = False
+        for key in [k for k in gone if k not in lost]:
+            del gone[key]
+            dirty = True
+        for key in lost:
+            rec = gone.get(key)
+            if rec:
+                rec[1] += 1
+            else:
+                gone[key] = [now, 1]
+            dirty = True
+        mass = len(lost) > (_REMOVE_MASS_CAP_EPISODES if media == "episode" else _REMOVE_MASS_CAP) and len(lost) > len(sent) * 0.05
+        wait = _WETRAKR_MASS_SECONDS if mass else _REMOVE_CONFIRM_SECONDS
+        due = sorted(k for k in lost if gone[k][1] >= 2 and now - gone[k][0] >= wait)
+        if not due:
+            if dirty:
+                self._meta_save()
+            return
+        batch = {k: lost[k] for k in due[: _WETRAKR_REMOVE_CAP[media]]}
+        if removal_mode == 1:
+            g.log(f"bridgeSync (WeTrakr, log only): {len(batch)} {media}s the bridge sent are unwatched on every other service and would be taken off WeTrakr", "info")
+            if dirty:
+                self._meta_save()
+            return
+        api = self._api("wetrakr")
+        path = _WETRAKR_PATHS[media]
+        removed, failed = set(), False
+        response = api.user_request("POST", "/sync/tracking/remove/all", body=self._wetrakr_remove_payload(media, batch))
+        code = getattr(response, "status_code", None)
+        if code is None or not 200 <= code < 300:
+            g.log(f"bridgeSync: WeTrakr sync/tracking/remove/all failed (HTTP {code or 'no answer'}) - retry next cycle", "warning")
+            failed = True
+        else:
+            ok_after, rows_after = api.get_list(path)
+            if ok_after:
+                after = self._wetrakr_keys(media, rows_after)
+                removed = {k for k in batch if k not in after}
+        tries = tries_all.setdefault(label, {})
+        for key in batch:
+            if key in removed:
+                tries.pop(key, None)
+            elif not failed:
+                tries[key] = tries.get(key, 0) + 1
+                if tries[key] >= _WETRAKR_REMOVE_TRIES:
+                    removed.add(key)  # given up on: the bridge stops trying (WeTrakr keeps it)
+                    tries.pop(key, None)
+                    g.log(f"bridgeSync: {label} -> WeTrakr: {key} still listed after {_WETRAKR_REMOVE_TRIES} removal tries - giving up on it", "warning")
+        for key in removed:
+            sent.pop(key, None)
+            gone.pop(key, None)
+        if removed:
+            g.log(f"bridgeSync -> WeTrakr: took {len(removed)} {media}s off (unwatched on every other service)", "info")
+            try:
+                from resources.lib.database.wetrakr_sync.activities import WeTrakrSyncDatabase
+
+                WeTrakrSyncDatabase().reset_watched_stamp()
+            except Exception as e:  # pylint: disable=broad-except
+                g.log(f"bridgeSync: WeTrakr watched stamp not reset: {type(e).__name__}", "info")
+        self._meta_save()
+
     def _sync_wetrakr(self, media, current):
         mode = self._wetrakr_mode()
         if not mode or not self._ok:
@@ -2605,6 +2720,7 @@ class _Bridge:
         else:
             carried = dict(snap)
         meta = self._meta_data()
+        self._wetrakr_remove(media, label, union, out_held, out_known and all(v is not None for v in current.values()), mode)
         meta_dirty = False
         snap_dirty = False
         if mode == 2:
@@ -2683,6 +2799,7 @@ class _Bridge:
             if key in done or key in given_up or key not in newly:
                 tries.pop(key)
         if done:
+            meta.setdefault("wetrakr_sent", {}).setdefault(label, {}).update({k: int(batch[k]) for k in done})  # 3.9.183: only these can be taken off again
             g.log(f"bridgeSync ->WeTrakr: {len(done)} {media} (watched)", "info")
         new_snap = {**carried, **accounted, **{k: batch[k] for k in done | given_up}}
         self._wetrakr_save(label, media, new_snap, True)

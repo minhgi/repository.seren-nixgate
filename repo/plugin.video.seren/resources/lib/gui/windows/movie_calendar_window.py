@@ -137,6 +137,12 @@ class MovieCalendarWindow(BaseWindow):
         list_item.setProperty("release_countdown", movie.get("_calendar_countdown") or "")
         list_item.setProperty("rating_display", movie.get("_calendar_rating_display") or "")
         list_item.setProperty("release_status", movie.get("_calendar_status") or "upcoming")
+        try:  # the badge on a movie with a resume point shows a whole number (percentplayed can be a decimal)
+            percent = float(movie.get("percent_played") or 0)
+        except (TypeError, ValueError):
+            percent = 0
+        if percent > 0:
+            list_item.setProperty("percent_display", str(max(1, int(round(percent)))))
         return list_item
 
     def _navigate_month(self, delta):
