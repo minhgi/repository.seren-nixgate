@@ -86,6 +86,7 @@ class SerenPlayer(xbmc.Player):
         self.wetrakr_enabled = bool(g.get_setting("wetrakr.auth", "")) and g.get_bool_setting("wetrakr.enabled", True)
         self.wetrakr_scrobbling_enabled = g.get_bool_setting("wetrakr.scrobbling", True)
         self.wetrakr_playCountMinimumPercent = g.get_int_setting("wetrakr.playCountMinimumPercent", 75) or 75
+        self.wetrakr_ignoreSecondsAtStart = g.get_int_setting("wetrakr.ignoreSecondsAtStart", 180)
         self.wetrakr_scrobble_started = False  # a start went out (or could never go out, so the keep-alive loop stops asking)
         self.wetrakr_paused = False
         self.wetrakr_stopped = False
@@ -1309,6 +1310,8 @@ class SerenPlayer(xbmc.Player):
                     return
                 if not self._wetrakr_start_ready():
                     return  # still owed: the keep-alive loop asks again
+                if self.current_time < self.wetrakr_ignoreSecondsAtStart:
+                    return  # "Ignore seconds at start": still owed, the keep-alive loop asks again (as for Trakt, MDBList and Simkl)
                 # Set before the post and even when there is nothing to send (or the build fails), so the keep-alive loop does not
                 # retry this every 0.5 s
                 payload = None
@@ -1327,7 +1330,13 @@ class SerenPlayer(xbmc.Player):
         try:
             with self._wetrakr_lock:
                 self.wetrakr_paused = True
-                if self.wetrakr_stopped or self._wetrakr_inert() or not self.wetrakr_scrobble_started or self.current_time <= 0:
+                if (
+                    self.wetrakr_stopped
+                    or self._wetrakr_inert()
+                    or not self.wetrakr_scrobble_started
+                    or self.current_time <= 0
+                    or self.current_time < self.wetrakr_ignoreSecondsAtStart
+                ):
                     return
                 payload = self._build_wetrakr_object()
                 if payload is not None:
@@ -1346,8 +1355,8 @@ class SerenPlayer(xbmc.Player):
                 if self.wetrakr_stopped or self._wetrakr_inert():
                     return
                 self.wetrakr_stopped = True
-                if not self.wetrakr_scrobble_started or self.current_time <= 0:
-                    return  # nothing was played, or the start never went out
+                if not self.wetrakr_scrobble_started or self.current_time <= 0 or self.current_time < self.wetrakr_ignoreSecondsAtStart:
+                    return  # nothing was played, the start never went out, or the play ended inside "Ignore seconds at start"
                 payload = self._build_wetrakr_object()
                 if payload is not None:
                     result = (payload, self._wetrakr_post("stop", payload))

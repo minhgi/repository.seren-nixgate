@@ -32,7 +32,9 @@ SIGNED_OUT_NOTICE = "Seren.WeTrakr.SignedOutNotice"  # runtime setting: the "aut
 AUTH_KEY = "wetrakr.auth"
 REFRESH_KEY = "wetrakr.refresh"
 EXPIRES_KEY = "wetrakr.expires"
-STATUS_KEY = "wetrakr.status"  # the signed-in indicator (WeTrakr gives third-party apps no username: GET /account answers 403 NOT_PUBLIC)
+STATUS_KEY = "wetrakr.status"  # the signed-in marker the settings rows gate on (hidden; Account Manager writes it too)
+USERID_KEY = "wetrakr.userid"  # the WeTrakr user id (from the access token) the stored username belongs to
+USERNAME_KEY = "wetrakr.username"  # shown in the settings (GET /account is closed to third-party apps: the name comes from the public profile, see get_username)
 
 _BLOCKED_UNTIL = [0.0]  # time.monotonic() until which an HTTP 429 asks for silence (shared by every API object of this process)
 
@@ -137,6 +139,8 @@ class WeTrakrAPI:
         # the status row first: it decides which rows the settings show; Kodi ignores an empty write to an integer setting, so the
         # expiry is set to 0 (which _expiring reads as "unknown")
         g.clear_setting(STATUS_KEY)
+        g.clear_setting(USERNAME_KEY)
+        g.clear_setting(USERID_KEY)
         g.clear_setting(AUTH_KEY)
         g.clear_setting(REFRESH_KEY)
         g.set_setting(EXPIRES_KEY, "0")
@@ -370,6 +374,99 @@ class WeTrakrAPI:
 
     # endregion
 
+    # region username / account info
+    @staticmethod
+    def _user_id(token):
+        """The numeric user id inside the access token (a JWT: its payload is only decoded, never logged - it also holds the e-mail
+        address). '' when there is none."""
+        try:
+            import base64
+            import json
+
+            part = (token or "").split(".")[1]
+            return str(json.loads(base64.urlsafe_b64decode(part + "=" * (-len(part) % 4))).get("user_id") or "")
+        except Exception:
+            return ""
+
+    def get_profile(self):
+        """The public profile of the signed-in user (GET /users/{id}, no token needed), or None. GET /account itself answers 403
+        NOT_PUBLIC to third-party apps, but the access token carries the user id and the profile holds info.username."""
+        try:
+            user_id = self._user_id(self.access_token)
+            if not user_id:
+                return None
+            response = self._send("GET", f"/users/{user_id}")
+            if response is None or response.status_code != 200:
+                return None
+            data = self._json(response)
+            if isinstance(data.get("data"), dict):
+                data = data["data"]
+            return data if isinstance(data.get("info"), dict) else None
+        except Exception:
+            g.log_stacktrace()
+            return None
+
+    def get_username(self):
+        """The WeTrakr username of the login, '' when it cannot be found (a private profile answers a minimal profile without it)"""
+        profile = self.get_profile()
+        return str(((profile or {}).get("info") or {}).get("username") or "")
+
+    def save_username(self):
+        """Looks the username up and stores it in wetrakr.username, with the user id it belongs to (nothing is written when the profile
+        cannot be read). Returns the name."""
+        profile = self.get_profile()
+        if profile is None:
+            return ""
+        name = str((profile.get("info") or {}).get("username") or "")
+        if name:
+            g.set_setting(USERNAME_KEY, name)
+        else:
+            g.clear_setting(USERNAME_KEY)  # a private profile: no name to show, and never the name of an earlier account
+        g.set_setting(USERID_KEY, self._user_id(self.access_token))
+        return name
+
+    def ensure_username(self):
+        """A login saved before the Username row existed, or pushed by Account Manager (also one of another account), has no name or the name of
+        an earlier account: look it up when the user id inside the access token is not the one the stored name was found for. No request
+        otherwise. Called by the periodic sync, so no settings window is open to swallow the write."""
+        if not self.is_authorized:
+            return
+        user_id = self._user_id(self.access_token)
+        if not user_id or g.get_setting(USERID_KEY, "") == user_id:
+            return
+        if g.get_setting(USERNAME_KEY, ""):
+            g.clear_setting(USERNAME_KEY)  # it belongs to another account; shown again once the lookup works
+        self.save_username()
+
+    def account_info_to_dialog(self):
+        """Shows the signed-in WeTrakr account (username, user id, plan, member since, sign-in) in a select dialog; mirrors Simkl's"""
+        title = f"{g.ADDON_NAME}: WeTrakr Account"
+        saved_user = g.get_setting(USERNAME_KEY, "")
+        try:
+            if not self.is_authorized:
+                xbmcgui.Dialog().ok(g.ADDON_NAME, "WeTrakr: Not authorized - authorize from settings.")
+                return
+            profile = self.get_profile() or {}
+            info = profile.get("info") or {}
+            items = [f"Username:  {info.get('username') or saved_user or 'N/A'}"]
+            if profile.get("id"):
+                items.append(f"User ID:  {profile['id']}")
+            if profile.get("plan"):
+                plan = str(profile["plan"])
+                items.append(f"Plan:  {plan.upper() if len(plan) <= 3 else plan.capitalize()}")
+            if profile.get("joined_at"):
+                items.append(f"Joined:  {str(profile['joined_at'])[:19].replace('T', ' ').replace('Z', '')}")
+            if g.get_setting(STATUS_KEY, ""):
+                items.append(f"Sign-in:  {g.get_setting(STATUS_KEY)}")
+            online = self.get_json("/sync/last_activities") is not None
+            items.append("Status:  Online" if online else "Status:  Offline (WeTrakr unreachable or the sign-in was rejected)")
+            xbmcgui.Dialog().select(title, items)
+        except Exception as e:
+            g.log(f"WeTrakr account_info_to_dialog error: {type(e).__name__}: {e}", "error")
+            xbmcgui.Dialog().select(title, ([f"Username:  {saved_user}"] if saved_user else []) + ["Status:  Offline (WeTrakr unreachable)"])
+
+    # endregion
+
     # region sign in / out
     def _device_failure(self, status):
         """The message for a failed sign-in step ('' for a status with no message of its own)"""
@@ -487,6 +584,9 @@ class WeTrakrAPI:
         if approved is not None and self._save_tokens(self._json(approved)):
             self._forget_synced_data()  # a different account must not inherit the last one's marks (the stamps decide what is read)
             g.set_setting(STATUS_KEY, g.get_language_string(31695).format(time.strftime("%Y-%m-%d")))
+            g.clear_setting(USERNAME_KEY)  # an earlier account's name never stays; the lookup below fills the new one
+            g.clear_setting(USERID_KEY)
+            self.save_username()
             g.clear_runtime_setting(SIGNED_OUT_NOTICE)
             g.log("WeTrakr authenticated successfully")
             xbmcgui.Dialog().ok(g.ADDON_NAME, g.get_language_string(31689))

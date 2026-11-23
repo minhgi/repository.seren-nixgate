@@ -182,6 +182,10 @@ class WeTrakrSyncDatabase(wetrakr_sync.WeTrakrSyncDatabase):
                 g.log("WeTrakrSync: WeTrakr disabled or no auth present, no sync will occur", "warning")
                 return
 
+            try:
+                self.wetrakr_api.ensure_username()  # 3.9.181: a login without a name (Account Manager's push, older sign-in) gets it here
+            except Exception:
+                g.log_stacktrace()
             self.refresh_activities()
             remote = self.wetrakr_api.get_json("/sync/last_activities")
             watched_stamp, playback_stamp = newest_stamp(remote, WATCHED_KEYS), newest_stamp(remote, PLAYBACK_KEYS)

@@ -477,6 +477,12 @@ def dispatch(params):
         wetrakr.WeTrakrAPI().auth()
         g.open_addon_settings(3, 33)
 
+    elif action == "wetrakrAccountInfo":
+        from resources.lib.indexers import wetrakr
+
+        wetrakr.WeTrakrAPI().account_info_to_dialog()
+        g.open_addon_settings(3, 37)
+
     elif action == "revokeWeTrakr":
         from resources.lib.indexers import wetrakr
 

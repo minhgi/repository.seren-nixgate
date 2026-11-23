@@ -7714,8 +7714,8 @@ msgstr "A play that stops at or after this percentage is logged on WeTrakr as wa
 
 #: /settings.xml
 msgctxt "#31684"
-msgid "Log out of WeTrakr"
-msgstr "Log out of WeTrakr"
+msgid "Revoke WeTrakr"
+msgstr "Revoke WeTrakr"
 
 #: /settings.xml
 msgctxt "#31685"
@@ -8006,3 +8006,28 @@ msgstr "WeTrakr - Watched Episodes"
 msgctxt "#31742"
 msgid "Every TV episode you have watched on WeTrakr, newest first"
 msgstr "Every TV episode you have watched on WeTrakr, newest first"
+
+#: /settings.xml
+msgctxt "#31743"
+msgid "WeTrakr Username"
+msgstr "WeTrakr Username"
+
+#: /settings.xml
+msgctxt "#31744"
+msgid "Shows the username of your linked WeTrakr account. Read-only - Seren finds it from your sign-in."
+msgstr "Shows the username of your linked WeTrakr account. Read-only - Seren finds it from your sign-in."
+
+#: /settings.xml
+msgctxt "#31745"
+msgid "Shows your WeTrakr account details: username, user ID, plan, member since and whether WeTrakr accepts this sign-in."
+msgstr "Shows your WeTrakr account details: username, user ID, plan, member since and whether WeTrakr accepts this sign-in."
+
+#: /settings.xml
+msgctxt "#31746"
+msgid "Wait this many seconds into playback before sending any watch progress to WeTrakr, to avoid recording brief or accidental plays."
+msgstr "Wait this many seconds into playback before sending any watch progress to WeTrakr, to avoid recording brief or accidental plays."
+
+#: /settings.xml
+msgctxt "#31747"
+msgid "WeTrakr"
+msgstr "WeTrakr"

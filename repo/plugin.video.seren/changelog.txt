@@ -1,3 +1,6 @@
+[B]3.9.181[/B]
+[CHANGE] WeTrakr settings - the WeTrakr rows of Settings > Watch Accounts now follow the Simkl and MDBList rows: a read-only WeTrakr Username row replaces the 'WeTrakr account' text row (Seren finds the name from your WeTrakr sign-in, once, also for a login Account Manager pushed), a new Account Info button shows the username, user ID, plan, join date and whether WeTrakr accepts the sign-in, 'Log out of WeTrakr' is now called Revoke WeTrakr, and the scrobble section has the Start scrobble after seconds option (30-360, default 180) that Trakt, MDBList and Simkl have: nothing is sent to WeTrakr before that many seconds of a play, and a play that ends before then is not reported. Known change: a play shorter than that, or the first three minutes of one, no longer reaches WeTrakr by default.
+---
 [B]3.9.180[/B]
 [CHANGE] WeTrakr - an episode you watched only on WeTrakr now shows its tick in the Show Calendar and the TV Shows Daily Calendar, and it is no longer listed as unwatched in a show's Unwatched view there. The tick comes from the WeTrakr watched marks kept on this device; Trakt's own watched state, and what the context menus offer, do not change. A WeTrakr sync that brings in new watched marks now also reloads an open calendar. The Movie Calendar shows no ticks, as before.
 

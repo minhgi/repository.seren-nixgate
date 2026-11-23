@@ -1389,12 +1389,34 @@
 						<close>true</close>
 					</control>
 				</setting>
+			</group>
+			<group id="8" label="31747">
 				<setting id="wetrakr.enabled" type="boolean" label="31674" help="31675">
 					<level>0</level>
 					<default>true</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="wetrakr.status" type="string" label="31676" help="31677">
+				<setting id="wetrakr.status" type="string" help="">
+					<level>4</level>
+					<default/>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="edit" format="string">
+						<heading/>
+					</control>
+				</setting>
+				<setting id="wetrakr.userid" type="string" help="">
+					<level>4</level>
+					<default/>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="edit" format="string">
+						<heading/>
+					</control>
+				</setting>
+				<setting id="wetrakr.username" type="string" label="31743" help="31744">
 					<level>0</level>
 					<default/>
 					<constraints>
@@ -1407,7 +1429,7 @@
 						</dependency>
 					</dependencies>
 					<control type="edit" format="string">
-						<heading>31676</heading>
+						<heading>31743</heading>
 					</control>
 				</setting>
 				<setting id="wetrakr.authWeTrakr" type="action" label="31678" help="31679">
@@ -1441,6 +1463,26 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
+				<setting id="wetrakr.ignoreSecondsAtStart" type="integer" label="30481" help="31746" parent="wetrakr.scrobbling">
+					<level>0</level>
+					<default>180</default>
+					<constraints>
+						<minimum>30</minimum>
+						<maximum>360</maximum>
+					</constraints>
+					<dependencies>
+						<dependency type="visible">
+							<and>
+								<condition operator="is" setting="wetrakr.enabled">true</condition>
+								<condition operator="!is" setting="wetrakr.status"/>
+								<condition operator="is" setting="wetrakr.scrobbling">true</condition>
+							</and>
+						</dependency>
+					</dependencies>
+					<control type="slider" format="integer">
+						<popup>false</popup>
+					</control>
+				</setting>
 				<setting id="wetrakr.playCountMinimumPercent" type="integer" label="31682" help="31683" parent="wetrakr.scrobbling">
 					<level>0</level>
 					<default>75</default>
@@ -1459,6 +1501,24 @@
 					</dependencies>
 					<control type="slider" format="integer">
 						<popup>false</popup>
+					</control>
+				</setting>
+				<setting id="wetrakr.accountInfo" type="action" label="30876" help="31745">
+					<level>0</level>
+					<data>RunPlugin(plugin://plugin.video.seren/?action=wetrakrAccountInfo)</data>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<dependencies>
+						<dependency type="visible">
+							<and>
+								<condition operator="is" setting="wetrakr.enabled">true</condition>
+								<condition operator="!is" setting="wetrakr.status"/>
+							</and>
+						</dependency>
+					</dependencies>
+					<control type="button" format="action">
+						<close>true</close>
 					</control>
 				</setting>
 				<setting id="wetrakr.revokeWeTrakr" type="action" label="31684" help="31685">
