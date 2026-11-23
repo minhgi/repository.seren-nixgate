@@ -222,7 +222,8 @@ class Menus:
         trakt_active = g.trakt_active()
         mdblist_active = g.mdblist_active()
         simkl_active = g.simkl_active()
-        if (trakt_active or mdblist_active or simkl_active) and g.get_bool_setting('watchlistcalendar.enabled', False):
+        wetrakr_active = g.wetrakr_active()
+        if (trakt_active or mdblist_active or simkl_active or wetrakr_active) and g.get_bool_setting('watchlistcalendar.enabled', False):
             g.add_directory_item(
                 g.get_language_string(31472),
                 action="calendarBrowse",
@@ -230,7 +231,7 @@ class Menus:
                 menu_item=g.create_icon_dict("shows_update", g.ICONS_PATH),
                 is_folder=False,
             )
-        if (trakt_active or mdblist_active or simkl_active) and g.get_bool_setting('tvschedule.enabled', False):
+        if (trakt_active or mdblist_active or simkl_active or wetrakr_active) and g.get_bool_setting('tvschedule.enabled', False):
             g.add_directory_item(
                 g.get_language_string(31539),
                 action="tvScheduleBrowse",
@@ -238,7 +239,7 @@ class Menus:
                 menu_item=g.create_icon_dict("shows_update", g.ICONS_PATH),
                 is_folder=False,
             )
-        if sum((trakt_active, mdblist_active, simkl_active)) >= 2 and g.get_bool_setting('mergeshows.enabled', False):
+        if sum((trakt_active, mdblist_active, simkl_active, wetrakr_active)) >= 2 and g.get_bool_setting('mergeshows.enabled', False):
             g.add_directory_item(
                 g.get_language_string(30977),
                 action="mergeInProgressShows",
@@ -497,6 +498,67 @@ class Menus:
                 g.get_language_string(31662),
                 action="simklWatchedEpisodes",
                 description=g.get_language_string(31663),
+                menu_item=g.create_icon_dict("shows_watched", g.ICONS_PATH),
+            )
+        if g.wetrakr_active():
+            g.add_directory_item(
+                g.get_language_string(31720),
+                action="wetrakrInProgressEpisodes",
+                description=g.get_language_string(31721),
+                menu_item=g.create_icon_dict("shows_progress", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31722),
+                action="wetrakrNextUp",
+                description=g.get_language_string(31723),
+                menu_item=g.create_icon_dict("shows_nextup", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31724),
+                action="wetrakrWatchingShows",
+                description=g.get_language_string(31725),
+                menu_item=g.create_icon_dict("shows_progress", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31726),
+                action="wetrakrPlanToWatchShows",
+                description=g.get_language_string(31727),
+                menu_item=g.create_icon_dict("shows_watched", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31728),
+                action="wetrakrHoldShows",
+                description=g.get_language_string(31729),
+                menu_item=g.create_icon_dict("shows_collected", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31730),
+                action="wetrakrDroppedShows",
+                description=g.get_language_string(31731),
+                menu_item=g.create_icon_dict("shows_watched", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31732),
+                action="wetrakrRecentShows",
+                description=g.get_language_string(31733),
+                menu_item=g.create_icon_dict("shows_watched", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31737),
+                action="wetrakrRecentEpisodes",
+                description=g.get_language_string(31738),
+                menu_item=g.create_icon_dict("shows_recent", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31739),
+                action="wetrakrUpcomingEpisodes",
+                description=g.get_language_string(31740),
+                menu_item=g.create_icon_dict("shows_update", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31741),
+                action="wetrakrWatchedEpisodes",
+                description=g.get_language_string(31742),
                 menu_item=g.create_icon_dict("shows_watched", g.ICONS_PATH),
             )
         g.close_directory(g.CONTENT_MENU)

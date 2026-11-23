@@ -139,8 +139,11 @@ def get_movie_calendar_month(year, month, prefetch=False):
     yields the identical bookkept row set a foreground call would write for the
     same month."""
     from resources.lib.modules.syncGateway import configured_providers
+    from resources.lib.modules import wetrakr_calendar
 
     providers = configured_providers()
+    if wetrakr_calendar.active():
+        providers.append("wetrakr")  # 3.9.179: WeTrakr is not in configured_providers() (the bridge counts that list): the plan to watch movies are its watchlist
     if not providers:
         return []
 
@@ -345,7 +348,7 @@ def retention_cutoff():
 
 
 def _resolve_watchlist_movies(providers):
-    """Simkl plan-to-watch + MDBList watchlist movies, resolved. Does not depend on the
+    """Simkl plan-to-watch + MDBList watchlist + WeTrakr plan-to-watch (3.9.179) movies, resolved. Does not depend on the
     month (_drop_covered() removes the ones Trakt's own calendar already covers for a
     given month). Candidates are capped BEFORE their release date is known (a bare
     tmdb_id carries no date - it only appears after resolving against Trakt, and even
@@ -364,6 +367,11 @@ def _resolve_watchlist_movies(providers):
     if "mdblist" in providers:
         for tmdb_id in _mdblist_watchlist_movie_tmdb_ids():
             _add_candidate(candidate_tmdb_ids, tmdb_id)
+    if "wetrakr" in providers:  # last: the cap keeps the earlier sources first
+        from resources.lib.modules.wetrakr_calendar import planning_movie_ids
+
+        for tmdb_id in planning_movie_ids():
+            _add_candidate(candidate_tmdb_ids, tmdb_id)
 
     if not candidate_tmdb_ids:
         return [], [], {}
@@ -371,7 +379,7 @@ def _resolve_watchlist_movies(providers):
     capped_ids = list(candidate_tmdb_ids)[:_UNION_CAP]
     dropped = len(candidate_tmdb_ids) - len(capped_ids)
     if dropped > 0:
-        g.log(f"movie_calendar_data: union cap reached, dropped {dropped} Simkl/MDBList-only movie(s) this fetch", "warning")
+        g.log(f"movie_calendar_data: union cap reached, dropped {dropped} Simkl/MDBList/WeTrakr-only movie(s) this fetch", "warning")
 
     from resources.lib.gui.simklMenus import Menus as SimklMenus
 

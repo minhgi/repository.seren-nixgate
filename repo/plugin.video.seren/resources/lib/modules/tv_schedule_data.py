@@ -115,14 +115,19 @@ _union = None
 # answer may be a failed request: fetch_my_calendar_days() turns a failure into no rows) and handed out as a copy.
 _my_calendar = {}  # week_start (YYYY-MM-DD) -> (time stored, stamp, rows)
 
+# WeTrakr's own calendar of the followed shows for a week (3.9.179, modules/wetrakr_calendar.py): the rows of GET /calendar/shows?mode=following,
+# nothing resolved (that needs the main thread). Same rules as _my_calendar; the prefetch may ask for it, the request only reads WeTrakr.
+_wetrakr_calendar = {}  # week_start (YYYY-MM-DD) -> (time stored, stamp, rows)
+
 
 def clear_memo():
-    """Forget every kept week, the kept watchlist-union layer and the kept Trakt calendar answers (the window calls this when it drops its own weeks)"""
+    """Forget every kept week, the kept watchlist-union layer and the kept Trakt / WeTrakr calendar answers (the window calls this when it drops its own weeks)"""
     global _memo_generation, _union
     with _memo_lock:
         _memo_generation += 1
         _memo.clear()
         _my_calendar.clear()
+        _wetrakr_calendar.clear()
         _union = None
 
 
@@ -184,6 +189,59 @@ def _warm_my_calendar(week_start_str, stamp):
     _fetch_my_calendar(week_start_str, stamp)
 
 
+def _wetrakr_calendar_get(week_start_str, stamp):
+    if stamp is None:
+        return None
+    with _memo_lock:
+        entry = _wetrakr_calendar.get(week_start_str)
+        if entry is not None and (time.time() - entry[0] >= _MEMO_SECONDS or entry[1] != stamp):
+            _wetrakr_calendar.pop(week_start_str, None)
+            entry = None
+        rows = entry[2] if entry is not None else None
+    if rows is None:
+        return None
+    g.log(f"tv_schedule_data: WeTrakr calendar of week {week_start_str} served from memory ({len(rows)} rows)", "debug")
+    return copy.deepcopy(rows)
+
+
+def _fetch_wetrakr_calendar(week_start_str, stamp):
+    """WeTrakr's calendar rows of the followed shows that air in the week (wetrakr_calendar.following_episodes), from memory when the prefetch
+    (or an earlier visit) kept them; a per-week lock of its own, like _fetch_my_calendar(). Never stored for a stamp of None or when empty (an
+    empty answer may be a failed request), and not when clear_memo() ran during the request."""
+    from resources.lib.modules import wetrakr_calendar
+
+    with _fetch_lock("wt:" + week_start_str):
+        kept = _wetrakr_calendar_get(week_start_str, stamp)
+        if kept is not None:
+            return kept
+        with _memo_lock:
+            generation = _memo_generation
+        week_start = datetime.datetime.strptime(week_start_str, "%Y-%m-%d").date()
+        rows = wetrakr_calendar.following_episodes(week_start, week_start + datetime.timedelta(days=6))
+        if rows and stamp is not None:
+            copied = copy.deepcopy(rows)
+            with _memo_lock:
+                if generation == _memo_generation:
+                    _wetrakr_calendar[week_start_str] = (time.time(), stamp, copied)
+                    while len(_wetrakr_calendar) > _MEMO_MAX:
+                        _wetrakr_calendar.pop(min(_wetrakr_calendar, key=lambda k: _wetrakr_calendar[k][0]))
+            g.log(f"tv_schedule_data: WeTrakr calendar of week {week_start_str} kept in memory ({len(rows)} rows)", "debug")
+    return rows
+
+
+def _warm_wetrakr_calendar(week_start_str, stamp):
+    """Prefetch side of _fetch_wetrakr_calendar(): only for a signed-in WeTrakr, only when it is not kept already"""
+    from resources.lib.modules import wetrakr_calendar
+
+    if not wetrakr_calendar.active():
+        return
+    with _memo_lock:
+        entry = _wetrakr_calendar.get(week_start_str)
+        if stamp is not None and entry is not None and time.time() - entry[0] < _MEMO_SECONDS and entry[1] == stamp:
+            return
+    _fetch_wetrakr_calendar(week_start_str, stamp)
+
+
 def _fetch_lock(week_start_str):
     """Per-week lock so a background rolling-prefetch timer (see
     show_calendar_window.py) and a foreground navigation to the same week can't
@@ -234,6 +292,7 @@ def prefetch_schedule_week(week_start, stamp=None):
         if not _memo_fresh(week_start_str, stamp):
             _get_global_layer(week_start_str, week_end_str, stamp)
         _warm_my_calendar(week_start_str, stamp)  # 3.9.165: the week's Trakt "my calendar" answer too
+        _warm_wetrakr_calendar(week_start_str, stamp)  # 3.9.179: and WeTrakr's calendar rows of the week (no Trakt resolve off the main thread)
         return
     if TvScheduleDatabase().get_week(week_start_str) is not None:
         return
@@ -244,8 +303,9 @@ def get_schedule_week(week_start):
     """week_start: datetime.date, the Sunday starting the target week.
     Returns one chronologically-sorted list of normalized episode rows."""
     from resources.lib.modules.syncGateway import configured_providers
+    from resources.lib.modules import wetrakr_calendar
 
-    if not configured_providers():
+    if not configured_providers() and not wetrakr_calendar.active():  # 3.9.179: WeTrakr is not in configured_providers()
         return []
 
     week_start_str = week_start.strftime("%Y-%m-%d")
@@ -279,6 +339,7 @@ def get_schedule_week(week_start):
     result = [r for r in merged.values() if week_start_str <= (get_air_date(r) or "")[:10] <= week_end_str]
     for row in result:
         _annotate(row)
+    wetrakr_calendar.mark_watched(result)  # 3.9.180: after the memo (the rows are copies), so it follows WeTrakr's local copy at once
     result.sort(key=lambda r: (get_air_date(r) or "", (r.get("info") or {}).get("tvshowtitle") or ""))
     return result
 
@@ -477,7 +538,23 @@ def _get_watchlist_layer(week_start_str, week_end_str, stamp=None):
     layer = _get_union_layer(providers, stamp)
     extra_items = _pick_extra_shows_in_week(layer[5], covered_show_ids, shows_db, week_start_str, week_end_str)
     _annotate_union_ratings(extra_items, layer, providers)
-    return trakt_items + extra_items
+    wetrakr_items = _wetrakr_week_items(week_start_str, stamp, trakt_items + extra_items, shows_db, hidden_shows)
+    return trakt_items + extra_items + wetrakr_items
+
+
+def _wetrakr_week_items(week_start_str, stamp, taken_rows, shows_db, hidden_shows):
+    """The episodes of the week WeTrakr's own calendar lists for the followed shows (3.9.179) that the rows already taken do not carry (same
+    Trakt show, season and episode), minus the shows hidden from the calendar. Resolves shows through Trakt: main thread only."""
+    from resources.lib.modules import wetrakr_calendar
+
+    if not wetrakr_calendar.active():
+        return []
+    rows = _fetch_wetrakr_calendar(week_start_str, stamp)
+    if not rows:
+        return []
+    taken = {key for key in (wetrakr_calendar.episode_key(row) for row in taken_rows) if key is not None}
+    items = wetrakr_calendar.episode_items(rows, taken, shows_db)
+    return [i for i in items if (i.get("info") or {}).get("trakt_show_id") not in hidden_shows]
 
 
 def _annotate_union_ratings(extra_items, layer, providers):

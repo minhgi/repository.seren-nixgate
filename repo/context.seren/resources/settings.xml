@@ -63,6 +63,11 @@
                     <default>true</default>
                     <control type="toggle"/>
                 </setting>
+                <setting id="context.seren.wetrakrManager" type="boolean" label="30013" help="">
+                    <level>0</level>
+                    <default>true</default>
+                    <control type="toggle"/>
+                </setting>
             </group>
         </category>
     </section>

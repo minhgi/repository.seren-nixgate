@@ -79,7 +79,8 @@ def get_air_date(episode):
 
 def is_watched(episode):
     info = episode.get("info") or {}
-    return bool(episode.get("play_count") or info.get("playcount"))
+    # "_wetrakr_watched": WeTrakr holds it as watched (3.9.180, wetrakr_calendar.mark_watched); kept apart from play_count on purpose
+    return bool(episode.get("play_count") or info.get("playcount") or episode.get("_wetrakr_watched"))
 
 
 def rating_text(episode):

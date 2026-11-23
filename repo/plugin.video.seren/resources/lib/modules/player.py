@@ -2,6 +2,7 @@ import copy
 import importlib
 import json
 import sys
+import threading
 import time
 from functools import cached_property
 from urllib import parse
@@ -82,6 +83,15 @@ class SerenPlayer(xbmc.Player):
         self.simkl_scrobble_started = False
         self.last_attempted_simkl_stop = 0
         self.last_attempted_simkl_pause = 0
+        self.wetrakr_enabled = bool(g.get_setting("wetrakr.auth", "")) and g.get_bool_setting("wetrakr.enabled", True)
+        self.wetrakr_scrobbling_enabled = g.get_bool_setting("wetrakr.scrobbling", True)
+        self.wetrakr_playCountMinimumPercent = g.get_int_setting("wetrakr.playCountMinimumPercent", 75) or 75
+        self.wetrakr_scrobble_started = False  # a start went out (or could never go out, so the keep-alive loop stops asking)
+        self.wetrakr_paused = False
+        self.wetrakr_stopped = False
+        self.wetrakr_inert_reason = None  # why nothing is sent ('' = posts go out); decided once per playback
+        self.wetrakr_hold_since = None  # monotonic time of the first held start (see _wetrakr_start_ready)
+        self._wetrakr_lock = threading.RLock()  # orders start / pause / stop: a start must never land after a pause or stop
         self.simkl_anime_target = None  # (ids, episode inside the entry) / False; resolved on the first Simkl request
         self.simkl_anime_used = False  # the last Simkl request was the entry-based one and Simkl took it
         self.simkl_anime_failed = False  # Simkl answered 404 to the entry-based request: not tried again in this playback
@@ -141,6 +151,12 @@ class SerenPlayer(xbmc.Player):
         from resources.lib.indexers.simkl import SimklAPI
 
         return SimklAPI()
+
+    @cached_property
+    def _wetrakr_api(self):
+        from resources.lib.indexers.wetrakr import WeTrakrAPI
+
+        return WeTrakrAPI()
 
     @cached_property
     def bookmark_sync(self):
@@ -434,6 +450,7 @@ class SerenPlayer(xbmc.Player):
         self._trakt_start_watching(re_scrobble=True)
         self._mdblist_start_watching(re_scrobble=True)
         self._simkl_start_watching(re_scrobble=True)
+        self._wetrakr_start_watching(re_scrobble=True)
 
     def onPlayBackEnded(self):
         """
@@ -469,6 +486,7 @@ class SerenPlayer(xbmc.Player):
         self._trakt_stop_watching()
         self._mdblist_stop_watching()
         self._simkl_stop_watching()
+        self._wetrakr_pause()
 
     def onPlayBackError(self):
         """
@@ -513,6 +531,7 @@ class SerenPlayer(xbmc.Player):
         self._trakt_stop_watching()
         self._mdblist_stop_watching()
         self._simkl_stop_watching()
+        self._wetrakr_stop_watching()
         self._trakt_mark_playing_item_watched()
         from resources.lib.modules.bridgeTrigger import request_run
 
@@ -1209,6 +1228,169 @@ class SerenPlayer(xbmc.Player):
 
     # endregion
 
+    # region WeTrakr
+    def _build_wetrakr_object(self):
+        """The scrobble body for the playing item, or None (with the reason logged once) when the item has no TMDb id to send.
+        WeTrakr numbers episodes by TMDb, so there is no anime remap here."""
+        info = self.item_information["info"]
+        progress = round(min(max(self.watched_percentage, 0), 100), 2)
+        if self.mediatype == "movie":
+            tmdb_id = info.get("tmdb_id")
+            if tmdb_id:
+                return {"movie": {"ids": {"tmdb": int(tmdb_id)}}, "progress": progress}
+            reason = "the movie has no TMDb id"
+        elif self.mediatype == "episode":
+            tmdb_show_id = info.get("tmdb_show_id")
+            season = info.get("season")
+            episode = info.get("episode")
+            if tmdb_show_id and season is not None and episode is not None:
+                return {
+                    "show": {"ids": {"tmdb": int(tmdb_show_id)}},
+                    "episode": {"season": int(season), "number": int(episode)},
+                    "progress": progress,
+                }
+            reason = "the episode has no TMDb show id, season or episode number"
+        else:
+            reason = f"media type {self.mediatype} is not reported"
+        if not self.wetrakr_scrobble_started:  # once per playback
+            g.log(f"WeTrakr scrobble skipped: {reason}", "warning")
+        return None
+
+    def _wetrakr_inert(self):
+        """True when nothing is sent to WeTrakr for this playback (decided once): WeTrakr is off or not signed in, its scrobbling
+        setting is off, or the official script.wetrakr add-on already reports the same play."""
+        if self.wetrakr_inert_reason is None:
+            if not self.wetrakr_enabled:
+                self.wetrakr_inert_reason = "WeTrakr is switched off or not signed in"
+            elif not self.wetrakr_scrobbling_enabled:
+                self.wetrakr_inert_reason = "its scrobbling setting is off"
+            else:
+                from resources.lib.indexers.wetrakr import official_wetrakr_scrobbles
+
+                self.wetrakr_inert_reason = official_wetrakr_scrobbles()
+                if self.wetrakr_inert_reason:
+                    g.log(f"WeTrakr scrobble skipped: {self.wetrakr_inert_reason}", "info")
+        return bool(self.wetrakr_inert_reason)
+
+    def _wetrakr_start_ready(self):
+        """True once a playing time is measured. WeTrakr takes a start on a paused item as 'playing at this position', so a start sent
+        at 0 % before Seren has jumped to the saved resume point would overwrite the resume point WeTrakr holds. A start therefore
+        waits until the player has reached the resume point (or 30 s have passed since the first attempt)."""
+        if self.current_time <= 0:
+            return False
+        if self.offset and self.current_time < self.offset - 10:
+            if self.wetrakr_hold_since is None:
+                self.wetrakr_hold_since = time.monotonic()
+            return time.monotonic() - self.wetrakr_hold_since > 30
+        return True
+
+    def _wetrakr_post(self, action, payload):
+        """POST one scrobble (the caller holds the lock and has checked that WeTrakr is not inert). start and stop carry min_progress:
+        WeTrakr decides at the stop, at or above it the play is logged (201), below it a paused resume row is kept (200)."""
+        params = {"min_progress": self.wetrakr_playCountMinimumPercent} if action in ("start", "stop") else None
+        try:
+            response = self._wetrakr_api.scrobble(action, payload, params)
+        except Exception:
+            g.log_stacktrace()
+            return None
+        status = response.status_code if response is not None else "no answer"
+        g.log(f"WeTrakr scrobble/{action} at {payload['progress']}%: HTTP {status}", "info" if action == "stop" else "debug")
+        return response
+
+    def _wetrakr_start_watching(self, re_scrobble=False):
+        """Start (and resume after a pause). Never from a seek callback; a seek is picked up by the pause / stop that follows."""
+        try:
+            with self._wetrakr_lock:
+                if self.wetrakr_stopped or self._wetrakr_inert():
+                    return
+                if re_scrobble:
+                    self.wetrakr_paused = False
+                elif self.wetrakr_scrobble_started or self.wetrakr_paused:
+                    return
+                if not self._wetrakr_start_ready():
+                    return  # still owed: the keep-alive loop asks again
+                # Set before the post and even when there is nothing to send (or the build fails), so the keep-alive loop does not
+                # retry this every 0.5 s
+                payload = None
+                try:
+                    payload = self._build_wetrakr_object()
+                finally:
+                    self.wetrakr_scrobble_started = True
+                if payload is not None:
+                    self._wetrakr_post("start", payload)
+        except Exception:
+            self.wetrakr_scrobble_started = True
+            g.log_stacktrace()  # a WeTrakr problem must never reach Trakt's mark-watched, the bridge or the keep-alive loop
+
+    def _wetrakr_pause(self):
+        result = None
+        try:
+            with self._wetrakr_lock:
+                self.wetrakr_paused = True
+                if self.wetrakr_stopped or self._wetrakr_inert() or not self.wetrakr_scrobble_started or self.current_time <= 0:
+                    return
+                payload = self._build_wetrakr_object()
+                if payload is not None:
+                    result = (payload, self._wetrakr_post("pause", payload))
+        except Exception:
+            g.log_stacktrace()
+        if result:  # after the lock: a database retry must never hold up the ordering of start / pause / stop
+            self._wetrakr_write_locally("pause", *result)
+
+    def _wetrakr_stop_watching(self):
+        """The one stop of a playback (the player stopped or the video ended). Posted at any progress: WeTrakr logs the play as watched
+        at or above min_progress and keeps a resume row below it."""
+        result = None
+        try:
+            with self._wetrakr_lock:
+                if self.wetrakr_stopped or self._wetrakr_inert():
+                    return
+                self.wetrakr_stopped = True
+                if not self.wetrakr_scrobble_started or self.current_time <= 0:
+                    return  # nothing was played, or the start never went out
+                payload = self._build_wetrakr_object()
+                if payload is not None:
+                    result = (payload, self._wetrakr_post("stop", payload))
+        except Exception:
+            self.wetrakr_stopped = True
+            g.log_stacktrace()
+        if result:
+            self._wetrakr_write_locally("stop", *result)
+
+    def _wetrakr_write_locally(self, action, payload, response):
+        """What WeTrakr accepted, into Seren's local copy (database/wetrakr_sync) at once, so the next play and the WeTrakr menus see it
+        before the next periodic sync (which rewrites the tables from WeTrakr anyway). A stop answered 201 is a play WeTrakr logged
+        (watched, the resume point gone); a pause, or a stop answered 200, is a resume point at this percentage. Never raises."""
+        try:
+            if response is None or response.status_code not in (200, 201):
+                return
+            import datetime
+
+            info = self.item_information["info"]
+            progress = payload["progress"]
+            if self.mediatype == "movie":
+                media_type, tmdb_id, season, number = "movie", info.get("tmdb_id"), None, None
+            else:
+                media_type, tmdb_id, season, number = "episode", info.get("tmdb_show_id"), info.get("season"), info.get("episode")
+            if not tmdb_id:
+                return
+            from resources.lib.database.wetrakr_sync import WeTrakrSyncDatabase
+
+            db = WeTrakrSyncDatabase()
+            now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            if action == "stop" and response.status_code == 201:
+                if media_type == "movie":
+                    db.mark_movie_watched_locally(int(tmdb_id), now)
+                else:
+                    db.mark_episode_watched_locally(int(tmdb_id), season, number, now)
+                db.remove_bookmark(media_type, int(tmdb_id), season, number)
+            elif 0 < progress < 100:
+                db.set_bookmark(media_type, int(tmdb_id), season, number, progress, now)
+        except Exception:
+            g.log_stacktrace()
+
+    # endregion
+
     def _keep_alive(self):
         for _ in range(480):
             if self._is_file_playing() or self._playback_has_stopped() or g.wait_for_abort(0.25):
@@ -1234,6 +1416,9 @@ class SerenPlayer(xbmc.Player):
 
             if not self.simkl_scrobble_started:
                 self._simkl_start_watching()
+
+            if not self.wetrakr_scrobble_started:
+                self._wetrakr_start_watching()
 
             time_left = int(self.total_time) - int(self.current_time)
 

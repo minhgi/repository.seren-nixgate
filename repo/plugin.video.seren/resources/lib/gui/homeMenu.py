@@ -16,7 +16,7 @@ class Menus:
             description=g.get_language_string(30365),
             menu_item=g.create_icon_dict("shows", g.ICONS_PATH),
         )
-        if g.trakt_active() or g.mdblist_active() or g.simkl_active():
+        if g.trakt_active() or g.mdblist_active() or g.simkl_active() or g.wetrakr_active():
             g.add_directory_item(
                 g.get_language_string(30001),
                 action='myMovies',
@@ -115,7 +115,7 @@ class Menus:
             description='View Current Downloads',
             menu_item=g.create_icon_dict("download", g.ICONS_PATH),
         )
-        if g.trakt_active() or g.mdblist_active() or g.simkl_active():
+        if g.trakt_active() or g.mdblist_active() or g.simkl_active() or g.wetrakr_active():
             g.add_directory_item(
                 g.get_language_string(31122),
                 action='syncTools',

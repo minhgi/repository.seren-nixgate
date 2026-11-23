@@ -14,6 +14,12 @@ def configured_providers():
     return providers
 
 
+def _wetrakr_configured():
+    """WeTrakr has its own local copy (database/wetrakr_sync) but is NOT a bridge service: it never counts towards the two services the
+    cross-service sync needs, so it is kept out of configured_providers()"""
+    return bool(g.get_setting('wetrakr.auth')) and g.get_bool_setting('wetrakr.enabled', True)
+
+
 def clear_all_sync():
     """Clear-button gateway: resets each configured provider's sync cursor via its
     existing bare primitive, not clear_last_sync() - that already notifies per-provider,
@@ -39,6 +45,12 @@ def clear_all_sync():
 
         SimklSyncDatabase().set_base_activities()
         cleared.append("Simkl")
+
+    if _wetrakr_configured():
+        from resources.lib.database.wetrakr_sync import WeTrakrSyncDatabase
+
+        WeTrakrSyncDatabase().set_base_activities()
+        cleared.append("WeTrakr")
 
     if cleared:
         g.notification(g.ADDON_NAME, g.get_language_string(31127).format(", ".join(cleared)))
@@ -68,6 +80,11 @@ def force_all_sync():
 
         SimklSyncDatabase().force_sync()
 
+    if _wetrakr_configured():
+        from resources.lib.database.wetrakr_sync.activities import WeTrakrSyncDatabase
+
+        WeTrakrSyncDatabase().force_sync()
+
     if len(providers) >= 2:
         from resources.lib.modules.bridgeSync import run as run_bridge_sync
 
@@ -82,7 +99,7 @@ def rebuild_all_sync():
     silently and lets its own resync notification fire naturally, same reasoning as
     force_all_sync() above."""
     providers = configured_providers()
-    if not providers:
+    if not providers and not _wetrakr_configured():
         return
 
     if not xbmcgui.Dialog().yesno(g.ADDON_NAME, g.get_language_string(30179)):
@@ -102,6 +119,11 @@ def rebuild_all_sync():
         from resources.lib.database.simkl_sync import SimklSyncDatabase
 
         SimklSyncDatabase().re_build_database(silent=True)
+
+    if _wetrakr_configured():
+        from resources.lib.database.wetrakr_sync import WeTrakrSyncDatabase
+
+        WeTrakrSyncDatabase().re_build_database(silent=True)
 
     if len(providers) >= 2:
         from resources.lib.modules.bridgeSync import run as run_bridge_sync

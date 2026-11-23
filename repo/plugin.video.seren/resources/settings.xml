@@ -247,6 +247,30 @@
 						<heading/>
 					</control>
 				</setting>
+				<setting id="wetrakr.auth" type="string" help="">
+					<level>4</level>
+					<default/>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="edit" format="string">
+						<heading/>
+					</control>
+				</setting>
+				<setting id="wetrakr.refresh" type="string" help="">
+					<level>4</level>
+					<default/>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="edit" format="string">
+						<heading/>
+					</control>
+				</setting>
+				<setting id="wetrakr.expires" type="integer" help="">
+					<level>4</level>
+					<default>0</default>
+				</setting>
 				<setting id="mdblist.apikey" type="string" help="">
 					<level>4</level>
 					<default/>
@@ -1365,6 +1389,96 @@
 						<close>true</close>
 					</control>
 				</setting>
+				<setting id="wetrakr.enabled" type="boolean" label="31674" help="31675">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="wetrakr.status" type="string" label="31676" help="31677">
+					<level>0</level>
+					<default/>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<enable>false</enable>
+					<dependencies>
+						<dependency type="visible">
+							<condition operator="is" setting="wetrakr.enabled">true</condition>
+						</dependency>
+					</dependencies>
+					<control type="edit" format="string">
+						<heading>31676</heading>
+					</control>
+				</setting>
+				<setting id="wetrakr.authWeTrakr" type="action" label="31678" help="31679">
+					<level>0</level>
+					<data>RunPlugin(plugin://plugin.video.seren/?action=authWeTrakr)</data>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<dependencies>
+						<dependency type="visible">
+							<and>
+								<condition operator="is" setting="wetrakr.enabled">true</condition>
+								<condition operator="is" setting="wetrakr.status"/>
+							</and>
+						</dependency>
+					</dependencies>
+					<control type="button" format="action">
+						<close>true</close>
+					</control>
+				</setting>
+				<setting id="wetrakr.scrobbling" type="boolean" label="31680" help="31681">
+					<level>0</level>
+					<default>true</default>
+					<dependencies>
+						<dependency type="visible">
+							<and>
+								<condition operator="is" setting="wetrakr.enabled">true</condition>
+								<condition operator="!is" setting="wetrakr.status"/>
+							</and>
+						</dependency>
+					</dependencies>
+					<control type="toggle"/>
+				</setting>
+				<setting id="wetrakr.playCountMinimumPercent" type="integer" label="31682" help="31683" parent="wetrakr.scrobbling">
+					<level>0</level>
+					<default>75</default>
+					<constraints>
+						<minimum>60</minimum>
+						<maximum>95</maximum>
+					</constraints>
+					<dependencies>
+						<dependency type="visible">
+							<and>
+								<condition operator="is" setting="wetrakr.enabled">true</condition>
+								<condition operator="!is" setting="wetrakr.status"/>
+								<condition operator="is" setting="wetrakr.scrobbling">true</condition>
+							</and>
+						</dependency>
+					</dependencies>
+					<control type="slider" format="integer">
+						<popup>false</popup>
+					</control>
+				</setting>
+				<setting id="wetrakr.revokeWeTrakr" type="action" label="31684" help="31685">
+					<level>0</level>
+					<data>RunPlugin(plugin://plugin.video.seren/?action=revokeWeTrakr)</data>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<dependencies>
+						<dependency type="visible">
+							<and>
+								<condition operator="is" setting="wetrakr.enabled">true</condition>
+								<condition operator="!is" setting="wetrakr.status"/>
+							</and>
+						</dependency>
+					</dependencies>
+					<control type="button" format="action">
+						<close>true</close>
+					</control>
+				</setting>
 			</group>
 			<group id="5" label="31137">
 				<setting id="crosssync.enabled" type="boolean" label="31138" help="31313">
@@ -1461,6 +1575,26 @@
 						</options>
 					</constraints>
 					<dependencies>
+						<dependency type="visible">
+							<condition operator="is" setting="crosssync.enabled">true</condition>
+						</dependency>
+					</dependencies>
+					<control type="spinner" format="string"/>
+				</setting>
+				<setting id="crosssync.wetrakr" type="integer" label="31734" help="31735" parent="crosssync.enabled">
+					<level>0</level>
+					<default>1</default>
+					<constraints>
+						<options>
+							<option label="31618">0</option>
+							<option label="31619">1</option>
+							<option label="31627">2</option>
+						</options>
+					</constraints>
+					<dependencies>
+						<dependency type="enable">
+							<condition operator="is" setting="wetrakr.enabled">true</condition>
+						</dependency>
 						<dependency type="visible">
 							<condition operator="is" setting="crosssync.enabled">true</condition>
 						</dependency>
@@ -4944,6 +5078,16 @@
 					</constraints>
 					<control type="edit" format="string">
 						<heading>31083</heading>
+					</control>
+				</setting>
+				<setting id="wetrakr.clientid" type="string" label="31686" help="31687">
+					<level>3</level>
+					<default/>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="edit" format="string">
+						<heading>31686</heading>
 					</control>
 				</setting>
 				<setting id="mdblist.clientid" type="string" label="31164" help="31466">

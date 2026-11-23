@@ -44,6 +44,10 @@ def context(argv):
         from resources.lib.action.plugin import SimklManager
 
         SimklManager().execute()
+    elif arg == "wetrakrManager":
+        from resources.lib.action.plugin import WeTrakrManager
+
+        WeTrakrManager().execute()
     elif arg == "browseShow":
         from resources.lib.action.window import BrowseShow
 

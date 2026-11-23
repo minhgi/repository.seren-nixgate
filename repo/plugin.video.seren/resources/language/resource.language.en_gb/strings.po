@@ -4780,32 +4780,32 @@ msgid "Merge - In Progress Movies"
 msgstr "Merge - In Progress Movies"
 
 msgctxt "#30974"
-msgid "Movies in progress on Trakt, MDBList, or Simkl, deduplicated"
-msgstr "Movies in progress on Trakt, MDBList, or Simkl, deduplicated"
+msgid "Movies in progress on Trakt, MDBList, Simkl, or WeTrakr, deduplicated"
+msgstr "Movies in progress on Trakt, MDBList, Simkl, or WeTrakr, deduplicated"
 
 msgctxt "#30975"
 msgid "Merge - Recently Watched Movies"
 msgstr "Merge - Recently Watched Movies"
 
 msgctxt "#30976"
-msgid "Movies watched on Trakt, MDBList, or Simkl, deduplicated"
-msgstr "Movies watched on Trakt, MDBList, or Simkl, deduplicated"
+msgid "Movies watched on Trakt, MDBList, Simkl, or WeTrakr, deduplicated"
+msgstr "Movies watched on Trakt, MDBList, Simkl, or WeTrakr, deduplicated"
 
 msgctxt "#30977"
 msgid "Merge - In Progress Episodes"
 msgstr "Merge - In Progress Episodes"
 
 msgctxt "#30978"
-msgid "Episodes in progress on Trakt, MDBList, or Simkl, deduplicated"
-msgstr "Episodes in progress on Trakt, MDBList, or Simkl, deduplicated"
+msgid "Episodes in progress on Trakt, MDBList, Simkl, or WeTrakr, deduplicated"
+msgstr "Episodes in progress on Trakt, MDBList, Simkl, or WeTrakr, deduplicated"
 
 msgctxt "#30979"
 msgid "Merge - Recently Watched Shows"
 msgstr "Merge - Recently Watched Shows"
 
 msgctxt "#30980"
-msgid "Shows watched on Trakt, MDBList, or Simkl, deduplicated"
-msgstr "Shows watched on Trakt, MDBList, or Simkl, deduplicated"
+msgid "Shows watched on Trakt, MDBList, Simkl, or WeTrakr, deduplicated"
+msgstr "Shows watched on Trakt, MDBList, Simkl, or WeTrakr, deduplicated"
 
 msgctxt "#30981"
 msgid "Enable MDBList Scrobbling"
@@ -6800,8 +6800,8 @@ msgstr "No recent or upcoming episodes found"
 
 #: /resources/lib/gui/tvshowMenus.py
 msgctxt "#31475"
-msgid "Browse recently aired and upcoming episodes across Trakt, Simkl, and MDBList"
-msgstr "Browse recently aired and upcoming episodes across Trakt, Simkl, and MDBList"
+msgid "Browse recently aired and upcoming episodes across Trakt, Simkl, MDBList, and WeTrakr"
+msgstr "Browse recently aired and upcoming episodes across Trakt, Simkl, MDBList, and WeTrakr"
 
 #: /resources/lib/gui/tvshowMenus.py
 msgctxt "#31476"
@@ -6991,8 +6991,8 @@ msgid "Merge - In Progress TV Shows"
 msgstr "Merge - In Progress TV Shows"
 
 msgctxt "#31517"
-msgid "Shows with an episode in progress on Trakt, MDBList, or Simkl, deduplicated"
-msgstr "Shows with an episode in progress on Trakt, MDBList, or Simkl, deduplicated"
+msgid "Shows with an episode in progress on Trakt, MDBList, Simkl, or WeTrakr, deduplicated"
+msgstr "Shows with an episode in progress on Trakt, MDBList, Simkl, or WeTrakr, deduplicated"
 
 msgctxt "#31518"
 msgid "No movies found for this month"
@@ -7092,8 +7092,8 @@ msgid "No episodes"
 msgstr "No episodes"
 
 msgctxt "#31542"
-msgid "Browse every TV show airing on a given day across Trakt, Simkl, and MDBList, one day at a time, filtered by the region/language settings above. Your watchlisted and currently-watching shows always appear regardless of the filter."
-msgstr "Browse every TV show airing on a given day across Trakt, Simkl, and MDBList, one day at a time, filtered by the region/language settings above. Your watchlisted and currently-watching shows always appear regardless of the filter."
+msgid "Browse every TV show airing on a given day across Trakt, Simkl, MDBList, and WeTrakr, one day at a time, filtered by the region/language settings above. Your watchlisted and currently-watching shows always appear regardless of the filter."
+msgstr "Browse every TV show airing on a given day across Trakt, Simkl, MDBList, and WeTrakr, one day at a time, filtered by the region/language settings above. Your watchlisted and currently-watching shows always appear regardless of the filter."
 
 msgctxt "#31543"
 msgid "No shows matched your region and language filter on this day. Try clearing one in settings."
@@ -7661,3 +7661,348 @@ msgstr "Whole show (marked watched as a whole)"
 msgctxt "#31673"
 msgid "No options are available for this item"
 msgstr "No options are available for this item"
+
+#: /settings.xml
+msgctxt "#31674"
+msgid "Enable WeTrakr"
+msgstr "Enable WeTrakr"
+
+#: /settings.xml
+msgctxt "#31675"
+msgid "Turn the WeTrakr service on or off. While it is on and you are signed in, what you play in Seren is reported to your WeTrakr account (see Scrobble to WeTrakr)."
+msgstr "Turn the WeTrakr service on or off. While it is on and you are signed in, what you play in Seren is reported to your WeTrakr account (see Scrobble to WeTrakr)."
+
+#: /settings.xml
+msgctxt "#31676"
+msgid "WeTrakr account"
+msgstr "WeTrakr account"
+
+#: /settings.xml
+msgctxt "#31677"
+msgid "Shows that this add-on is signed in to WeTrakr, and since when. WeTrakr gives third-party apps no user name to show here."
+msgstr "Shows that this add-on is signed in to WeTrakr, and since when. WeTrakr gives third-party apps no user name to show here."
+
+#: /settings.xml
+msgctxt "#31678"
+msgid "Authorize WeTrakr"
+msgstr "Authorize WeTrakr"
+
+#: /settings.xml
+msgctxt "#31679"
+msgid "Sign in to WeTrakr. A window shows a QR code, the address (wetrakr.com/activate) and a code: scan the QR code with a phone, or open the address and type the code, then approve Seren on the WeTrakr page."
+msgstr "Sign in to WeTrakr. A window shows a QR code, the address (wetrakr.com/activate) and a code: scan the QR code with a phone, or open the address and type the code, then approve Seren on the WeTrakr page."
+
+#: /settings.xml
+msgctxt "#31680"
+msgid "Scrobble to WeTrakr"
+msgstr "Scrobble to WeTrakr"
+
+#: /settings.xml
+msgctxt "#31681"
+msgid "Report what you play in Seren to WeTrakr: when it starts, when it is paused and when it stops. WeTrakr logs the play as watched when you stopped past the minimum percentage below, and otherwise keeps the position as a resume point."
+msgstr "Report what you play in Seren to WeTrakr: when it starts, when it is paused and when it stops. WeTrakr logs the play as watched when you stopped past the minimum percentage below, and otherwise keeps the position as a resume point."
+
+#: /settings.xml
+msgctxt "#31682"
+msgid "Minimum scrobble percentage before WeTrakr logs the play."
+msgstr "Minimum scrobble percentage before WeTrakr logs the play."
+
+#: /settings.xml
+msgctxt "#31683"
+msgid "A play that stops at or after this percentage is logged on WeTrakr as watched; one that stops earlier only keeps its resume position."
+msgstr "A play that stops at or after this percentage is logged on WeTrakr as watched; one that stops earlier only keeps its resume position."
+
+#: /settings.xml
+msgctxt "#31684"
+msgid "Log out of WeTrakr"
+msgstr "Log out of WeTrakr"
+
+#: /settings.xml
+msgctxt "#31685"
+msgid "End this add-on's WeTrakr session and forget the login. Seren stops reporting to WeTrakr until you authorize again."
+msgstr "End this add-on's WeTrakr session and forget the login. Seren stops reporting to WeTrakr until you authorize again."
+
+#: /settings.xml
+msgctxt "#31686"
+msgid "WeTrakr app key (client ID)"
+msgstr "WeTrakr app key (client ID)"
+
+#: /settings.xml
+msgctxt "#31687"
+msgid "Optional, for expert users with their own WeTrakr developer app. Leave empty to use the key built into Seren. After changing or clearing it, authorize again: a login belongs to the key it was made with."
+msgstr "Optional, for expert users with their own WeTrakr developer app. Leave empty to use the key built into Seren. After changing or clearing it, authorize again: a login belongs to the key it was made with."
+
+#: /resources/lib/indexers/wetrakr.py
+msgctxt "#31688"
+msgid "Connecting to WeTrakr"
+msgstr "Connecting to WeTrakr"
+
+#: /resources/lib/indexers/wetrakr.py
+msgctxt "#31689"
+msgid "Successfully authorized with WeTrakr"
+msgstr "Successfully authorized with WeTrakr"
+
+#: /resources/lib/indexers/wetrakr.py
+msgctxt "#31690"
+msgid "WeTrakr successfully disconnected"
+msgstr "WeTrakr successfully disconnected"
+
+#: /resources/lib/indexers/wetrakr.py
+msgctxt "#31691"
+msgid "Unable to reach WeTrakr. Please try again later."
+msgstr "Unable to reach WeTrakr. Please try again later."
+
+#: /resources/lib/indexers/wetrakr.py
+msgctxt "#31692"
+msgid "The WeTrakr code is unknown, was already used or has expired. Please try again."
+msgstr "The WeTrakr code is unknown, was already used or has expired. Please try again."
+
+#: /resources/lib/indexers/wetrakr.py
+msgctxt "#31693"
+msgid "WeTrakr did not accept the app key (client ID)."
+msgstr "WeTrakr did not accept the app key (client ID)."
+
+#: /resources/lib/indexers/wetrakr.py
+msgctxt "#31694"
+msgid "WeTrakr sign-in expired - authorize again in the settings"
+msgstr "WeTrakr sign-in expired - authorize again in the settings"
+
+#: /resources/lib/indexers/wetrakr.py
+msgctxt "#31695"
+msgid "Authorized {}"
+msgstr "Authorized {}"
+
+#: /resources/lib/indexers/wetrakr.py
+msgctxt "#31696"
+msgid "Access was denied on the WeTrakr page."
+msgstr "Access was denied on the WeTrakr page."
+
+#: /resources/lib/indexers/wetrakr.py
+msgctxt "#31697"
+msgid "Too many sign-in codes were requested. Please wait 15 minutes and try again."
+msgstr "Too many sign-in codes were requested. Please wait 15 minutes and try again."
+
+#: /resources/lib/indexers/wetrakr.py
+msgctxt "#31698"
+msgid "Clear the key you entered in the settings to use the one built into Seren."
+msgstr "Clear the key you entered in the settings to use the one built into Seren."
+
+#: /resources/lib/gui/wetrakr_manager.py
+msgctxt "#31699"
+msgid "WeTrakr manager"
+msgstr "WeTrakr manager"
+
+#: /resources/lib/gui/wetrakr_manager.py
+msgctxt "#31700"
+msgid "Set as Watched (WeTrakr)"
+msgstr "Set as Watched (WeTrakr)"
+
+#: /resources/lib/gui/wetrakr_manager.py
+msgctxt "#31701"
+msgid "Set as Unwatched (WeTrakr)"
+msgstr "Set as Unwatched (WeTrakr)"
+
+#: /resources/lib/gui/wetrakr_manager.py
+msgctxt "#31702"
+msgid "Reset Resume Position (WeTrakr)"
+msgstr "Reset Resume Position (WeTrakr)"
+
+#: /resources/lib/gui/wetrakr_manager.py
+msgctxt "#31703"
+msgid "Rate (WeTrakr)"
+msgstr "Rate (WeTrakr)"
+
+#: /resources/lib/gui/wetrakr_manager.py
+msgctxt "#31704"
+msgid "WeTrakr: item set as watched"
+msgstr "WeTrakr: item set as watched"
+
+#: /resources/lib/gui/wetrakr_manager.py
+msgctxt "#31705"
+msgid "WeTrakr: item set as unwatched"
+msgstr "WeTrakr: item set as unwatched"
+
+#: /resources/lib/gui/wetrakr_manager.py
+msgctxt "#31706"
+msgid "WeTrakr: resume position reset"
+msgstr "WeTrakr: resume position reset"
+
+#: /resources/lib/gui/wetrakr_manager.py
+msgctxt "#31707"
+msgid "WeTrakr: rating saved"
+msgstr "WeTrakr: rating saved"
+
+#: /resources/lib/gui/wetrakr_manager.py
+msgctxt "#31708"
+msgid "WeTrakr: rating removed"
+msgstr "WeTrakr: rating removed"
+
+#: /resources/lib/gui/wetrakr_manager.py
+msgctxt "#31709"
+msgid "WeTrakr: already in that state"
+msgstr "WeTrakr: already in that state"
+
+#: /resources/lib/gui/wetrakr_manager.py
+msgctxt "#31710"
+msgid "WeTrakr: the change could not be made, please check the log"
+msgstr "WeTrakr: the change could not be made, please check the log"
+
+#: /resources/lib/gui/wetrakr_manager.py
+msgctxt "#31711"
+msgid "Rate 0-10 (0 removes the rating)"
+msgstr "Rate 0-10 (0 removes the rating)"
+
+#: /resources/lib/gui/wetrakrMenus.py
+msgctxt "#31712"
+msgid "WeTrakr - In Progress Movies"
+msgstr "WeTrakr - In Progress Movies"
+
+#: /resources/lib/gui/wetrakrMenus.py
+msgctxt "#31713"
+msgid "Movies with a saved resume point on WeTrakr"
+msgstr "Movies with a saved resume point on WeTrakr"
+
+#: /resources/lib/gui/wetrakrMenus.py
+msgctxt "#31714"
+msgid "WeTrakr - Plan to Watch Movies"
+msgstr "WeTrakr - Plan to Watch Movies"
+
+#: /resources/lib/gui/wetrakrMenus.py
+msgctxt "#31715"
+msgid "Movies on your WeTrakr Plan to Watch list"
+msgstr "Movies on your WeTrakr Plan to Watch list"
+
+#: /resources/lib/gui/wetrakrMenus.py
+msgctxt "#31716"
+msgid "WeTrakr - Dropped Movies"
+msgstr "WeTrakr - Dropped Movies"
+
+#: /resources/lib/gui/wetrakrMenus.py
+msgctxt "#31717"
+msgid "Movies marked Dropped on WeTrakr"
+msgstr "Movies marked Dropped on WeTrakr"
+
+#: /resources/lib/gui/wetrakrMenus.py
+msgctxt "#31718"
+msgid "WeTrakr - Recently Watched Movies"
+msgstr "WeTrakr - Recently Watched Movies"
+
+#: /resources/lib/gui/wetrakrMenus.py
+msgctxt "#31719"
+msgid "Movies you've watched on WeTrakr, newest first"
+msgstr "Movies you've watched on WeTrakr, newest first"
+
+#: /resources/lib/gui/wetrakrMenus.py
+msgctxt "#31720"
+msgid "WeTrakr - In Progress Episodes"
+msgstr "WeTrakr - In Progress Episodes"
+
+#: /resources/lib/gui/wetrakrMenus.py
+msgctxt "#31721"
+msgid "Episodes with a saved resume point on WeTrakr"
+msgstr "Episodes with a saved resume point on WeTrakr"
+
+#: /resources/lib/gui/wetrakrMenus.py
+msgctxt "#31722"
+msgid "WeTrakr - Next Up"
+msgstr "WeTrakr - Next Up"
+
+#: /resources/lib/gui/wetrakrMenus.py
+msgctxt "#31723"
+msgid "Next episode for each show you're watching on WeTrakr, most recently watched first"
+msgstr "Next episode for each show you're watching on WeTrakr, most recently watched first"
+
+#: /resources/lib/gui/wetrakrMenus.py
+msgctxt "#31724"
+msgid "WeTrakr - Watching Shows"
+msgstr "WeTrakr - Watching Shows"
+
+#: /resources/lib/gui/wetrakrMenus.py
+msgctxt "#31725"
+msgid "Shows on your WeTrakr Watching list"
+msgstr "Shows on your WeTrakr Watching list"
+
+#: /resources/lib/gui/wetrakrMenus.py
+msgctxt "#31726"
+msgid "WeTrakr - Plan to Watch Shows"
+msgstr "WeTrakr - Plan to Watch Shows"
+
+#: /resources/lib/gui/wetrakrMenus.py
+msgctxt "#31727"
+msgid "Shows on your WeTrakr Plan to Watch list"
+msgstr "Shows on your WeTrakr Plan to Watch list"
+
+#: /resources/lib/gui/wetrakrMenus.py
+msgctxt "#31728"
+msgid "WeTrakr - On Hold Shows"
+msgstr "WeTrakr - On Hold Shows"
+
+#: /resources/lib/gui/wetrakrMenus.py
+msgctxt "#31729"
+msgid "Shows on your WeTrakr On Hold list"
+msgstr "Shows on your WeTrakr On Hold list"
+
+#: /resources/lib/gui/wetrakrMenus.py
+msgctxt "#31730"
+msgid "WeTrakr - Dropped Shows"
+msgstr "WeTrakr - Dropped Shows"
+
+#: /resources/lib/gui/wetrakrMenus.py
+msgctxt "#31731"
+msgid "Shows marked Dropped on WeTrakr"
+msgstr "Shows marked Dropped on WeTrakr"
+
+#: /resources/lib/gui/wetrakrMenus.py
+msgctxt "#31732"
+msgid "WeTrakr - Recently Watched Shows"
+msgstr "WeTrakr - Recently Watched Shows"
+
+#: /resources/lib/gui/wetrakrMenus.py
+msgctxt "#31733"
+msgid "Shows you've watched episodes of on WeTrakr, newest first"
+msgstr "Shows you've watched episodes of on WeTrakr, newest first"
+
+#: /resources/settings.xml
+msgctxt "#31734"
+msgid "Watched marks to WeTrakr"
+msgstr "Watched marks to WeTrakr"
+
+#: /resources/settings.xml
+msgctxt "#31735"
+msgid "Copies the watched movies and episodes that Trakt, MDBList and Simkl hold to your WeTrakr account, one way only: nothing is read back from WeTrakr into the other services and nothing is removed from it, and a title you unwatch on WeTrakr is not sent again. Specials (season 0) are left out. Up to 100 movies and 300 episodes are sent per run, so a large library takes several runs. Log only writes what would be sent to the Kodi log and sends nothing. Needs Cross-Service Sync on and a WeTrakr sign-in."
+msgstr "Copies the watched movies and episodes that Trakt, MDBList and Simkl hold to your WeTrakr account, one way only: nothing is read back from WeTrakr into the other services and nothing is removed from it, and a title you unwatch on WeTrakr is not sent again. Specials (season 0) are left out. Up to 100 movies and 300 episodes are sent per run, so a large library takes several runs. Log only writes what would be sent to the Kodi log and sends nothing. Needs Cross-Service Sync on and a WeTrakr sign-in."
+
+#: /resources/lib/gui/wetrakr_manager.py
+msgctxt "#31736"
+msgid "Change rating (WeTrakr: {})"
+msgstr "Change rating (WeTrakr: {})"
+
+#: /resources/lib/gui/wetrakrMenus.py
+msgctxt "#31737"
+msgid "WeTrakr - Recent Episodes"
+msgstr "WeTrakr - Recent Episodes"
+
+#: /resources/lib/gui/wetrakrMenus.py
+msgctxt "#31738"
+msgid "Episodes that aired in the last 14 days from the shows you follow on WeTrakr"
+msgstr "Episodes that aired in the last 14 days from the shows you follow on WeTrakr"
+
+#: /resources/lib/gui/wetrakrMenus.py
+msgctxt "#31739"
+msgid "WeTrakr - Upcoming Episodes"
+msgstr "WeTrakr - Upcoming Episodes"
+
+#: /resources/lib/gui/wetrakrMenus.py
+msgctxt "#31740"
+msgid "Episodes airing in the next 30 days from the shows you follow on WeTrakr"
+msgstr "Episodes airing in the next 30 days from the shows you follow on WeTrakr"
+
+#: /resources/lib/gui/wetrakrMenus.py
+msgctxt "#31741"
+msgid "WeTrakr - Watched Episodes"
+msgstr "WeTrakr - Watched Episodes"
+
+#: /resources/lib/gui/wetrakrMenus.py
+msgctxt "#31742"
+msgid "Every TV episode you have watched on WeTrakr, newest first"
+msgstr "Every TV episode you have watched on WeTrakr, newest first"

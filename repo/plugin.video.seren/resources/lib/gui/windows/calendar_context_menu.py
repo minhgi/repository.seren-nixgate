@@ -1,7 +1,7 @@
-"""The Trakt / MDBList / Simkl manager on the calendar windows (Context Menu key on a row or tile).
+"""The Trakt / MDBList / Simkl / WeTrakr manager on the calendar windows (Context Menu key on a row or tile).
 
 The same manager the item's Context Menu opens in a list (gui/trakt_context_menu.py), run on top of the open calendar window.
-Which of the three are offered follows the manager's own gates, so a scope that would open an empty menu is not listed.
+Which of the four are offered follows the manager's own gates, so a scope that would open an empty menu is not listed.
 """
 
 import json
@@ -14,7 +14,7 @@ ACTION_CONTEXT_MENU = 117
 
 STR_NO_OPTIONS = 31673
 
-_SCOPE_HEADER_STRINGS = (("trakt", 30286), ("mdblist", 30961), ("simkl", 31085))
+_SCOPE_HEADER_STRINGS = (("trakt", 30286), ("mdblist", 30961), ("simkl", 31085), ("wetrakr", 31699))
 
 
 def available_scopes():
@@ -26,6 +26,8 @@ def available_scopes():
         scopes.append("mdblist")
     if g.get_setting("simkl.auth") and g.get_bool_setting("simkl.enabled"):
         scopes.append("simkl")
+    if g.wetrakr_active():
+        scopes.append("wetrakr")
     return scopes
 
 

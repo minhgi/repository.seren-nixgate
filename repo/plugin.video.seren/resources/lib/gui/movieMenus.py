@@ -204,7 +204,8 @@ class Menus:
         trakt_active = g.trakt_active()
         mdblist_active = g.mdblist_active()
         simkl_active = g.simkl_active()
-        if (trakt_active or mdblist_active or simkl_active) and g.get_bool_setting('moviecalendar.enabled', False):
+        wetrakr_active = g.wetrakr_active()
+        if (trakt_active or mdblist_active or simkl_active or wetrakr_active) and g.get_bool_setting('moviecalendar.enabled', False):
             g.add_directory_item(
                 g.get_language_string(31510),
                 action="movieCalendarBrowse",
@@ -212,7 +213,7 @@ class Menus:
                 menu_item=g.create_icon_dict("movies_recent", g.ICONS_PATH),
                 is_folder=False,
             )
-        if sum((trakt_active, mdblist_active, simkl_active)) >= 2 and g.get_bool_setting('mergemovies.enabled', False):
+        if sum((trakt_active, mdblist_active, simkl_active, wetrakr_active)) >= 2 and g.get_bool_setting('mergemovies.enabled', False):
             g.add_directory_item(
                 g.get_language_string(30973),
                 action="mergeInProgressMovies",
@@ -351,6 +352,31 @@ class Menus:
                 g.get_language_string(31105),
                 action="simklRecentMovies",
                 description=g.get_language_string(31106),
+                menu_item=g.create_icon_dict("movies_watched", g.ICONS_PATH),
+            )
+        if g.wetrakr_active():
+            g.add_directory_item(
+                g.get_language_string(31712),
+                action="wetrakrInProgressMovies",
+                description=g.get_language_string(31713),
+                menu_item=g.create_icon_dict("movies_progress", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31714),
+                action="wetrakrPlanToWatchMovies",
+                description=g.get_language_string(31715),
+                menu_item=g.create_icon_dict("movies_watched", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31716),
+                action="wetrakrDroppedMovies",
+                description=g.get_language_string(31717),
+                menu_item=g.create_icon_dict("movies_watched", g.ICONS_PATH),
+            )
+            g.add_directory_item(
+                g.get_language_string(31718),
+                action="wetrakrRecentMovies",
+                description=g.get_language_string(31719),
                 menu_item=g.create_icon_dict("movies_watched", g.ICONS_PATH),
             )
         g.close_directory(g.CONTENT_MENU)

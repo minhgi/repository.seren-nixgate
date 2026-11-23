@@ -69,3 +69,7 @@ msgstr "MDBList Manager"
 msgctxt "#30012"
 msgid "Simkl Manager"
 msgstr "Simkl Manager"
+
+msgctxt "#30013"
+msgid "WeTrakr Manager"
+msgstr "WeTrakr Manager"

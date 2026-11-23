@@ -159,6 +159,9 @@ _ROUTE_TABLE = {
     # --- Simkl sync ---
     "syncSimklActivities": _call("resources.lib.database.simkl_sync.activities", "SimklSyncDatabase", "sync_activities"),
 
+    # --- WeTrakr sync ---
+    "syncWeTrakrActivities": _call("resources.lib.database.wetrakr_sync.activities", "WeTrakrSyncDatabase", "sync_activities"),
+
     # --- Combined sync gateway (fans out to whichever of Trakt/MDBList/Simkl are configured) ---
     "clearAllSync": _func("resources.lib.modules.syncGateway", "clear_all_sync"),
     "forceAllSync": _func("resources.lib.modules.syncGateway", "force_all_sync"),
@@ -214,6 +217,22 @@ _ROUTE_TABLE = {
     "simklHoldShows":            _menu("resources.lib.gui.simklMenus", "hold_shows"),
     "simklCompletedShows":       _menu("resources.lib.gui.simklMenus", "completed_shows"),
     "simklDroppedShows":         _menu("resources.lib.gui.simklMenus", "dropped_shows"),
+
+    # --- WeTrakr menus ---
+    "wetrakrRecentMovies":       _menu("resources.lib.gui.wetrakrMenus", "recent_movies"),
+    "wetrakrRecentShows":        _menu("resources.lib.gui.wetrakrMenus", "recent_shows"),
+    "wetrakrInProgressMovies":   _menu("resources.lib.gui.wetrakrMenus", "in_progress_movies"),
+    "wetrakrInProgressEpisodes": _menu("resources.lib.gui.wetrakrMenus", "in_progress_episodes"),
+    "wetrakrNextUp":             _menu("resources.lib.gui.wetrakrMenus", "next_up"),
+    "wetrakrPlanToWatchMovies":  _menu("resources.lib.gui.wetrakrMenus", "plan_to_watch_movies"),
+    "wetrakrDroppedMovies":      _menu("resources.lib.gui.wetrakrMenus", "dropped_movies"),
+    "wetrakrWatchingShows":      _menu("resources.lib.gui.wetrakrMenus", "watching_shows"),
+    "wetrakrPlanToWatchShows":   _menu("resources.lib.gui.wetrakrMenus", "plan_to_watch_shows"),
+    "wetrakrHoldShows":          _menu("resources.lib.gui.wetrakrMenus", "hold_shows"),
+    "wetrakrDroppedShows":       _menu("resources.lib.gui.wetrakrMenus", "dropped_shows"),
+    "wetrakrRecentEpisodes":     _menu("resources.lib.gui.wetrakrMenus", "recent_episodes"),
+    "wetrakrUpcomingEpisodes":   _menu("resources.lib.gui.wetrakrMenus", "upcoming_episodes"),
+    "wetrakrWatchedEpisodes":    _menu("resources.lib.gui.wetrakrMenus", "watched_episodes"),
 
     # --- Merge menus ---
     "mergeWatchedMovies":       _menu("resources.lib.gui.mergeMenus", "watched_movies"),
@@ -451,6 +470,18 @@ def dispatch(params):
 
         simkl.SimklAPI().account_info_to_dialog()
         g.open_addon_settings(3, 29)
+
+    elif action == "authWeTrakr":
+        from resources.lib.indexers import wetrakr
+
+        wetrakr.WeTrakrAPI().auth()
+        g.open_addon_settings(3, 33)
+
+    elif action == "revokeWeTrakr":
+        from resources.lib.indexers import wetrakr
+
+        wetrakr.WeTrakrAPI().revoke_auth()
+        g.open_addon_settings(3, 33)
 
     elif action == "getSources":
         from resources.lib.modules.smartPlay import SmartPlay
@@ -1051,6 +1082,12 @@ def dispatch(params):
         from resources.lib.common import tools
 
         TraktContextMenu(tools.get_item_information(action_args), "simkl")
+
+    elif action == "wetrakrManager":
+        from resources.lib.gui.trakt_context_menu import TraktContextMenu
+        from resources.lib.common import tools
+
+        TraktContextMenu(tools.get_item_information(action_args), "wetrakr")
 
     elif action == "onDeckShows":
         from resources.lib.gui import tvshowMenus

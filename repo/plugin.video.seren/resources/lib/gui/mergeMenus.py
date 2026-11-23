@@ -6,13 +6,15 @@ from resources.lib.modules.globals import g
 
 
 class Menus:
-    """Merged Trakt + MDBList + Simkl menus (Merge - In-Progress, Merge - Watched).
+    """Merged Trakt + MDBList + Simkl + WeTrakr menus (Merge - In-Progress, Merge - Watched).
 
     The Merge menu entries themselves are shown whenever at least 2 of
-    {Trakt, MDBList, Simkl} are active (movieMenus.py/tvshowMenus.py
+    {Trakt, MDBList, Simkl, WeTrakr} are active (movieMenus.py/tvshowMenus.py
     my_movies/my_shows), so any pairing - not just Trakt+MDBList - can reach
-    the functions below. Each source's fetch here is correspondingly guarded
-    by its own _trakt_active()/_mdblist_active()/_simkl_active() check (same
+    the functions below. WeTrakr (3.9.179) is folded in last, so a tie on the
+    time stamp keeps the source that was folded in first. Each source's fetch
+    here is correspondingly guarded
+    by its own _trakt_active()/_mdblist_active()/_simkl_active()/_wetrakr_active() check (same
     gate used everywhere else in this addon - homeMenu.py, movieMenus.py,
     tvshowMenus.py, player.py, syncGateway.py) so a user who disabled one
     service after syncing it once doesn't get its stale local rows folded in
@@ -60,6 +62,12 @@ class Menus:
         return SimklMenus()
 
     @cached_property
+    def wetrakr_menus(self):
+        from resources.lib.gui.wetrakrMenus import Menus as WeTrakrMenus
+
+        return WeTrakrMenus()
+
+    @cached_property
     def hidden_database(self):
         from resources.lib.database.trakt_sync.hidden import TraktSyncDatabase as HiddenDatabase
 
@@ -82,6 +90,10 @@ class Menus:
     @staticmethod
     def _simkl_active():
         return g.simkl_active()
+
+    @staticmethod
+    def _wetrakr_active():
+        return g.wetrakr_active()
 
     @staticmethod
     def _merge_by_key(trakt_rows, trakt_key_fn, trakt_ts_fn, *other_sources):
@@ -132,6 +144,15 @@ class Menus:
                 simkl_ts_by_tmdb,
             ))
 
+        if self._wetrakr_active():
+            wetrakr_rows = self.wetrakr_menus.wetrakr_database.get_recent_movies(self.page_limit, force_all=True)
+            wetrakr_ts_by_tmdb = {row["tmdb_id"]: row["last_watched_at"] for row in wetrakr_rows}
+            sources.append((
+                self.wetrakr_menus._resolve([row["tmdb_id"] for row in wetrakr_rows], "movie"),
+                lambda obj: obj.get("tmdb_id"),
+                wetrakr_ts_by_tmdb,
+            ))
+
         trakt_list = self._merge_by_key(
             trakt_rows,
             lambda r: r.get("tmdb_id"),
@@ -163,6 +184,15 @@ class Menus:
                 self.simkl_menus._resolve([row["tmdb_id"] for row in simkl_rows], "show"),
                 lambda obj: obj.get("tmdb_id"),
                 simkl_ts_by_tmdb,
+            ))
+
+        if self._wetrakr_active():
+            wetrakr_rows = self.wetrakr_menus.wetrakr_database.get_recent_shows(self.page_limit, force_all=True)
+            wetrakr_ts_by_tmdb = {row["tmdb_id"]: row["last_watched_at"] for row in wetrakr_rows}
+            sources.append((
+                self.wetrakr_menus._resolve([row["tmdb_id"] for row in wetrakr_rows], "show"),
+                lambda obj: obj.get("tmdb_id"),
+                wetrakr_ts_by_tmdb,
             ))
 
         trakt_list = self._merge_by_key(
@@ -198,6 +228,15 @@ class Menus:
                 simkl_ts_by_tmdb,
             ))
 
+        if self._wetrakr_active():
+            wetrakr_rows = self.wetrakr_menus.wetrakr_database.get_bookmarks("movie")
+            wetrakr_ts_by_tmdb = {row["tmdb_id"]: row.get("paused_at") for row in wetrakr_rows}
+            sources.append((
+                self.wetrakr_menus._resolve([row["tmdb_id"] for row in wetrakr_rows], "movie"),
+                lambda obj: obj.get("tmdb_id"),
+                wetrakr_ts_by_tmdb,
+            ))
+
         trakt_list = self._merge_by_key(
             trakt_rows,
             lambda r: r.get("tmdb_id"),
@@ -216,7 +255,7 @@ class Menus:
         recent paused_at, discarding the others entirely (not just deduping
         identical episodes - genuinely different episodes of the same show
         collapse too, per user's confirmed decision). Ties keep whichever source
-        was folded in first (Trakt, then MDBList, then Simkl - existing[0] >= ts).
+        was folded in first (Trakt, then MDBList, then Simkl, then WeTrakr - existing[0] >= ts).
         Shows hidden from progress (Trakt's own on_deck_shows filter) are excluded
         from every source here too. Each source is folded in only when its own
         _trakt_active()/_mdblist_active()/_simkl_active() check passes - see class
@@ -261,6 +300,24 @@ class Menus:
             simkl_rows = self.simkl_menus.simkl_database.get_bookmarks("episode")
             resolved = self._resolve_shows_by_tmdb_id(simkl_rows, self.simkl_menus.trakt_api)
             for row, trakt_show in zip(simkl_rows, resolved):
+                if not trakt_show or not trakt_show.get("trakt_id"):
+                    continue
+                show_id = trakt_show["trakt_id"]
+                if show_id in hidden_shows:
+                    continue
+                ts = row.get("paused_at") or ""
+                existing = merged.get(show_id)
+                if existing is not None and existing[0] >= ts:
+                    continue
+                episode = shows_db.get_episode_action_args(show_id, row["season"], row["number"])
+                if not episode:
+                    continue
+                merged[show_id] = (ts, episode)
+
+        if self._wetrakr_active():
+            wetrakr_rows = self.wetrakr_menus.wetrakr_database.get_bookmarks("episode")
+            resolved = self._resolve_shows_by_tmdb_id(wetrakr_rows, self.wetrakr_menus.trakt_api)
+            for row, trakt_show in zip(wetrakr_rows, resolved):
                 if not trakt_show or not trakt_show.get("trakt_id"):
                     continue
                 show_id = trakt_show["trakt_id"]

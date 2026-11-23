@@ -100,13 +100,16 @@ def fetch_my_calendar_days(trakt_api, first_day, days):
 
 def get_calendar_episodes():
     """Returns one chronologically-sorted list of normalized episode rows
-    spanning recent (14 days back, 3.9.162; was 13) through upcoming (30 days forward)."""
+    spanning recent (14 days back, 3.9.162; was 13) through upcoming (30 days forward). 3.9.179: plus the episodes of WeTrakr's own
+    calendar of the followed shows (_wetrakr_episodes()), which is a source of its own next to Trakt's calendar."""
     from resources.lib.modules.syncGateway import configured_providers
     from resources.lib.database.trakt_sync.shows import TraktSyncDatabase as ShowsDatabase
     from resources.lib.indexers.trakt import TraktAPI
 
+    from resources.lib.modules import wetrakr_calendar
+
     providers = configured_providers()
-    if not providers:
+    if not providers and not wetrakr_calendar.active():  # 3.9.179: WeTrakr is not in configured_providers() (the bridge counts that list)
         # Matches movie_calendar_data.py's/tv_schedule_data.py's own guard -
         # this module never had one (nothing to gate before now: with every
         # branch below already conditional on a specific provider, zero
@@ -162,9 +165,29 @@ def get_calendar_episodes():
     extra_items = _resolve_extra_shows(capped_ids, covered_show_ids, shows_db)
     _annotate_union_ratings(extra_items, capped_ids, simkl_id_by_tmdb, providers)
 
-    merged = trakt_items + extra_items
+    wetrakr_items = _wetrakr_episodes(recent_start, tomorrow + datetime.timedelta(days=29), trakt_items + extra_items, shows_db)
+
+    merged = trakt_items + extra_items + wetrakr_items
+    wetrakr_calendar.mark_watched(merged, shows_db)  # 3.9.180: what only WeTrakr holds as watched gets its tick too
     merged.sort(key=lambda i: get_air_date(i) or "")
     return merged
+
+
+def _wetrakr_episodes(first_day, last_day, taken_rows, shows_db):
+    """The episodes WeTrakr's own calendar lists for the shows the account follows (3.9.179, modules/wetrakr_calendar.py) that the rows
+    already taken do not carry (same Trakt show, season and episode), minus the shows hidden from the calendar. Nothing without a WeTrakr
+    login; a failed read adds nothing."""
+    from resources.lib.modules import wetrakr_calendar
+
+    if not wetrakr_calendar.active():
+        return []
+
+    from resources.lib.database.trakt_sync.hidden import TraktSyncDatabase as HiddenDatabase
+
+    taken = {key for key in (wetrakr_calendar.episode_key(row) for row in taken_rows) if key is not None}
+    items = wetrakr_calendar.episode_items(wetrakr_calendar.following_episodes(first_day, last_day), taken, shows_db)
+    hidden_shows = HiddenDatabase().get_hidden_items("calendar", "tvshow")
+    return [i for i in items if (i.get("info") or {}).get("trakt_show_id") not in hidden_shows]
 
 
 def _annotate_union_ratings(extra_items, capped_ids, simkl_id_by_tmdb, providers):

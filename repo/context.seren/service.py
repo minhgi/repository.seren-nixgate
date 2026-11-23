@@ -23,6 +23,7 @@ service_aware_properties = {
     "context.seren.traktManager": "trakt.auth",
     "context.seren.mdblistManager": "mdblist.enabled",
     "context.seren.simklManager": "simkl.auth",
+    "context.seren.wetrakrManager": "wetrakr.auth",
 }
 
 
@@ -52,6 +53,8 @@ class PropertiesUpdater(xbmc.Monitor):
             return seren.getSetting("mdblist.enabled") == "true" and bool(seren.getSetting("mdblist.apikey"))
         if seren_setting == "simkl.auth":
             return bool(seren.getSetting("simkl.auth")) and seren.getSetting("simkl.enabled") != "false"
+        if seren_setting == "wetrakr.auth":
+            return bool(seren.getSetting("wetrakr.auth")) and seren.getSetting("wetrakr.enabled") != "false"
         return False
 
     def _update_window_properties(self, force=False):

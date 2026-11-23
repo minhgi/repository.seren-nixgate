@@ -124,6 +124,9 @@ try:
             xbmc.executebuiltin('RunPlugin("plugin://plugin.video.seren/?action=syncMDBListActivities")')
         if not g.wait_for_abort(15):  # interpreters are never created all at once (deadlock risk under RLI)
             xbmc.executebuiltin('RunPlugin("plugin://plugin.video.seren/?action=syncSimklActivities")')
+        if g.wetrakr_active():  # WeTrakr's sync on its own tick too, only when signed in and enabled: no extra wait or interpreter for anyone else
+            if not g.wait_for_abort(15):
+                xbmc.executebuiltin('RunPlugin("plugin://plugin.video.seren/?action=syncWeTrakrActivities")')
         if not g.wait_for_abort(15):  # Sleep to let the provider syncs above actually complete first
             xbmc.executebuiltin('RunPlugin("plugin://plugin.video.seren/?action=bridgeSync")')
         if not g.wait_for_abort(30):  # Sleep to make sure we don't possibly clobber settings (the timezone check writes one)

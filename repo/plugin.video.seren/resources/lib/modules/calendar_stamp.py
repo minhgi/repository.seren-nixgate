@@ -17,6 +17,8 @@ from resources.lib.modules.globals import g
 _TRAKT = "SELECT all_activities, shows_watched, hidden_sync FROM activities WHERE sync_id=1"
 _MDBLIST = "SELECT watched_at, episode_watched_at FROM activities WHERE sync_id=1"
 _SIMKL = "SELECT tv_shows_completed_at, tv_shows_watching_at FROM activities WHERE sync_id=1"
+# 3.9.180: watched_at only (written after the marks on both sync paths, moves only when WeTrakr's watched stamp moved); journal_at moves on every sync
+_WETRAKR = "SELECT watched_at FROM activities WHERE sync_id=1"
 
 
 def _values(row):
@@ -44,6 +46,10 @@ def sync_stamp():
             from resources.lib.database.simkl_sync import SimklSyncDatabase
 
             stamp.append(_values(SimklSyncDatabase().fetchone(_SIMKL)))
+        if g.wetrakr_active():  # not in configured_providers(); the database only for a signed-in WeTrakr
+            from resources.lib.database.wetrakr_sync import WeTrakrSyncDatabase
+
+            stamp.append(_values(WeTrakrSyncDatabase().fetchone(_WETRAKR)))
         return tuple(stamp)
     except Exception as exc:  # pylint: disable=broad-except
         g.log(f"calendar_stamp: the sync activities could not be read: {exc}", "debug")

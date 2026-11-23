@@ -211,7 +211,11 @@ class ShowCalendarWindow(BaseWindow):
         else:
             episodes = db.get_episode_list(show_id, hide_unaired=False, hide_watched=True)
             episodes = [e for e in episodes or [] if (e.get("info") or {}).get("season") == show_row.get("season")]
-        return [e for e in episodes or [] if e and ((e.get("info") or {}).get("season") or 0) > 0 and not view.is_watched(e)]
+        from resources.lib.modules import wetrakr_calendar
+
+        episodes = [e for e in episodes or [] if e]
+        wetrakr_calendar.mark_watched(episodes, db)  # 3.9.180: an episode only WeTrakr holds as watched is not unwatched either
+        return [e for e in episodes if ((e.get("info") or {}).get("season") or 0) > 0 and not view.is_watched(e)]
 
     # endregion
 

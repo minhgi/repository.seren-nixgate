@@ -19,7 +19,7 @@ class TraktContextMenu:
 
         self._confirm_item_information(item_information)
 
-        _scope_header_strings = {"trakt": 30286, "mdblist": 30961, "simkl": 31085}
+        _scope_header_strings = {"trakt": 30286, "mdblist": 30961, "simkl": 31085, "wetrakr": 31699}
         self.header_text = g.get_language_string(_scope_header_strings.get(scope, 30961))
 
         self.dialog_list = []
@@ -333,6 +333,42 @@ class TraktContextMenu:
                     self.dialog_list.append(g.get_language_string(31091))
                     options[g.get_language_string(31091)] = {
                         "method": self._simkl_remove_playback_history,
+                        "info_key": "info",
+                    }
+
+        if scope == "wetrakr" and g.wetrakr_active():
+            # Local data only (no request): Set as watched / unwatched gated on WeTrakr's own copy (wetrakr_manager.watched_gate), Rate always
+            # (a rating changes nothing else on the account), Reset Resume Position only while the copy holds a resume point. Placed like
+            # MDBList's and Simkl's: the watched toggle, then Rate, Clear Progress last. WeTrakr is not a bridge service: no cross_sync.
+            from resources.lib.database.wetrakr_sync import WeTrakrSyncDatabase
+            from resources.lib.gui import wetrakr_manager
+
+            wetrakr_target = wetrakr_manager.target_of(item_information["info"])
+            if wetrakr_target is not None:
+                manager = wetrakr_manager.WeTrakrManager(self.header_text)
+                wetrakr_db = WeTrakrSyncDatabase()
+                offer_watched, offer_unwatched = wetrakr_manager.watched_gate(
+                    wetrakr_db, wetrakr_target, item_information.get("episode_count") or 0
+                )
+                if offer_watched:
+                    self.dialog_list.append(g.get_language_string(wetrakr_manager.STR_SET_WATCHED))
+                    options[g.get_language_string(wetrakr_manager.STR_SET_WATCHED)] = {
+                        "method": manager.mark_watched,
+                        "info_key": "info",
+                    }
+                if offer_unwatched:
+                    self.dialog_list.append(g.get_language_string(wetrakr_manager.STR_SET_UNWATCHED))
+                    options[g.get_language_string(wetrakr_manager.STR_SET_UNWATCHED)] = {
+                        "method": manager.mark_unwatched,
+                        "info_key": "info",
+                    }
+                rate_text = wetrakr_manager.rate_label(wetrakr_db, wetrakr_target)  # 'Change rating (WeTrakr: X)' from the local copy while rated
+                self.dialog_list.append(rate_text)
+                options[rate_text] = {"method": manager.rate, "info_key": "info"}
+                if wetrakr_manager.has_resume_point(wetrakr_db, wetrakr_target):
+                    self.dialog_list.append(g.get_language_string(wetrakr_manager.STR_RESET_RESUME))
+                    options[g.get_language_string(wetrakr_manager.STR_RESET_RESUME)] = {
+                        "method": manager.reset_resume_point,
                         "info_key": "info",
                     }
 

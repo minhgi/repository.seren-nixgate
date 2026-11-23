@@ -58,6 +58,16 @@ class SimklManager(ContextPluginAction):
         self.action_path = f"plugin://{SEREN_ADDON_ID}/?{urlencode(args, quote_via=quote)}"
 
 
+class WeTrakrManager(ContextPluginAction):
+    @property
+    def action(self):
+        return "wetrakrManager"
+
+    def handle_path(self):
+        args = {"action": self.action, "action_args": url_quoted_action_args(self.action_args)}
+        self.action_path = f"plugin://{SEREN_ADDON_ID}/?{urlencode(args, quote_via=quote)}"
+
+
 class ShufflePlay(ContextPluginAction):
     @property
     def action(self):

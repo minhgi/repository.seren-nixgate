@@ -607,6 +607,7 @@ class GlobalVariables:
             "TRAKT_SYNC_DB_PATH": self.TRAKT_SYNC_DB_PATH,
             "MDBLIST_SYNC_DB_PATH": self.MDBLIST_SYNC_DB_PATH,
             "SIMKL_SYNC_DB_PATH": self.SIMKL_SYNC_DB_PATH,
+            "WETRAKR_SYNC_DB_PATH": self.WETRAKR_SYNC_DB_PATH,
             "BRIDGE_SYNC_DB_PATH": self.BRIDGE_SYNC_DB_PATH,
             "SEARCH_HISTORY_DB_PATH": self.SEARCH_HISTORY_DB_PATH,
             "SKINS_DB_PATH": self.SKINS_DB_PATH,
@@ -691,6 +692,7 @@ class GlobalVariables:
             self.TRAKT_SYNC_DB_PATH = state["TRAKT_SYNC_DB_PATH"]
             self.MDBLIST_SYNC_DB_PATH = state["MDBLIST_SYNC_DB_PATH"]
             self.SIMKL_SYNC_DB_PATH = state["SIMKL_SYNC_DB_PATH"]
+            self.WETRAKR_SYNC_DB_PATH = state["WETRAKR_SYNC_DB_PATH"]
             self.BRIDGE_SYNC_DB_PATH = state["BRIDGE_SYNC_DB_PATH"]
             self.SEARCH_HISTORY_DB_PATH = state["SEARCH_HISTORY_DB_PATH"]
             self.SKINS_DB_PATH = state["SKINS_DB_PATH"]
@@ -1018,6 +1020,7 @@ class GlobalVariables:
         self.TRAKT_SYNC_DB_PATH = tools.translate_path(os.path.join(self.ADDON_USERDATA_PATH, "traktSync.db"))
         self.MDBLIST_SYNC_DB_PATH = tools.translate_path(os.path.join(self.ADDON_USERDATA_PATH, "mdblistSync.db"))
         self.SIMKL_SYNC_DB_PATH = tools.translate_path(os.path.join(self.ADDON_USERDATA_PATH, "simklSync.db"))
+        self.WETRAKR_SYNC_DB_PATH = tools.translate_path(os.path.join(self.ADDON_USERDATA_PATH, "wetrakrSync.db"))
         self.BRIDGE_SYNC_DB_PATH = tools.translate_path(os.path.join(self.ADDON_USERDATA_PATH, "bridgeSync.db"))
         self.SEARCH_HISTORY_DB_PATH = tools.translate_path(os.path.join(self.ADDON_USERDATA_PATH, "search.db"))
         self.SKINS_DB_PATH = tools.translate_path(os.path.join(self.ADDON_USERDATA_PATH, "skins.db"))
@@ -1711,6 +1714,9 @@ class GlobalVariables:
 
     def simkl_active(self):
         return bool(self.get_setting('simkl.auth')) and self.get_bool_setting('simkl.enabled')
+
+    def wetrakr_active(self):
+        return bool(self.get_setting('wetrakr.auth')) and self.get_bool_setting('wetrakr.enabled', True)
 
     def local_scraping_configured(self):
         """Settings-only check, no I/O — safe to call from the synchronous dispatch path."""

@@ -23,7 +23,7 @@ from resources.lib.modules.globals import g
 
 DEADLINE = 8.0  # seconds for the whole refresh: the wait for a running sync plus the lookups, which run side by side
 
-_SYNC_LOCKS = {"trakt": "trakt.sync", "mdblist": "mdblist.sync", "simkl": "simkl.sync"}
+_SYNC_LOCKS = {"trakt": "trakt.sync", "mdblist": "mdblist.sync", "simkl": "simkl.sync", "wetrakr": "wetrakr.sync"}
 
 
 def best_resume_seconds(item_information):
@@ -93,6 +93,8 @@ def _enabled_services():
         services.append("mdblist")
     if g.get_setting("simkl.auth", "") and g.get_bool_setting("simkl.enabled", True):
         services.append("simkl")
+    if g.get_setting("wetrakr.auth", "") and g.get_bool_setting("wetrakr.enabled", True):
+        services.append("wetrakr")
     return services
 
 
@@ -136,6 +138,10 @@ def _refresh_service(name, info, mediatype, trakt_id):
             from resources.lib.database.simkl_sync.activities import SimklSyncDatabase
 
             SimklSyncDatabase().refresh_play_bookmark(tmdb_id, mediatype, season, number)
+        elif name == "wetrakr":
+            from resources.lib.database.wetrakr_sync.activities import WeTrakrSyncDatabase
+
+            WeTrakrSyncDatabase().refresh_play_bookmark(tmdb_id, mediatype, season, number)
     except Exception as e:
         g.log(f"Resume: could not refresh the {name} resume point ({e}), using the local copy", "warning")
 
@@ -189,6 +195,14 @@ def _candidates(services, info, mediatype, trakt_id):
         percent = _number(row["percent_played"]) if row else None
         if percent and 0 < percent < 100:  # Simkl keeps a percentage only: the item's runtime turns it into seconds
             found.append(("simkl", int(percent / 100 * duration), _normalise(row["paused_at"])))
+
+    if "wetrakr" in services and tmdb_id and duration:
+        from resources.lib.database.wetrakr_sync import WeTrakrSyncDatabase
+
+        row = WeTrakrSyncDatabase().get_bookmark(mediatype, tmdb_id, season, number)
+        percent = _number(row["percent_played"]) if row else None
+        if percent and 0 < percent < 100:  # WeTrakr keeps a percentage only: the item's runtime turns it into seconds
+            found.append(("wetrakr", int(percent / 100 * duration), _normalise(row["paused_at"])))
 
     # An item that is (almost) finished is not a resume point worth jumping to
     return [c for c in found if not duration or c[1] < duration]
