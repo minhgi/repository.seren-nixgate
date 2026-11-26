@@ -696,6 +696,7 @@ class Menus:
                 g.add_directory_item(
                     g.get_language_string(31480),
                     action="traktDroppedShowsRestore",
+                    is_folder=False,  # an action, not a folder: a Container.Refresh on the list must not run the picker again (3.9.195)
                     description=g.get_language_string(31481),
                     menu_item=g.create_icon_dict("shows_watched", g.ICONS_PATH),
                 )
@@ -705,6 +706,7 @@ class Menus:
             g.add_directory_item(
                 g.get_language_string(31480),
                 action="traktDroppedShowsRestore",
+                is_folder=False,  # an action, not a folder: a Container.Refresh on the list must not run the picker again (3.9.195)
                 description=g.get_language_string(31481),
                 menu_item=g.create_icon_dict("shows_watched", g.ICONS_PATH),
             )
@@ -732,7 +734,6 @@ class Menus:
         )
         if not trakt_list:
             g.notification(g.ADDON_NAME, g.get_language_string(31485))
-            self.dropped_shows()
             return
 
         list_items = [
@@ -744,7 +745,6 @@ class Menus:
         )
 
         if not selected:
-            self.dropped_shows()
             return
 
         show_ids = [trakt_list[i].get("trakt_id") for i in selected]
@@ -757,7 +757,7 @@ class Menus:
             self.hidden_database.remove_item("dropped", trakt_id)
 
         g.notification(g.ADDON_NAME, g.get_language_string(31484).format(len(show_ids)))
-        self.dropped_shows()
+        g.container_refresh()  # the Dropped Shows list the entry sits on reads Trakt again (3.9.195; it used to build the list under the Restore path)
 
     @trakt_auth_guard
     def my_shows_favorites(self):

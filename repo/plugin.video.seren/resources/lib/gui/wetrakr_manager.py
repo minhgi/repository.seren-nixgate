@@ -29,6 +29,10 @@ STR_DONE_RATING_REMOVED = 31708
 STR_ALREADY = 31709
 STR_FAILED = 31710
 STR_RATE_INPUT = 31711
+STR_HOLD = 31755  # "Put on hold (WeTrakr)" (3.9.194)
+STR_DROP = 31756  # "Drop Show (WeTrakr)"
+STR_DONE_HOLD = 31757
+STR_DONE_DROP = 31758
 STR_RATE_CHANGE = 31736  # "Change rating (WeTrakr: {})": the Rate entry while the local copy holds a rating (3.9.178)
 
 
@@ -293,6 +297,26 @@ class WeTrakrManager:
             g.log_stacktrace()
         self._notify(STR_ALREADY if status == "already" else STR_DONE_RESET)
         self._refresh()
+
+    def _set_show_status(self, info, status, done_string):
+        """3.9.194: put a show on WeTrakr's On Hold / Dropped list (one way, like MDBList's Drop Show: the way back is the Restore entry of the
+        On Hold / Dropped Shows list). POST /sync/tracking moves the show to that list and keeps its plays (live-probed 2026-11-25); a show already
+        on that list is answered under `existing`, which read_outcome reports as 'already'. Shows only."""
+        target = target_of(info)
+        if target is None or target[0] != "show":
+            return
+        status_code, _ = self._write("POST", "/sync/tracking", tracking_payload(target, status))
+        if status_code == "failed":
+            self._notify(STR_FAILED)
+            return
+        self._notify(STR_ALREADY if status_code == "already" else done_string)
+        self._refresh()
+
+    def put_on_hold(self, info):
+        self._set_show_status(info, "hold", STR_DONE_HOLD)
+
+    def drop_show(self, info):
+        self._set_show_status(info, "dropped", STR_DONE_DROP)
 
     def rate(self, info):
         target = target_of(info)

@@ -303,10 +303,73 @@ class Menus:
         self._status_menu("planning", "show")
 
     def hold_shows(self):
+        self._restore_header("wetrakrHoldShowsRestore", 31760, 31761, "shows_collected")
         self._status_menu("hold", "show")
 
     def dropped_shows(self):
+        self._restore_header("wetrakrDroppedShowsRestore", 31759, 31548, "shows_watched")
         self._status_menu("dropped", "show")
+
+    @staticmethod
+    def _restore_header(action, label_id, description_id, icon):
+        """3.9.194: the Restore entry at the top of page 1 of the On Hold / Dropped Shows list (as MDBList's Dropped Shows has)"""
+        if g.PAGE == 1:
+            g.add_directory_item(
+                g.get_language_string(label_id),
+                action=action,
+                is_folder=False,  # an action, not a folder: a Container.Refresh on the list must not run the picker again (MDBList's Restore header, a folder item, does)
+                description=g.get_language_string(description_id),
+                menu_item=g.create_icon_dict(icon, g.ICONS_PATH),
+            )
+
+    def _restore_status(self, status, heading_id, empty_id):
+        """3.9.194: take the shows you pick off WeTrakr's `status` list (hold / dropped): POST /sync/tracking/remove puts a show back in the list
+        its plays give it (watching or waiting; live-probed 2026-11-25). The list is read live, every page, never from a cached copy."""
+        import xbmcgui
+        from resources.lib.gui.wetrakr_manager import read_outcome
+
+        tmdb_ids = self._status_ids(status, "shows")
+        if tmdb_ids is None:
+            g.notification(g.ADDON_NAME, g.get_language_string(30287))
+            return
+        if not tmdb_ids:
+            g.notification(g.ADDON_NAME, g.get_language_string(empty_id))
+            return
+        titles = {}
+        for item in self._resolve(tmdb_ids, "show"):  # the compact rows carry no title
+            # a resolved Trakt search result keeps its show data in trakt_object > info (the *_id keys are also on the object itself)
+            info = (
+                (item.get("trakt_object") or {}).get("info")
+                or ((item.get("show") or {}).get("trakt_object") or {}).get("info")
+                or item.get("info")
+                or {}
+            )
+            tmdb = _int(item.get("tmdb_id") or info.get("tmdb_id"))
+            title = item.get("title") or info.get("title") or ""
+            year = item.get("year") or info.get("year")
+            titles[tmdb] = f"{title} ({year})" if year else title
+        entries = [(i, titles.get(i) or f"TMDb {i}") for i in tmdb_ids]
+        selected = xbmcgui.Dialog().multiselect(
+            f"{g.ADDON_NAME}: {g.get_language_string(heading_id)}", [e[1] for e in entries]
+        )
+        if not selected:
+            return
+        picked = [entries[i][0] for i in selected]
+        response = self.wetrakr_api.user_request(
+            "POST", "/sync/tracking/remove", body={"shows": [{"ids": {"tmdb": i}, "status": status} for i in picked]}
+        )
+        if read_outcome(response)[0] == "failed":
+            g.notification(g.ADDON_NAME, g.get_language_string(30287))
+            return
+        g.notification(g.ADDON_NAME, g.get_language_string(31549).format(len(picked)))
+        g.container_refresh()  # the list the header sits on reads WeTrakr again
+        g.trigger_widget_refresh()
+
+    def dropped_shows_bulk_restore(self):
+        self._restore_status("dropped", 31548, 31550)
+
+    def hold_shows_bulk_restore(self):
+        self._restore_status("hold", 31761, 31762)
 
     def next_up(self):
         """One row per show WeTrakr lists as watching: WeTrakr's own next_watching_episode, the most recently watched show first. The

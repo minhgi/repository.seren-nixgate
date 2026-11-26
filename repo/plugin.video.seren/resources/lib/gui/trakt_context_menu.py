@@ -362,6 +362,11 @@ class TraktContextMenu:
                         "method": manager.mark_unwatched,
                         "info_key": "info",
                     }
+                if wetrakr_target[0] == "show":  # 3.9.194: Put on hold / Drop Show, shows only, one way (restore from the On Hold / Dropped Shows list)
+                    self.dialog_list.append(g.get_language_string(wetrakr_manager.STR_HOLD))
+                    options[g.get_language_string(wetrakr_manager.STR_HOLD)] = {"method": manager.put_on_hold, "info_key": "info"}
+                    self.dialog_list.append(g.get_language_string(wetrakr_manager.STR_DROP))
+                    options[g.get_language_string(wetrakr_manager.STR_DROP)] = {"method": manager.drop_show, "info_key": "info"}
                 rate_text = wetrakr_manager.rate_label(wetrakr_db, wetrakr_target)  # 'Change rating (WeTrakr: X)' from the local copy while rated
                 self.dialog_list.append(rate_text)
                 options[rate_text] = {"method": manager.rate, "info_key": "info"}

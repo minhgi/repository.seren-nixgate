@@ -230,6 +230,8 @@ _ROUTE_TABLE = {
     "wetrakrPlanToWatchShows":   _menu("resources.lib.gui.wetrakrMenus", "plan_to_watch_shows"),
     "wetrakrHoldShows":          _menu("resources.lib.gui.wetrakrMenus", "hold_shows"),
     "wetrakrDroppedShows":       _menu("resources.lib.gui.wetrakrMenus", "dropped_shows"),
+    "wetrakrDroppedShowsRestore": _menu("resources.lib.gui.wetrakrMenus", "dropped_shows_bulk_restore"),
+    "wetrakrHoldShowsRestore":   _menu("resources.lib.gui.wetrakrMenus", "hold_shows_bulk_restore"),
     "wetrakrRecentEpisodes":     _menu("resources.lib.gui.wetrakrMenus", "recent_episodes"),
     "wetrakrUpcomingEpisodes":   _menu("resources.lib.gui.wetrakrMenus", "upcoming_episodes"),
     "wetrakrWatchedEpisodes":    _menu("resources.lib.gui.wetrakrMenus", "watched_episodes"),

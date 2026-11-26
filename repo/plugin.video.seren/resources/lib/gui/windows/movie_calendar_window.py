@@ -6,6 +6,7 @@ import xbmcgui
 
 from resources.lib.gui.windows.base_window import BaseWindow
 from resources.lib.gui.windows.calendar_busy import DelayedBusyDialog, close_busy_now
+from resources.lib.gui.windows.calendar_close_on_play import CloseOnPlay
 from resources.lib.modules.globals import g
 
 PREV_BUTTON_ID = 3001
@@ -53,6 +54,8 @@ class MovieCalendarWindow(BaseWindow):
             return
         self._initialised = True
         self.grid_control = self.getControlList(GRID_ID)
+        self._close_on_play = CloseOnPlay(self, "Movie calendar")  # 3.9.193: closes the window when a video starts from its information dialog
+        self._close_on_play.start()
         try:
             self._populate_grid()
             # an empty grid cannot take focus: land on Next, so an empty month can be paged straight away
@@ -105,6 +108,8 @@ class MovieCalendarWindow(BaseWindow):
             g.log(f"movie_calendar_window: the kept watchlist layer could not be cleared: {e}", "warning")
 
     def close(self):
+        if getattr(self, "_close_on_play", None):
+            self._close_on_play.stop_watching()
         self._cancel_prefetch()
         self._clear_kept_months()
         super().close()
@@ -237,5 +242,7 @@ def open_movie_calendar():
         window.doModal()
     finally:
         g.close_busy_dialog()
+        if getattr(window, "_close_on_play", None):  # a window left without close() (Home) must not keep the watcher alive
+            window._close_on_play.stop_watching()
         del window
         g.end_calendar_window()

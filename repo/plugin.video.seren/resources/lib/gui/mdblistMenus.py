@@ -1309,6 +1309,7 @@ class Menus:
             g.add_directory_item(
                 g.get_language_string(31547),
                 action="mdblistDroppedShowsRestore",
+                is_folder=False,  # an action, not a folder: a Container.Refresh on the list must not run the picker again (3.9.195)
                 description=g.get_language_string(31548),
                 menu_item=g.create_icon_dict("shows_watched", g.ICONS_PATH),
             )
@@ -1352,14 +1353,12 @@ class Menus:
 
         if not entries:
             g.notification(g.ADDON_NAME, g.get_language_string(31550))
-            self.dropped_shows()
             return
 
         selected = xbmcgui.Dialog().multiselect(
             f"{g.ADDON_NAME}: {g.get_language_string(31548)}", [e[1] for e in entries]
         )
         if not selected:
-            self.dropped_shows()
             return
 
         tmdb_ids = [entries[i][0] for i in selected]
@@ -1368,7 +1367,7 @@ class Menus:
         )
 
         g.notification(g.ADDON_NAME, g.get_language_string(31549).format(len(tmdb_ids)))
-        self.dropped_shows()
+        g.container_refresh()  # the Dropped Shows list the entry sits on reads MDBList again (3.9.195; it used to build the list under the Restore path)
 
     def _watchlist(self, media_type):
         """Live MDBList watchlist/items fetch for Watchlist Movies/Shows. mdblist.apib's

@@ -134,7 +134,7 @@
 			Rework for Seren 2.0
 		</news>
 	</extension>
-</addon><addon id="plugin.video.seren" version="3.9.192" name="Seren" provider-name="Nixgates">
+</addon><addon id="plugin.video.seren" version="3.9.196" name="Seren" provider-name="Nixgates">
     <requires>
         <import addon="xbmc.addon" version="17.9.910" />
         <import addon="xbmc.python" version="3.0.0" />
@@ -201,6 +201,15 @@
             <screenshot>resources/screenshots/screenshot-04.jpg</screenshot>
         </assets>
         <news>
+            Changelog 3.9.196
+            [FIX] After a video started from a calendar (Play in the information dialog) ended, the information dialog came back on screen (on the Bingie skin: Video info left open, one Back to leave it). It is closed when the video stops now, so you land where the calendar close leaves you (Home)
+            Changelog 3.9.195
+            [FIX] The Restore Dropped Shows entries of Trakt and MDBList are actions now, not folders: refreshing the Dropped Shows list no longer opens the picker again, and a restore (or a cancel) leaves you on the list, refreshed
+            Changelog 3.9.194
+            [NEW] WeTrakr options on a show now have Put on hold and Drop Show (one way, like MDBList's Drop Show: the show moves to WeTrakr's On Hold or Dropped list and keeps its watch history), and WeTrakr - On Hold Shows and WeTrakr - Dropped Shows start with Restore Shows on Hold / Restore Dropped Shows (WeTrakr), which put the shows you pick back where their watch history places them
+            Changelog 3.9.193
+            [FIX] The Shows Calendars and the Movie Calendar now show the video when you press Play in an episode's or movie's information dialog - the video used to start behind the calendar window and stayed out of sight until the calendar was closed by hand; the calendar now closes when the video starts (backing out of the information dialog or the source pick leaves it open)
+            [NEW] The Shows Calendars show how far you got in an unwatched episode that has a resume point - after the air status, e.g. Aired - 23% (the Trakt resume points the other lists show)
             Changelog 3.9.192
             [NEW] Release Group lists can now update themselves (off by default) - turn on Settings &gt; Sort &amp; Filter &gt; Source Sorting &gt; Update release group lists weekly and, once a week, in the background and only while the Release Group sort level is in use, Seren fetches the newest tiers and low-quality lists from TRaSH Guides, Dictionarry and Dumpstarr (about 5 MB, a few seconds), builds the list on your device and uses it from then on. There is nothing to download or rebuild by hand. If an update fails, looks wrong or the network is down, the previous list (or the TRaSH snapshot that ships with the add-on) stays in use. Until you turn it on or press Update release group lists now (same place), nothing changes: the TRaSH snapshot that ships with the add-on is used as before.
             [NEW] Release Group sort level ranks more groups once the lists have been updated - groups that Dictionarry and Dumpstarr rate well but TRaSH does not tier get one extra tier below all TRaSH tiers, groups their lists ban get a lower score than unknown groups, and Dumpstarr's anime baseline and tier lists add anime groups below TRaSH's anime tiers. Wherever TRaSH rates a group (good or low quality) TRaSH wins, so nothing TRaSH ranks changes. In a test on 150 popular titles (35,000 releases), 3 to 5 more releases in 100 got a rank, and a newly ranked group took the top spot in about 1 of 9 title-and-resolution pairs; less popular titles will see less.

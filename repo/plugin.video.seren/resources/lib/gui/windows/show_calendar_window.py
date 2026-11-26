@@ -6,6 +6,7 @@ import xbmcgui
 
 from resources.lib.gui.windows.base_window import BaseWindow
 from resources.lib.gui.windows.calendar_busy import DelayedBusyDialog, close_busy_now
+from resources.lib.gui.windows.calendar_close_on_play import CloseOnPlay
 from resources.lib.modules import calendar_view as view
 from resources.lib.modules.calendar_stamp import sync_stamp
 from resources.lib.modules.globals import g
@@ -85,6 +86,8 @@ class ShowCalendarWindow(BaseWindow):
         self._data_stamp = None     # sync_stamp() read just before the weeks / watchlist rows above were loaded
         self._prefetch_timers = []
         self._prefetch_week_start = None
+        self._percents = {}  # 3.9.193: episode trakt id -> resume percent of the rows on the page
+        self._close_on_play = None  # 3.9.193: closes the window when a video starts from its information dialog
         self._initialised = False   # closing the episode information dialog calls onInit again: that one must change nothing
         self._time_format = xbmc.getRegion("time")
         self._date_format = xbmc.getRegion("dateshort")
@@ -100,6 +103,8 @@ class ShowCalendarWindow(BaseWindow):
         self.setProperty("window_title", g.get_language_string(31539 if self.mode == MODE_DAY else 31472))
         if self.mode == MODE_DAY:
             self.setProperty("day_mode", "True")
+        self._close_on_play = CloseOnPlay(self, "Show calendar")
+        self._close_on_play.start()
         try:
             self._show_overview()
         finally:
@@ -111,6 +116,8 @@ class ShowCalendarWindow(BaseWindow):
         self._schedule_prefetch()
 
     def close(self):
+        if self._close_on_play:
+            self._close_on_play.stop_watching()
         self._cancel_prefetch()
         self._clear_kept_weeks()
         super().close()
@@ -264,6 +271,7 @@ class ShowCalendarWindow(BaseWindow):
 
     def _set_rows(self, rows, empty_text, position=0):
         self._rows = rows
+        self._percents = self._resume_percents(rows)
         self.list_control.reset()
         self.list_control.addItems([self._build_item(r) for r in rows])
         if rows:
@@ -291,6 +299,34 @@ class ShowCalendarWindow(BaseWindow):
     # endregion
 
     # region list items
+
+    @staticmethod
+    def _resume_percents(rows):
+        """3.9.193: {episode trakt id: whole percent} of the unwatched episodes of these rows that have a resume point (the Trakt bookmarks the other
+        lists show too); {} when nothing is read. Shown after the air status ("Aired - 23%"), as TMDb Helper's calendar does (7.5.26)."""
+        ids = [
+            (row["episode"].get("info") or {}).get("trakt_id")
+            for row in rows
+            if row["type"] == "episode" and not view.is_watched(row["episode"])
+        ]
+        if not any(ids):
+            return {}
+        try:
+            from resources.lib.database.trakt_sync.bookmark import TraktSyncDatabase as BookmarkDatabase
+
+            found = BookmarkDatabase().get_percent_played(ids)
+        except Exception as e:
+            g.log(f"show_calendar_window: could not read the resume points: {e}", "warning")
+            return {}
+        percents = {}
+        for trakt_id, value in found.items():
+            try:
+                percent = min(99, int(float(value)))
+            except (TypeError, ValueError):
+                continue
+            if percent > 0:
+                percents[trakt_id] = percent
+        return percents
 
     def _build_item(self, row):
         return self._build_show_item(row) if row["type"] == "show" else self._build_episode_item(row)
@@ -327,7 +363,9 @@ class ShowCalendarWindow(BaseWindow):
         item.setProperty("row_type", "episode")
         item.setProperty("air_state", row["state"])
         text = g.get_language_string(row["status_id"])
-        item.setProperty("air_status", text % row["status_count"] if row["status_count"] else text)
+        text = text % row["status_count"] if row["status_count"] else text
+        percent = self._percents.get((row["episode"].get("info") or {}).get("trakt_id")) if not view.is_watched(row["episode"]) else 0
+        item.setProperty("air_status", f"{text} - {percent}%" if percent else text)
         item.setProperty("row_date", row["day"].strftime(self._date_format) if row["day"] else "")
         item.setProperty("air_time", view.format_air_time(row["air"], self._time_format))
         item.setProperty("rating_display", view.rating_text(row["episode"]))
@@ -451,6 +489,8 @@ def _open(mode):
         window.doModal()
     finally:
         g.close_busy_dialog()
+        if window._close_on_play:  # a window left without close() (Home) must not keep the watcher alive
+            window._close_on_play.stop_watching()
         del window
         g.end_calendar_window()
 

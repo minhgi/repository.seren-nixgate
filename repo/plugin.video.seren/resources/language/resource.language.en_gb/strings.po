@@ -8070,3 +8070,35 @@ msgstr "Release group lists updated"
 msgctxt "#31754"
 msgid "Release group lists not updated"
 msgstr "Release group lists not updated"
+
+msgctxt "#31755"
+msgid "Put on hold (WeTrakr)"
+msgstr "Put on hold (WeTrakr)"
+
+msgctxt "#31756"
+msgid "Drop Show (WeTrakr)"
+msgstr "Drop Show (WeTrakr)"
+
+msgctxt "#31757"
+msgid "Show put on hold on WeTrakr"
+msgstr "Show put on hold on WeTrakr"
+
+msgctxt "#31758"
+msgid "Show dropped on WeTrakr"
+msgstr "Show dropped on WeTrakr"
+
+msgctxt "#31759"
+msgid "Restore Dropped Shows (WeTrakr)"
+msgstr "Restore Dropped Shows (WeTrakr)"
+
+msgctxt "#31760"
+msgid "Restore Shows on Hold (WeTrakr)"
+msgstr "Restore Shows on Hold (WeTrakr)"
+
+msgctxt "#31761"
+msgid "Select shows on hold to restore"
+msgstr "Select shows on hold to restore"
+
+msgctxt "#31762"
+msgid "No shows on hold to restore"
+msgstr "No shows on hold to restore"

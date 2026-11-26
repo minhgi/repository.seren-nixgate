@@ -12,6 +12,19 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
             (trakt_id, time_in_seconds, percent_played, media_type, paused_at),
         )
 
+    def get_percent_played(self, trakt_ids):
+        """3.9.193: {trakt_id: percent_played} of the local resume points among these episode ids, for the calendar rows (one query per 500 ids)"""
+        ids = [i for i in dict.fromkeys(trakt_ids) if i]
+        found = {}
+        for start in range(0, len(ids), 500):
+            chunk = ids[start : start + 500]
+            rows = self.fetchall(
+                f"SELECT trakt_id, percent_played FROM bookmarks WHERE type='episode' AND trakt_id IN ({','.join('?' * len(chunk))})",
+                tuple(chunk),
+            )
+            found.update({row["trakt_id"]: row["percent_played"] for row in rows})
+        return found
+
     def remove_bookmark(self, trakt_id):
         self.execute_sql("DELETE FROM bookmarks WHERE trakt_id=?", (trakt_id,))
 
