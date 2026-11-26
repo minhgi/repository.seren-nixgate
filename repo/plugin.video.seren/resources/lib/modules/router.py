@@ -274,6 +274,7 @@ _ROUTE_TABLE = {
     "runMaintenance":       _func("resources.lib.common.maintenance", "run_maintenance"),
     "startupHousekeeping":  _func("resources.lib.modules.housekeeping", "run_startup"),
     "cycleHousekeeping":    _func("resources.lib.modules.housekeeping", "run_cycle"),
+    "releaseGroupsUpdate":  _func("resources.lib.modules.release_groups_sync", "update_now_action"),
     "cleanInstall":        _func("resources.lib.common.maintenance", "wipe_install"),
     "premiumizeCleanup":    _func("resources.lib.common.maintenance", "premiumize_transfer_cleanup"),
     "toggleLanguageInvoker": _func("resources.lib.common.maintenance", "toggle_reuselanguageinvoker"),

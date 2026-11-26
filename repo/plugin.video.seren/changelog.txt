@@ -1,3 +1,32 @@
+[B]3.9.192[/B]
+[NEW] Release Group lists can now update themselves (off by default) - turn on Settings > Sort & Filter > Source Sorting > Update release group lists weekly and, once a week, in the background and only while the Release Group sort level is in use, Seren fetches the newest tiers and low-quality lists from TRaSH Guides, Dictionarry and Dumpstarr (about 5 MB, a few seconds), builds the list on your device and uses it from then on. There is nothing to download or rebuild by hand. If an update fails, looks wrong or the network is down, the previous list (or the TRaSH snapshot that ships with the add-on) stays in use. Until you turn it on or press Update release group lists now (same place), nothing changes: the TRaSH snapshot that ships with the add-on is used as before.
+[NEW] Release Group sort level ranks more groups once the lists have been updated - groups that Dictionarry and Dumpstarr rate well but TRaSH does not tier get one extra tier below all TRaSH tiers, groups their lists ban get a lower score than unknown groups, and Dumpstarr's anime baseline and tier lists add anime groups below TRaSH's anime tiers. Wherever TRaSH rates a group (good or low quality) TRaSH wins, so nothing TRaSH ranks changes. In a test on 150 popular titles (35,000 releases), 3 to 5 more releases in 100 got a rank, and a newly ranked group took the top spot in about 1 of 9 title-and-resolution pairs; less popular titles will see less.
+[FIX] Release Group sort level finds the group in more titles - a group followed by an underscore or dot suffix (-GROUP_suffix) and a group written as the last word of the title (... WEB-DL GROUP) are now read, only for groups that the lists already know, never for everyday words or format tags. SeaDex and AniDB matching are unchanged.
+
+[B]3.9.191[/B]
+[NEW] Release Group sort level now uses AniDB's group ratings for anime - when AniDB's users rate the release group of a source well (or badly) for that show, it breaks ties between releases that the TRaSH tiers and SeaDex rank the same. The effect is tiny (at most 12 points, TRaSH tiers are at least 25 apart) and needs at least 3 votes, it is used only for the season being played when AniDB has its own entry for it (first seasons and films), and it never lifts a group TRaSH lists as low quality. It uses the AniDB group data Seren already fetches in the background, so nothing new is requested.
+
+[B]3.9.190[/B]
+[FIX] Anime lookups now also start when a play is served from stored results - the SeaDex best-release lookup and the AniDB fansub group lookup used to start only once a live scraper ran, so a play that ended early on stored sources never had them. They now start at the very beginning of the scrape, from the offline anime index only (no extra waiting, still only for anime and only when the Release Group sort level is in use for SeaDex).
+
+[B]3.9.189[/B]
+[NEW] Release Group sort level now knows SeaDex - for anime, the Release Group level puts SeaDex's curated best release of a show first: the exact torrent SeaDex lists as best, then any release from a group SeaDex names as best for the season being played, then the TRaSH tiers. With Prefer Dubbed on, only SeaDex's dual-audio picks count. Seren asks SeaDex once per show in the background (kept for 7 days); if SeaDex cannot be reached, sorting is unchanged.
+
+[B]3.9.188[/B]
+[NEW] Release Group sort level - a new choice for any of the eight sort levels (Settings > Sort & Filter > Source Sorting > Choose Sorting...). It ranks releases by their release group using the TRaSH Guides tiers that Radarr and Sonarr users rely on: remux groups first, then BluRay groups, then WEB groups, and groups TRaSH lists as low quality (YIFY and the like) last. Movies, TV and anime each use their own tiers. It is off until you pick it; a good place for it is just below DV/HDR (and above HEVC, Size and Seeders). The tier list is bundled with Seren, so ranking needs no internet. Release groups it does not know rank in the middle.
+
+[B]3.9.187[/B]
+[CHANGE] Anime movies - an anime film now gets its AniDB id the way an episode does (looked up offline from its IMDb id, no network), so the AniDB group data is prepared in the background while its sources are found. This only prepares the data; it does not change the order of the sources yet, and what the scrapers search for is unchanged.
+
+[B]3.9.186[/B]
+[CHANGE] Anime - the AniDB lookups for cast, episode ratings and titles now use Seren's own registered AniDB client name (serenkodihttp) instead of the name of another add-on, matching the AniDB group lookup from 3.9.185.
+
+[B]3.9.185[/B]
+[FIX] Anime - the AniDB group lookup now logs in with Seren's own registered AniDB client name (serenkodi). The name it used before belonged to another add-on and AniDB refused every login with 'client banned', so no AniDB group data could arrive. The AniDB cast and episode-rating lookups (HTTP) still use the old name.
+
+[B]3.9.184[/B]
+[FIX] Anime - the AniDB login in Settings is now used. Seren sent AniDB a command AniDB does not know and never started the lookup, so its AniDB group data was always empty. It now looks the show's groups up in the background while the sources are being found (it never delays playback; the first lookup of a show takes about 8 seconds and is then remembered for 30 days, with each group's AniDB rating). This only prepares the data; it does not change the order of the sources yet. An AniDB error, ban or busy reply is no longer remembered as 'no groups'; a failed lookup is not repeated for 6 hours.
+
 [B]3.9.183[/B]
 [CHANGE] Cross-service bridge - it now also takes a watched title off WeTrakr when you unwatch it everywhere else. Only titles the bridge itself copied to WeTrakr are touched (never what WeTrakr already had or you marked there), and only when it has stayed unwatched on Trakt, MDBList and Simkl for two bridge runs and three minutes. Needs the settings WeTrakr = On and Removals = also watched history. Titles the bridge copied before this version are not remembered and stay on WeTrakr.
 [NEW] WeTrakr now shows the same sync notification as MDBList and Simkl when its sync stored watched marks or resume points ("WeTrakr Sync: N watched, N in-progress synced"; not shown during video playback).

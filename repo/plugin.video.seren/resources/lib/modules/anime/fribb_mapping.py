@@ -119,6 +119,32 @@ def lookup(imdb_id=None, tmdb_id=None):
         conn.close()
 
 
+def show_entries(imdb_id=None, tmdb_id=None):
+    """Every AniList entry of a show or film as [(anilist_id, type)]: by TMDb TV id when given, else by IMDb id.
+
+    Empty when unmapped. Read only, offline."""
+    conn = _connect()
+    if conn is None:
+        return []
+    try:
+        tmdb = _int(tmdb_id)
+        order = "ORDER BY type_rank, season_rank, tmdb_offset"
+        if tmdb:
+            rows = conn.execute(f"SELECT anilist_id, type FROM anime WHERE anilist_id IS NOT NULL AND tmdb_tv=? {order}", (tmdb,)).fetchall()
+        elif imdb_id:
+            rows = conn.execute(
+                f"SELECT anilist_id, type FROM anime WHERE anilist_id IS NOT NULL AND id IN (SELECT anime_id FROM imdb WHERE imdb_id=?) {order}",
+                (str(imdb_id),)).fetchall()
+        else:
+            return []
+        return [(int(r[0]), r[1]) for r in rows]
+    except Exception as e:
+        g.log(f"Fribb show entries failed: {e}", "debug")
+        return []
+    finally:
+        conn.close()
+
+
 def lookup_episode(imdb_id=None, tmdb_id=None, season=None, episode=None):
     """The entry (cour) that a TMDb season/episode of an anime show belongs to.
 

@@ -328,6 +328,7 @@ class Sources:
 
             self._handle_pre_scrape_modifiers()
             self._get_imdb_info()
+            self._start_anime_lookups_early()
 
             if self.background_refresh:
                 g.log("Background refresh: ignoring Tier 0, asking the live providers", "info")
@@ -1805,10 +1806,77 @@ class Sources:
                         self._simple_info_cache = self._build_simple_show_info(info)
                     else:
                         self._simple_info_cache = self._build_simple_movie_info(info)
+                    self._start_anidb_group_prefetch(self._simple_info_cache)
+                    self._start_seadex_prefetch()
         simple_info = dict(self._simple_info_cache)
         alias_key = 'show_aliases' if self.media_type == g.MEDIA_EPISODE else 'aliases'
         simple_info[alias_key] = list(simple_info[alias_key])
         return simple_info
+
+    def _start_anidb_group_prefetch(self, simple_info):
+        """Fill the per-anime AniDB fansub group cache in the background, beside the scrape (about 8 s on first use).
+
+        Never for a background refresh or a quiet scrape (next-up prefetch): those processes can exit before the
+        lookup finishes, and nobody is waiting on a ranking. Does nothing without an AniDB login or an AniDB id.
+        """
+        if self.background_refresh or self.quiet:
+            return
+        anidb_id = simple_info.get('anidb_id') or (self.item_information.get('info') or {}).get('anidb_id')
+        if not anidb_id:
+            return
+        try:
+            from resources.lib.modules.anime.anidb_udp import start_group_prefetch
+            start_group_prefetch(anidb_id)
+        except Exception as e:
+            g.log(f"AniDB group prefetch not started: {e}", "debug")
+
+    def _start_seadex_prefetch(self):
+        """Fetch SeaDex's best releases for an anime item in the background, beside the scrape (one request per show, kept 7 days).
+
+        Same rules as the AniDB lookup: never for a background refresh or a quiet scrape, only for anime, and a failure is neutral.
+        """
+        if self.background_refresh or self.quiet:
+            return
+        try:
+            if not tools.is_anime_by_genre(self.item_information):
+                return
+            from resources.lib.modules.anime.seadex import start_prefetch
+            start_prefetch(self.item_information)
+        except Exception as e:
+            g.log(f"SeaDex prefetch not started: {e}", "debug")
+
+    def _start_anime_lookups_early(self):
+        """Start the SeaDex and AniDB background lookups for an anime item before the stored-source check.
+
+        The lookups otherwise start from _get_cached_simple_info, which only a provider thread calls, so a play served
+        straight from stored (Tier 0) sources would never start them. This path is offline and instant (Fribb index only):
+        it sets item_information['info']['anidb_id'] the way the show/movie builder does (so the sorter can use the cached
+        AniDB groups) and starts both fetches, which skip themselves when the data is cached or already being fetched.
+        Not for a background refresh or a quiet scrape.
+        """
+        if self.background_refresh or self.quiet:
+            return
+        try:
+            if not tools.is_anime_by_genre(self.item_information):
+                return
+            self._start_seadex_prefetch()  # needs no smart-search switch: it only reads the offline index and the cache
+            if not (g.get_bool_setting('general.smartSearch', True) and g.get_bool_setting('general.smartSearch.anime', True)):
+                return
+            info = self.item_information['info']
+            if not info.get('anidb_id'):
+                # Ask the index exactly as the show/movie builder does (same ids, same order), so both agree on the id
+                from resources.lib.modules.anime.fribb_mapping import lookup as fribb_lookup
+                if self.media_type == g.MEDIA_EPISODE:
+                    imdb_id = info.get('imdb_id', '')
+                    tmdb_id = info.get('tmdb_show_id', '') or info.get('tmdb_id', '')
+                    anime_ids = fribb_lookup(imdb_id=imdb_id or None, tmdb_id=tmdb_id or None)
+                else:
+                    anime_ids = fribb_lookup(imdb_id=info.get('imdb_id')) if info.get('imdb_id') else None
+                if anime_ids and anime_ids.get('anidb_id'):
+                    info['anidb_id'] = int(anime_ids['anidb_id'])
+            self._start_anidb_group_prefetch({})
+        except Exception as e:
+            g.log(f"Early anime lookups not started: {e}", "debug")
 
     def _get_provider_sources(self, info, provider, provider_type, process_function,
                               skip_cache_check=False, result_collector=None):
@@ -2352,6 +2420,15 @@ class Sources:
                         if val is not None:
                             simple_info[id_key] = val
 
+                    # The sort runs later in helpers.sort_sources, which builds a fresh SourceSorter from this same
+                    # item_information, so the AniDB id has to be visible there (the fansub group lookup itself is
+                    # started by _start_anidb_group_prefetch).
+                    try:
+                        if anime_ids.get('anidb_id'):
+                            info['info']['anidb_id'] = int(anime_ids['anidb_id'])
+                    except (TypeError, ValueError):
+                        pass
+
                     # Enrich title aliases from AniList + MAL
                     from resources.lib.modules.anime.smart_search import get_enriched_aliases
                     extra_aliases = get_enriched_aliases(
@@ -2511,6 +2588,23 @@ class Sources:
                       f"{simple_info['aliases']}", "notice")
             except Exception as e:
                 g.log(f"Asian drama movie title enrichment failed: {e}", "warning")
+
+        # Anime film: find its AniDB id in the offline Fribb index. By IMDb id only: the index's TMDb column holds TV ids, so a
+        # movie's TMDb id could match an unrelated show. Offline and instant (no network fallbacks), and simple_info is left
+        # alone so what the scrapers receive is unchanged; the id only reaches the sorter and the background AniDB group lookup
+        # (see _start_anidb_group_prefetch), the same way it does for episodes.
+        if (tools.is_anime_by_genre(info)
+                and g.get_bool_setting('general.smartSearch', True)
+                and g.get_bool_setting('general.smartSearch.anime', True)):
+            try:
+                imdb_id = info['info'].get('imdb_id')
+                if imdb_id:
+                    from resources.lib.modules.anime.fribb_mapping import lookup as fribb_lookup
+                    anime_ids = fribb_lookup(imdb_id=imdb_id)
+                    if anime_ids and anime_ids.get('anidb_id'):
+                        info['info']['anidb_id'] = int(anime_ids['anidb_id'])
+            except Exception as e:
+                g.log(f"Anime movie AniDB id lookup failed: {e}", "debug")
 
         return simple_info
 

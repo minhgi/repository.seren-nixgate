@@ -3,7 +3,8 @@ from difflib import SequenceMatcher
 import xbmcgui
 
 from resources.lib.common.source_utils import get_accepted_resolution_set, is_foreign_release, build_user_language_sets, get_undesirables, is_undesirable
-from resources.lib.common.tools import FixedSortPositionObject
+from resources.lib.common.tools import FixedSortPositionObject, is_anime_by_genre
+from resources.lib.modules import release_groups
 from resources.lib.modules.globals import g
 
 
@@ -42,8 +43,30 @@ class SourceSorter:
                     for genre in genre_list
                 )
 
+        # Release Group sort level (TRaSH tiers): anime has its own tiers, matched on the whole title
+        self._release_group_anime = is_anime_by_genre(self.item_information)
+        # SeaDex "best release" signal (anime only): read from the cache the background fetch filled, never from the network
+        self._seadex = None
+        if self._release_group_anime:
+            try:
+                from resources.lib.modules.anime import seadex
+                self._seadex = seadex.signal_for(self.item_information, g.get_int_setting("anime.dubSubPreference", 0))
+            except Exception as e:
+                g.log(f"SeaDex signal not loaded: {e}", "debug")
+
         # AniDB ID for per-anime UDP fansub group lookup
         self._anidb_id = self.item_information.get("info", {}).get("anidb_id")
+
+        # AniDB group rating (anime only, only when the Release Group level is in use): a tiny tie-breaking bonus from the cache
+        self._anidb_rating = None
+        if self._release_group_anime and self._anidb_id:
+            try:
+                from resources.lib.modules.anime import anidb_rating
+                from resources.lib.modules.anime.seadex import level_enabled
+                if level_enabled():
+                    self._anidb_rating = anidb_rating.signal_for_item(self.item_information, self._anidb_id)
+            except Exception as e:
+                g.log(f"AniDB rating signal not loaded: {e}", "debug")
 
         # Size filter settings
         self.enable_size_limit = g.get_int_setting("general.enablesizelimit")
@@ -288,6 +311,7 @@ class SourceSorter:
             7: self._get_hdr_sort_key,
             8: self._get_audio_channels_sort_key,
             9: self._get_seeders_sort_key,
+            10: self._get_release_group_sort_key,
         }
 
         if self.mediatype == g.MEDIA_EPISODE and g.get_bool_setting("general.lastreleasenamepriority"):
@@ -469,6 +493,19 @@ class SourceSorter:
         if info := source['info']:
             audio_channels = {"2.0", "5.1", "7.1"} & info
         return float(max(audio_channels)) if audio_channels else 0
+
+    def _get_release_group_sort_key(self, source):
+        media = "episode" if self.mediatype == g.MEDIA_EPISODE else "movie"
+        score = release_groups.score(source, media, self._release_group_anime)
+        if self._seadex is not None:
+            boost = self._seadex.boost(source)
+            if boost:
+                # a curated SeaDex best release outranks any TRaSH tier, and beats a low-quality group listing
+                score = boost + max(score, 0)
+        if self._anidb_rating is not None and score >= 0:
+            # AniDB's rating of the group for this anime orders releases the tiers rank the same; never lifts a low-quality group
+            score += self._anidb_rating.bonus(source)
+        return score
 
     @staticmethod
     def _get_seeders_sort_key(source):

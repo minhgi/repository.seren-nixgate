@@ -3660,6 +3660,21 @@
 					<default>true</default>
 					<control type="toggle"/>
 				</setting>
+				<setting id="releasegroups.autoupdate" type="boolean" label="31749" help="31750">
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="releasegroups.updatenow" type="action" label="31751" help="31752">
+					<level>0</level>
+					<data>RunPlugin(plugin://plugin.video.seren/?action=releaseGroupsUpdate)</data>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="button" format="action">
+						<close>true</close>
+					</control>
+				</setting>
 				<setting id="general.sortmethod.1" type="integer" label="30582" help="">
 					<level>4</level>
 					<default>2</default>
@@ -3675,6 +3690,7 @@
 							<option label="30573">7</option>
 							<option label="30575">8</option>
 							<option label="30667">9</option>
+							<option label="30684">10</option>
 						</options>
 					</constraints>
 					<control type="spinner" format="string"/>
@@ -3699,6 +3715,7 @@
 							<option label="30573">7</option>
 							<option label="30575">8</option>
 							<option label="30667">9</option>
+							<option label="30684">10</option>
 						</options>
 					</constraints>
 					<control type="spinner" format="string"/>
@@ -3723,6 +3740,7 @@
 							<option label="30573">7</option>
 							<option label="30575">8</option>
 							<option label="30667">9</option>
+							<option label="30684">10</option>
 						</options>
 					</constraints>
 					<control type="spinner" format="string"/>
@@ -3747,6 +3765,7 @@
 							<option label="30573">7</option>
 							<option label="30575">8</option>
 							<option label="30667">9</option>
+							<option label="30684">10</option>
 						</options>
 					</constraints>
 					<control type="spinner" format="string"/>
@@ -3771,6 +3790,7 @@
 							<option label="30573">7</option>
 							<option label="30575">8</option>
 							<option label="30667">9</option>
+							<option label="30684">10</option>
 						</options>
 					</constraints>
 					<control type="spinner" format="string"/>
@@ -3795,6 +3815,7 @@
 							<option label="30573">7</option>
 							<option label="30575">8</option>
 							<option label="30667">9</option>
+							<option label="30684">10</option>
 						</options>
 					</constraints>
 					<control type="spinner" format="string"/>
@@ -3819,6 +3840,7 @@
 							<option label="30573">7</option>
 							<option label="30575">8</option>
 							<option label="30667">9</option>
+							<option label="30684">10</option>
 						</options>
 					</constraints>
 					<control type="spinner" format="string"/>
@@ -3843,6 +3865,7 @@
 							<option label="30573">7</option>
 							<option label="30575">8</option>
 							<option label="30667">9</option>
+							<option label="30684">10</option>
 						</options>
 					</constraints>
 					<control type="spinner" format="string"/>

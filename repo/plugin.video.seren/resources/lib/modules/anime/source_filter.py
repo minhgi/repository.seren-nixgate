@@ -107,7 +107,9 @@ def get_fansub_group(release_title, anidb_id=None):
             from resources.lib.modules.anime.anidb_udp import get_cached_group_data
             udp_data = get_cached_group_data(anidb_id)
             if udp_data and group_lower in udp_data:
-                return group, udp_data[group_lower].get("category")
+                # AniDB's own categories ('complete'/'active') mean nothing to the dub/sub scoring, which only knows
+                # the hardcoded 'sub'/'quality' ones, so a group the hardcoded list already knows keeps its category.
+                return group, _GROUP_CATEGORY.get(group_lower) or udp_data[group_lower].get("category")
         except Exception:
             pass
 

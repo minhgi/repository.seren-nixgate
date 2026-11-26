@@ -19,7 +19,7 @@ import xml.etree.ElementTree as ET
 from resources.lib.modules.globals import g
 
 _ANIDB_BASE = "http://api.anidb.net:9001/httpapi"
-_ANIDB_CLIENT = "otakukodi"
+_ANIDB_CLIENT = "serenkodihttp"  # registered at anidb.net/software/24813 (HTTP API, version 1); the old name "otakukodi" belongs to another add-on
 _ANIDB_CLIENTVER = "1"
 _CDN_BASE = "https://cdn.anidb.net/images/main"
 

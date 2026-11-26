@@ -47,6 +47,16 @@ def run_cycle():
         prefetch_next_up()
     except Exception as e:
         g.log(f"cycleHousekeeping: next-up prefetch failed: {e}", "error")
+    if g.abort_requested():
+        return
+    try:
+        # last on purpose: a weekly download and replay (a few seconds to a minute) must never delay the steps above.
+        # Does nothing unless the setting is on, the Release Group sort level is in use and a week has passed.
+        from resources.lib.modules.release_groups_sync import run_if_due
+
+        run_if_due()
+    except Exception as e:
+        g.log(f"cycleHousekeeping: release group list update failed: {e}", "error")
 
 
 def _torrent_cache_cleanup():

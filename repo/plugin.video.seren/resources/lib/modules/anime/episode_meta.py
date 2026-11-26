@@ -32,10 +32,10 @@ _ANIZIP_BASE = 'https://api.ani.zip'
 _TENRAI_BASE = 'https://api.tenrai.org/v1'
 
 # AniDB HTTP API
-# Client name 'otakukodi' is registered with AniDB (shared with Otaku addon).
+# Client name 'serenkodihttp' is Seren's own HTTP API client (anidb.net/software/24813).
 # Rate limit: 4 seconds between requests (AniDB enforced).
 _ANIDB_BASE = 'http://api.anidb.net:9001/httpapi'
-_ANIDB_CLIENT = 'otakukodi'
+_ANIDB_CLIENT = 'serenkodihttp'
 _ANIDB_CLIENTVER = '1'
 _ANIDB_LAST_REQUEST = 0  # module-level timestamp for 4s rate limit
 

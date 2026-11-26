@@ -2,8 +2,8 @@ from resources.lib.gui.windows.base_window import BaseWindow
 from resources.lib.modules.globals import g
 
 SORT_OPTIONS = {
-    "sortmethod": [30513, 30237, 30252, 30570, 30251, 30571, 30572, 30573, 30575, 30667],
-    # None, Resolution, Source Type, Debrid Provider, Size, Low Cam Sort, HEVC, DV/HDR, Audio Channels, Seeders
+    "sortmethod": [30513, 30237, 30252, 30570, 30251, 30571, 30572, 30573, 30575, 30667, 30684],
+    # None, Resolution, Source Type, Debrid Provider, Size, Low Cam Sort, HEVC, DV/HDR, Audio Channels, Seeders, Release Group
     "none": [],
     "resolution": [],
     "sourcetypesort": [30581, 30249, 30470, 30057, 30058, 30631],
@@ -17,6 +17,7 @@ SORT_OPTIONS = {
     # None, DV, HDR
     "audiochannels": [],
     "seeders": [],
+    "releasegroup": [],
 }
 SORT_METHODS = [
     "none",
@@ -29,6 +30,7 @@ SORT_METHODS = [
     "hdrsort",
     "audiochannels",
     "seeders",
+    "releasegroup",
 ]
 
 

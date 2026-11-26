@@ -3802,6 +3802,10 @@ msgctxt "#30683"
 msgid "Fifth Priority"
 msgstr "Fifth Priority"
 
+msgctxt "#30684"
+msgid "Release Group"
+msgstr "Release Group"
+
 msgctxt "#30691"
 msgid "Filter Foreign Audio"
 msgstr "Filter Foreign Audio"
@@ -8036,3 +8040,33 @@ msgstr "WeTrakr"
 msgctxt "#31748"
 msgid "WeTrakr Sync: {0} watched, {1} in-progress synced"
 msgstr "WeTrakr Sync: {0} watched, {1} in-progress synced"
+
+#: /settings.xml
+msgctxt "#31749"
+msgid "Update release group lists weekly"
+msgstr "Update release group lists weekly"
+
+#: /settings.xml
+msgctxt "#31750"
+msgid "Off by default. When on, once a week, in the background, fetch the newest release group tiers and bans from TRaSH Guides, Dictionarry and Dumpstarr (about 5 MB) and use them for the Release Group sort level. Only runs while that sort level is in use. If an update fails or looks wrong, the previous list stays."
+msgstr "Off by default. When on, once a week, in the background, fetch the newest release group tiers and bans from TRaSH Guides, Dictionarry and Dumpstarr (about 5 MB) and use them for the Release Group sort level. Only runs while that sort level is in use. If an update fails or looks wrong, the previous list stays."
+
+#: /settings.xml
+msgctxt "#31751"
+msgid "Update release group lists now"
+msgstr "Update release group lists now"
+
+#: /settings.xml
+msgctxt "#31752"
+msgid "Fetch the newest release group lists from TRaSH Guides, Dictionarry and Dumpstarr right now, even if they were updated recently. Takes a few seconds to a minute."
+msgstr "Fetch the newest release group lists from TRaSH Guides, Dictionarry and Dumpstarr right now, even if they were updated recently. Takes a few seconds to a minute."
+
+#: /settings.xml
+msgctxt "#31753"
+msgid "Release group lists updated"
+msgstr "Release group lists updated"
+
+#: /settings.xml
+msgctxt "#31754"
+msgid "Release group lists not updated"
+msgstr "Release group lists not updated"
