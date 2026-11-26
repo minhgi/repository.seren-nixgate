@@ -504,6 +504,7 @@
                         <label>$INFO[Window().Property(filter.label)]</label>
                         <align>right</align>
                         <textcolor>FFFFFFFF</textcolor>
+                        <focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
                     </control>
 
 					<!-- Close -->
@@ -516,6 +517,7 @@
                         <label>$INFO[Window().Property(close.text)]</label>
                         <align>right</align>
                         <textcolor>FFFFFFFF</textcolor>
+                        <focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
                      </control>
                 </control>
             </control>

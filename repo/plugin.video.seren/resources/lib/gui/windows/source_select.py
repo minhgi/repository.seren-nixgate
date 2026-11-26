@@ -9,6 +9,8 @@ from resources.lib.modules.exceptions import NoFilesSelected
 from resources.lib.modules.exceptions import UnsupportedDebridProvider
 from resources.lib.modules.globals import g
 from resources.lib.modules.helpers import Resolverhelper
+from resources.lib.modules.helpers import SourcesHelper
+from resources.lib.modules.source_sorter import SourceSorter
 
 
 class SourceSelect(SourceWindow):
@@ -19,6 +21,9 @@ class SourceSelect(SourceWindow):
     def __init__(self, xml_file, location, item_information=None, sources=None, uncached=None):
         super().__init__(xml_file, location, item_information=item_information, sources=sources)
         self.uncached_sources = uncached or []
+        # (sources, uncached) from the last Full Scrape done in this window, else None; the caller reads it after
+        # doModal so a later re-open of the window lists the newer results
+        self.refreshed = None
         self.position = -1
         self.stream_link = False
         self.setProperty("instant_close", "false")
@@ -83,6 +88,10 @@ class SourceSelect(SourceWindow):
                 self._resolve_item(False)
             elif control_id == 2001:
                 self._open_manual_cache_assist()
+            elif control_id == 2003:
+                self._full_scrape()
+            elif control_id == 2004:
+                self._full_scrape(max_timeout=True)
             elif control_id == 2002:
                 self.toggle_filter()
             elif control_id == 2999:
@@ -110,6 +119,40 @@ class SourceSelect(SourceWindow):
         else:
             self.setProperty("instant_close", "true")
             self.close()
+
+    def _full_scrape(self, max_timeout=False):
+        """Ask every enabled scraper of every enabled tier (nothing ends the scrape early, stored releases are
+        ignored) and replace the list on screen with the result. The Timeout setting applies, or the maximum timeout
+        when max_timeout is set. A cancelled or empty scrape leaves the list as it is."""
+        action_args = self.item_information.get("action_args") if self.item_information else None
+        if not isinstance(action_args, dict):
+            g.log("Full scrape: the item has no action_args, cannot scrape again", "warning")
+            g.notification(g.ADDON_NAME, g.get_language_string(31765), time=4000)
+            return
+        try:
+            result = SourcesHelper().get_sources(
+                action_args, overwrite_cache=True, full_scrape="max" if max_timeout else True
+            )
+        except Exception:
+            g.log_stacktrace()
+            g.notification(g.ADDON_NAME, g.get_language_string(31765), time=4000)
+            return
+        if not result:  # e.g. no providers enabled
+            g.notification(g.ADDON_NAME, g.get_language_string(31765), time=4000)
+            return
+        uncached, sources_list, item_information = result
+
+        sorted_sources = SourceSorter(item_information or self.item_information).sort_sources(sources_list)
+        if not sorted_sources:
+            g.notification(g.ADDON_NAME, g.get_language_string(31765), time=4000)
+            return
+
+        self.uncached_sources = uncached or []
+        self.refreshed = (list(sorted_sources), self.uncached_sources)
+        self.replace_sources(sorted_sources)
+        g.notification(
+            g.ADDON_NAME, g.get_language_string(31766).format(len(sorted_sources)), time=3000, sound=False
+        )
 
     def _open_manual_cache_assist(self):
         newly_cached_source = None

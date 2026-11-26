@@ -1,3 +1,18 @@
+[B]3.9.204[/B]
+[FIX] Full scrape fallback - the full scrape that follows a thin normal scrape ran with nothing on screen: its progress window was closed again a fraction of a second after it opened, because the first scrape's window was still being taken down. Seren now waits until the old window is gone, so the full scrape is shown like any other scrape. The "Only N sources found - running a full scrape" notice stays on screen for 8 seconds as a pop-up and, with the default (Fancy) scraper display, as a line in the scrape window.
+
+[B]3.9.203[/B]
+[NEW] Scraping settings - two new switches, both off by default and only one on at a time: "Full Scrape When Few Sources" and "Full Scrape (Max) When Few Sources". When a normal scrape ends with fewer playable sources than the number you choose (new slider "Full Scrape When Fewer Than (Sources)", default 10), Seren runs a full scrape right after it (the first keeps your Timeout setting, the second uses the maximum, 180 seconds) and keeps the larger list; when the full scrape is cancelled or finds fewer, you get the normal list. With no source at all, cache assist and the cancelled playback wait until the full scrape has also found nothing. Not used for background scrapes or the scrape that runs during playback; a scrape that pre-termination ended early counts like any other. [CHG] Source select - the button "Full Scrape (Max Timeout)" is now called "Full Scrape (Max)".
+
+[B]3.9.202[/B]
+[FIX] Source select - Filter Results now sits above the two Full Scrape buttons; the Year/Rating (or Season/Episode) line and the Sources count are centred under each other. The focused button in every Seren window (source select, sort setup, filters, provider packages, downloads, calendars, locale and others) now uses a dark label when your accent colour is light, so the highlighted button no longer blends into its own text.
+
+[B]3.9.201[/B]
+[NEW] Source select - Two new buttons under View Uncached: Full Scrape and Full Scrape (Max Timeout). They ask every enabled scraper of every enabled tier again and replace the list on screen with the result: stored releases are ignored, no tier is skipped for having enough cached sources, nothing ends the scrape early, and scrapers that were switched off for repeated errors are tried again. Full Scrape keeps your Timeout setting (with Scrape All Tiers on, each tier gets an equal share of it); Full Scrape (Max Timeout) uses the maximum, 180 seconds. Cancelling or finding nothing leaves the list as it was. The newer list is also what the window shows if it re-opens after a stream fails.
+
+[B]3.9.200[/B]
+[FIX] The "Check for provider updates" progress window is now always closed when the check ends, including when no provider pack is installed (the code that closed it could never run).
+
 [B]3.9.199[/B]
 [FIX] Your Trakt watched marks, watchlist, favorites, ratings, hidden shows and list contents are no longer lost or half-reset when a Trakt sync request fails or only part of a list arrives (a timed-out, rate-limited or errored request used to clear the watchlist and favorites, empty the hidden list or un-mark watched movies and episodes until the next sync). Seren now reads the whole list first and keeps what it has when that fails; the sync is tried again next time.
 

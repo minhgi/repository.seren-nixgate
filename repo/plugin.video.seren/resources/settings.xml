@@ -3150,6 +3150,45 @@
 					<default>true</default>
 					<control type="toggle"/>
 				</setting>
+				<setting id="scraping.fullScrapeFallback" type="boolean" label="31769" help="31770">
+					<level>0</level>
+					<default>false</default>
+					<dependencies>
+						<dependency type="enable">
+							<condition operator="is" setting="scraping.fullScrapeFallbackMax">false</condition>
+						</dependency>
+					</dependencies>
+					<control type="toggle"/>
+				</setting>
+				<setting id="scraping.fullScrapeFallbackMax" type="boolean" label="31771" help="31772">
+					<level>0</level>
+					<default>false</default>
+					<dependencies>
+						<dependency type="enable">
+							<condition operator="is" setting="scraping.fullScrapeFallback">false</condition>
+						</dependency>
+					</dependencies>
+					<control type="toggle"/>
+				</setting>
+				<setting id="scraping.fullScrapeFallbackMin" type="integer" label="31773" help="31774">
+					<level>0</level>
+					<default>10</default>
+					<constraints>
+						<minimum>1</minimum>
+						<maximum>100</maximum>
+					</constraints>
+					<dependencies>
+						<dependency type="enable">
+							<or>
+								<condition operator="is" setting="scraping.fullScrapeFallback">true</condition>
+								<condition operator="is" setting="scraping.fullScrapeFallbackMax">true</condition>
+							</or>
+						</dependency>
+					</dependencies>
+					<control type="slider" format="integer">
+						<popup>false</popup>
+					</control>
+				</setting>
 				<setting id="general.providerPerformance" type="boolean" label="30730" help="30731">
 					<level>0</level>
 					<default>true</default>

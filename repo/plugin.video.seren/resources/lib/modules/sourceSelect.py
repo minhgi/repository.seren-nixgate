@@ -3,7 +3,14 @@ from resources.lib.modules.exceptions import NoPlayableSourcesException
 from resources.lib.modules.globals import g
 
 
+# (sources, uncached) a Full Scrape inside the window produced during the last source_select() call, else None.
+# The router reads it so a later re-open of the window shows the newer lists, not the ones it started with.
+last_refresh = None
+
+
 def source_select(uncached_sources, source_list, item_information):
+    global last_refresh
+    last_refresh = None
     selection = None
 
     if len(source_list) == 0 and len(uncached_sources) == 0:
@@ -20,6 +27,7 @@ def source_select(uncached_sources, source_list, item_information):
             uncached=uncached_sources
         )
         selection = window.doModal()
+        last_refresh = window.refreshed
     finally:
         del window
 

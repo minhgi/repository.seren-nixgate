@@ -599,6 +599,9 @@ def dispatch(params):
                 if background:
                     background.set_text("")
                 stream_link = sourceSelect.source_select(uncached, sources, ii)
+                if sourceSelect.last_refresh:
+                    # A Full Scrape ran inside the window: later re-opens must list its results
+                    sources, uncached = sourceSelect.last_refresh
             else:
                 # Clear any previous rescrape flag before resolving
                 g.clear_runtime_setting("content_verify_rescrape")
@@ -855,6 +858,8 @@ def dispatch(params):
                                 uncached=uncached,
                             )
                             new_link = window.doModal()
+                            if window.refreshed:
+                                sources, uncached = window.refreshed
                         except Exception:
                             g.log_stacktrace()
                         finally:

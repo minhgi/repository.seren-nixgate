@@ -358,6 +358,7 @@
 						<label>$ADDON[plugin.video.seren 31192]</label>
 						<align>right</align>
 						<textcolor>FFFFFFFF</textcolor>
+						<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 					</control>
 
 					<!-- Resume All -->
@@ -370,6 +371,7 @@
 						<label>$ADDON[plugin.video.seren 31194]</label>
 						<align>right</align>
 						<textcolor>FFFFFFFF</textcolor>
+						<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 					</control>
 
 					<!-- Cancel All -->
@@ -382,6 +384,7 @@
 						<label>$ADDON[plugin.video.seren 31195]</label>
 						<align>right</align>
 						<textcolor>FFFFFFFF</textcolor>
+						<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 					</control>
 
 					<!-- Clear Completed -->
@@ -394,6 +397,7 @@
 						<label>$ADDON[plugin.video.seren 30469]</label>
 						<align>right</align>
 						<textcolor>FFFFFFFF</textcolor>
+						<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 					</control>
 
 					<!-- Close -->
@@ -406,6 +410,7 @@
 						<label>$ADDON[plugin.video.seren 30459]</label>
 						<align>right</align>
 						<textcolor>FFFFFFFF</textcolor>
+						<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 					</control>
 				</control>
 			</control>

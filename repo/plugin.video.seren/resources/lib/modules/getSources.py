@@ -65,6 +65,13 @@ _CACHE_CHECK_GRACE_SECONDS = 20
 _ORCHESTRATOR_SENTINEL = "TORRENT_ORCHESTRATOR"
 # Seconds a tier waits for its last few providers once the rest are done (setting scraping.stragglerGrace, 0 = off)
 STRAGGLER_GRACE_SECONDS = 5
+# Full Scrape (Max Timeout) button in source select: the scrape may take as long as the Timeout setting allows at
+# most (that slider's maximum is 180), so slow providers are really waited for. The plain Full Scrape button
+# keeps the user's own Timeout setting.
+FULL_SCRAPE_MAX_TIMEOUT_SECONDS = 180
+# A normal scrape that finds fewer playable sources than scraping.fullScrapeFallbackMin (default below) is followed by a
+# full scrape when one of the two scraping.fullScrapeFallback* switches is on (SourcesHelper.get_sources runs it)
+FULL_SCRAPE_FALLBACK_MIN_SOURCES = 10
 # mm:ss before a queued stale-release refresh runs (long enough for playback to be up before the scrape starts)
 STALE_REFRESH_DELAY = "01:30"
 
@@ -184,8 +191,15 @@ class Sources:
     Handles fetching and processing of available sources for provided meta data
     """
 
-    def __init__(self, item_information, background_refresh=False, quiet=False):
+    def __init__(self, item_information, background_refresh=False, quiet=False, full_scrape=False, allow_fallback=False, fallback_note=None):
         self.hash_regex = re.compile(r'btih:(.*?)(?:&|$)')
+        # A full scrape is asked for by the user (Full Scrape buttons in source select): every enabled provider of
+        # every enabled tier is asked and nothing ends the scrape early - Tier 0 (stored releases) is ignored,
+        # the tier-skip threshold is 0, pre-termination and the Tier 1 straggler grace are off, and auto-disabled
+        # providers are tried again. full_scrape=True keeps the Timeout setting; full_scrape="max" raises the
+        # timeout to FULL_SCRAPE_MAX_TIMEOUT_SECONDS. Unlike a background refresh it shows its progress window and
+        # still runs hosters, cloud inspection and the other providers.
+        self.full_scrape = full_scrape
         # A background refresh re-scrapes an item whose stored (Tier 0) releases are getting old while the user plays
         # from them. It shows nothing, ignores Tier 0 so the live providers are really asked, and never touches
         # playback (no cancel_playback, no cache assist).
@@ -290,14 +304,32 @@ class Sources:
         self.host_domains = []
         self.host_names = []
         self.timeout = g.get_int_setting('general.timeout')
+        if self.full_scrape == "max":
+            self.timeout = max(self.timeout, FULL_SCRAPE_MAX_TIMEOUT_SECONDS)
         self.window = SourceWindowAdapter(self.item_information, self)
 
-        self.silent = g.get_bool_runtime_setting('tempSilent') or background_refresh
+        self.silent = (g.get_bool_runtime_setting('tempSilent') or background_refresh) and not self.full_scrape
         self.window.silent = self.silent
 
         self.source_sorter = SourceSorter(self.item_information)
 
-        self.preem_enabled = g.get_bool_setting('preem.enabled')
+        self.preem_enabled = g.get_bool_setting('preem.enabled') and not self.full_scrape
+
+        # Full scrape fallback: only for a foreground scrape whose caller (SourcesHelper.get_sources) runs the follow-up.
+        # Never for a full scrape, a background refresh, a quiet / silent scrape or the pre-scrape that runs during playback
+        # (the follow-up shows a progress window). fallback_wanted is set by _finalise_results when the scrape ended thin.
+        self.fallback_mode = False
+        self.fallback_wanted = False
+        # Text for a line in the progress window of a fallback full scrape ("Only N sources found - running a full scrape")
+        self.fallback_note = fallback_note
+        if (allow_fallback and not (self.full_scrape or background_refresh or quiet or self.silent)
+                and g.REQUEST_PARAMS.get('action') != 'preScrape'):
+            if g.get_bool_setting('scraping.fullScrapeFallbackMax'):
+                self.fallback_mode = "max"
+                if g.get_bool_setting('scraping.fullScrapeFallback'):
+                    g.log("Both full scrape fallback settings are on: using Full Scrape (Max)", "warning")
+            elif g.get_bool_setting('scraping.fullScrapeFallback'):
+                self.fallback_mode = True
         self.preem_waitfor_cloudfiles = g.get_bool_setting("preem.waitfor.cloudfiles", True)
         self.preem_cloudfiles = g.get_bool_setting('preem.cloudfiles')
         self.preem_adaptive_sources = g.get_bool_setting('preem.adaptiveSources')
@@ -326,12 +358,21 @@ class Sources:
             g.log(f"Pre-term-adaptive-files: {self.preem_adaptive_sources}", 'debug')
             g.log(f"Pre-term-direct-files: {self.preem_direct_sources}", 'debug')
 
+            if self.full_scrape:
+                # An earlier scrape in this plugin call (the one that built the list on screen) may have ended by
+                # pre-termination or timeout, which blocks provider requests until this is cleared.
+                monkey_requests.PRE_TERM_BLOCK = False
+
             self._handle_pre_scrape_modifiers()
             self._get_imdb_info()
             self._start_anime_lookups_early()
 
             if self.background_refresh:
                 g.log("Background refresh: ignoring Tier 0, asking the live providers", "info")
+            elif self.full_scrape:
+                # Not cleared: if the user cancels, the item keeps its stored releases. The live results are stored
+                # over them when the scrape ends.
+                g.log("Full scrape: ignoring Tier 0, asking every enabled provider of every enabled tier", "info")
             elif overwrite_torrent_cache:
                 self._clear_local_torrent_results()
             else:
@@ -344,6 +385,8 @@ class Sources:
                 return self._finalise_results()
 
             self.window.create()
+            if self.fallback_note:
+                self.window.set_property('fallback_text', self.fallback_note)
             self.window.set_text(
                 g.get_language_string(30054),
                 self.progress,
@@ -661,14 +704,14 @@ class Sources:
         import threading
 
         # Read user-configurable threshold (0 = always run all tiers)
-        tier_min_cached = g.get_int_setting('general.tierThreshold', TIER_MIN_CACHED_DEFAULT)
+        tier_min_cached = 0 if self.full_scrape else g.get_int_setting('general.tierThreshold', TIER_MIN_CACHED_DEFAULT)
 
         # Detect anime content from genre metadata
         is_anime = tools.is_anime_by_genre(self.item_information)
 
         # Load provider performance data if feature is enabled
         pp = self._get_provider_perf_db()
-        disabled_providers = pp.get_disabled_providers() if pp else set()
+        disabled_providers = pp.get_disabled_providers() if (pp and not self.full_scrape) else set()
 
         # Group providers by tier, skipping blacklisted/disabled scrapers
         tier_groups = {}  # {1: [provider_tuples], 2: [...], ...}
@@ -802,7 +845,7 @@ class Sources:
                 }
                 pending = set(futures)
                 started = time.time()
-                grace = 0 if (tier_n != 1 or g.REQUEST_PARAMS.get('action', '') == "preScrape") else g.get_int_setting(
+                grace = 0 if (tier_n != 1 or self.full_scrape or g.REQUEST_PARAMS.get('action', '') == "preScrape") else g.get_int_setting(
                     'scraping.stragglerGrace', STRAGGLER_GRACE_SECONDS
                 )
                 max_stragglers = max(1, len(providers) // 4)
@@ -1149,10 +1192,15 @@ class Sources:
             if self.background_refresh:
                 g.log("Background refresh: scrape finished (no source list is built; the releases it found were stored in Tier 0)", "info")
                 return uncached, [], self.item_information
-            self._build_cache_assist()
-            g.cancel_playback()
-            if self.silent:
-                g.notification(g.ADDON_NAME, g.get_language_string(30055))
+            if self.full_scrape:
+                # The source list the user is looking at must stay up: no cache assist, no cancelled playback
+                g.log("Full scrape: no playable source found", "info")
+                return uncached, [], self.item_information
+            if self._fallback_applies(0):
+                # Cache assist and the cancelled playback wait for the full scrape (_finish_without_playable)
+                g.log("Full scrape fallback: no playable source found, a full scrape runs before giving up", "info")
+                return uncached, [], self.item_information
+            self._finish_without_playable()
             return uncached, [], self.item_information
 
         # Return sources list
@@ -1163,6 +1211,9 @@ class Sources:
             + self.sources_information['adaptiveSources']
             + self.sources_information['directSources']
         )
+
+        if self._fallback_applies(len(sources_list)):
+            g.log(f"Full scrape fallback: only {len(sources_list)} playable sources found", "info")
 
         # Re-stamp "(Local Cache)" on any source whose hash was in Tier 0.
         # store_torrent() may have overwritten the Tier 0 entry with a live
@@ -1185,6 +1236,25 @@ class Sources:
             )
 
         return uncached, sources_list, self.item_information
+
+    def _fallback_applies(self, found):
+        """True (and fallback_wanted set) when this normal scrape ended with fewer playable sources than the
+        scraping.fullScrapeFallbackMin setting (default FULL_SCRAPE_FALLBACK_MIN_SOURCES) and a full scrape should follow.
+        Not after a cancel or an abort. A scrape that pre-termination ended early counts like any other: what matters is
+        how many playable sources it found."""
+        if not self.fallback_mode or self._canceled_by_user or g.abort_requested():
+            return False
+        if found >= g.get_int_setting('scraping.fullScrapeFallbackMin', FULL_SCRAPE_FALLBACK_MIN_SOURCES):
+            return False
+        self.fallback_wanted = True
+        return True
+
+    def _finish_without_playable(self):
+        """What a scrape that ends with no playable source does: offer cache assist, cancel the playback."""
+        self._build_cache_assist()
+        g.cancel_playback()
+        if self.silent:
+            g.notification(g.ADDON_NAME, g.get_language_string(30055))
 
     # ── Tracker name → scraper module mapping ──────────────────────────────
     # Maps tracker names (from Torrentio/AIOStreams name field, local cache

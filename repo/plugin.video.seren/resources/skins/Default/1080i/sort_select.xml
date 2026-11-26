@@ -1927,6 +1927,7 @@
 						<label>$ADDON[plugin.video.seren 30459]</label>
 						<align>right</align>
 						<textcolor>FFFFFFFF</textcolor>
+						<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 					</control>
 				</control>
 			</control>

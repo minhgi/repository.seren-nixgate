@@ -278,6 +278,18 @@ class SourceWindow(BaseWindow):
         if self._remember_filter:
             self._save_filter_state()
 
+    def replace_sources(self, sources):
+        """Show a new source list (a Full Scrape finished): forget the old list and any filter on it, re-apply the
+        remembered filter when that setting is on, and redraw."""
+        self.sources = list(sources)
+        self._all_sources = list(sources)
+        self._filter_applied = False
+        if self._remember_filter:
+            self._restore_last_filter()
+        self.populate_sources_list()
+        self._update_filter_label()
+        self.set_default_focus(self.display_list, 2999, control_list_reset=True)
+
     def clear_filter(self):
         """Restore the full unfiltered source list."""
         if self._all_sources is not None:

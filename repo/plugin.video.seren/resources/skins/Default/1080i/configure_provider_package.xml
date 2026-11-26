@@ -821,6 +821,7 @@
 						<label>$ADDON[plugin.video.seren 30242]</label>
 						<align>right</align>
 						<textcolor>FFFFFFFF</textcolor>
+						<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 					</control>
 
 					<!-- Enable All Torrents -->
@@ -833,6 +834,7 @@
 						<label>$ADDON[plugin.video.seren 30243]</label>
 						<align>right</align>
 						<textcolor>FFFFFFFF</textcolor>
+						<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 					</control>
 
 					<!-- Disable All Hosters -->
@@ -845,6 +847,7 @@
 						<label>$ADDON[plugin.video.seren 30244]</label>
 						<align>right</align>
 						<textcolor>FFFFFFFF</textcolor>
+						<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 					</control>
 
 					<!-- Disable All Torrents -->
@@ -857,6 +860,7 @@
 						<label>$ADDON[plugin.video.seren 30245]</label>
 						<align>right</align>
 						<textcolor>FFFFFFFF</textcolor>
+						<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 					</control>
 
 					<!-- Enable All -->
@@ -869,6 +873,7 @@
 						<label>$ADDON[plugin.video.seren 30246]</label>
 						<align>right</align>
 						<textcolor>FFFFFFFF</textcolor>
+						<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 					</control>
 
 					<!-- Disable All -->
@@ -881,6 +886,7 @@
 						<label>$ADDON[plugin.video.seren 30247]</label>
 						<align>right</align>
 						<textcolor>FFFFFFFF</textcolor>
+						<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 					</control>
 
 					<!-- Close -->
@@ -893,6 +899,7 @@
 						<label>$ADDON[plugin.video.seren 30623]</label>
 						<align>right</align>
 						<textcolor>FFFFFFFF</textcolor>
+						<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 					</control>
 				</control>
 			</control>

@@ -399,17 +399,19 @@ class ProviderInstallManager(CustomProviders, ZipManager):
         # Automatic "True" will update all packages with available updates
         # Silent "True" will prevent kodi from creating any dialogs except for a single notification
 
+        update_dialog = None
         if not silent:
             update_dialog = xbmcgui.DialogProgress()
             update_dialog.create(g.ADDON_NAME, g.get_language_string(30082))
             update_dialog.update(-1)
 
         updates = []
-        update_dialog = None
 
         packages = self.known_packages
 
         if len(packages) == 0:
+            if update_dialog:
+                update_dialog.close()
             return []
 
         with requests.Session() as session:

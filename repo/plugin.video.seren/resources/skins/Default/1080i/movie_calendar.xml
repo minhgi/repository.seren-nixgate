@@ -84,6 +84,7 @@
 				<height>50</height>
 				<font>font12</font>
 				<label>&lt;</label>
+				<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 				<align>center</align>
 				<textoffsetx>0</textoffsetx>
 				<aligny>center</aligny>
@@ -99,6 +100,7 @@
 				<height>50</height>
 				<font>font12</font>
 				<label>&gt;</label>
+				<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 				<align>center</align>
 				<textoffsetx>0</textoffsetx>
 				<aligny>center</aligny>
@@ -122,6 +124,7 @@
 				<textoffsetx>0</textoffsetx>
 				<aligny>center</aligny>
 				<textcolor>FFFFFFFF</textcolor>
+				<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 				<onleft>3002</onleft>
 				<ondown>1000</ondown>
 			</control>

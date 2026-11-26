@@ -80,6 +80,7 @@
 				<textoffsetx>0</textoffsetx>
 				<aligny>center</aligny>
 				<textcolor>FFFFFFFF</textcolor>
+				<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 				<onleft>3003</onleft>
 				<onright>3001</onright>
 				<ondown>1000</ondown>
@@ -97,6 +98,7 @@
 				<textoffsetx>0</textoffsetx>
 				<aligny>center</aligny>
 				<textcolor>FFFFFFFF</textcolor>
+				<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 				<onleft>3004</onleft>
 				<onright>3002</onright>
 				<ondown>1000</ondown>
@@ -114,6 +116,7 @@
 				<textoffsetx>0</textoffsetx>
 				<aligny>center</aligny>
 				<textcolor>FFFFFFFF</textcolor>
+				<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 				<onleft>3001</onleft>
 				<onright>2999</onright>
 				<ondown>1000</ondown>
@@ -131,6 +134,7 @@
 				<textoffsetx>0</textoffsetx>
 				<aligny>center</aligny>
 				<textcolor>FFFFFFFF</textcolor>
+				<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 				<onright>2999</onright>
 				<ondown>1000</ondown>
 				<visible>!String.IsEmpty(Window.Property(view_unwatched))</visible>
@@ -147,6 +151,7 @@
 				<textoffsetx>0</textoffsetx>
 				<aligny>center</aligny>
 				<textcolor>FFFFFFFF</textcolor>
+				<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 				<onleft>3002</onleft>
 				<ondown>1000</ondown>
 			</control>

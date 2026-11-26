@@ -118,6 +118,21 @@
             <label>$INFO[Window().Property(notification_text)]</label>
         </control>
 
+		<!-- Full scrape fallback notice -->
+		<control type="label">
+			<animation effect="fade" end="0" time="350">WindowClose</animation>
+			<animation effect="fade" time="350">WindowOpen</animation>
+			<top>110</top>
+			<centerleft>50%</centerleft>
+			<width>100%</width>
+			<font>font12</font>
+			<align>center</align>
+			<aligny>center</aligny>
+			<textcolor>$INFO[Window().Property(settings.color)]</textcolor>
+			<visible>!String.IsEmpty(Window().Property(fallback_text))</visible>
+			<label>$INFO[Window().Property(fallback_text)]</label>
+		</control>
+
 		<!-- Progress -->
 		<control type="grouplist">
 			<animation effect="fade" end="0" time="350">WindowClose</animation>

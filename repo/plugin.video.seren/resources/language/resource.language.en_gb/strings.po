@@ -8102,3 +8102,47 @@ msgstr "Select shows on hold to restore"
 msgctxt "#31762"
 msgid "No shows on hold to restore"
 msgstr "No shows on hold to restore"
+
+msgctxt "#31764"
+msgid "Full Scrape"
+msgstr "Full Scrape"
+
+msgctxt "#31765"
+msgid "Full scrape found no sources (or was cancelled) - list unchanged"
+msgstr "Full scrape found no sources (or was cancelled) - list unchanged"
+
+msgctxt "#31766"
+msgid "Full scrape done: {} sources"
+msgstr "Full scrape done: {} sources"
+
+msgctxt "#31767"
+msgid "Full Scrape (Max)"
+msgstr "Full Scrape (Max)"
+
+msgctxt "#31768"
+msgid "Only {} sources found - running a full scrape"
+msgstr "Only {} sources found - running a full scrape"
+
+msgctxt "#31769"
+msgid "Full Scrape When Few Sources"
+msgstr "Full Scrape When Few Sources"
+
+msgctxt "#31770"
+msgid "When a normal scrape finds fewer playable sources than the number set below (default 10), run a Full Scrape right after it (every enabled scraper of every tier, keeping your Timeout setting). Only one of the two full scrape settings can be on. Not used for background scrapes or the scrape that runs during playback."
+msgstr "When a normal scrape finds fewer playable sources than the number set below (default 10), run a Full Scrape right after it (every enabled scraper of every tier, keeping your Timeout setting). Only one of the two full scrape settings can be on. Not used for background scrapes or the scrape that runs during playback."
+
+msgctxt "#31771"
+msgid "Full Scrape (Max) When Few Sources"
+msgstr "Full Scrape (Max) When Few Sources"
+
+msgctxt "#31772"
+msgid "When a normal scrape finds fewer playable sources than the number set below (default 10), run a Full Scrape (Max) right after it (every enabled scraper of every tier, with the maximum timeout of 180 seconds). Only one of the two full scrape settings can be on. Not used for background scrapes or the scrape that runs during playback."
+msgstr "When a normal scrape finds fewer playable sources than the number set below (default 10), run a Full Scrape (Max) right after it (every enabled scraper of every tier, with the maximum timeout of 180 seconds). Only one of the two full scrape settings can be on. Not used for background scrapes or the scrape that runs during playback."
+
+msgctxt "#31773"
+msgid "Full Scrape When Fewer Than (Sources)"
+msgstr "Full Scrape When Fewer Than (Sources)"
+
+msgctxt "#31774"
+msgid "How many playable sources a normal scrape has to find to count as enough. When it finds fewer than this, the full scrape switch that is on above runs a full scrape. Default 10. Only used while one of the two switches above is on."
+msgstr "How many playable sources a normal scrape has to find to count as enough. When it finds fewer than this, the full scrape switch that is on above runs a full scrape. Default 10. Only used while one of the two switches above is on."

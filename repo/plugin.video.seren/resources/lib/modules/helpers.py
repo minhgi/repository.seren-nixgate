@@ -1,6 +1,7 @@
 import datetime
 import time
 
+import xbmc
 import xbmcgui
 
 from resources.lib.common import tools
@@ -81,11 +82,14 @@ class SourcesHelper:
     """
 
     @use_cache(1)
-    def get_sources(self, action_args, overwrite_cache=False):
+    def get_sources(self, action_args, overwrite_cache=False, full_scrape=False):
         """
         Method to handle automatic background or foreground scraping
         :param action_args: action arguments from request uri
         :param overwrite_cache: Set to true if you wish to overwrite the current cached return value
+        :param full_scrape: Ask every enabled provider of every enabled tier (see Sources.full_scrape): True keeps the
+            Timeout setting, "max" uses the maximum timeout. A cancelled full scrape returns an empty result, which
+            the cache decorator does not store
         :return:
         """
         item_information = self._get_item_information_for_play(action_args)
@@ -100,8 +104,12 @@ class SourcesHelper:
             if remembered:
                 self._negative_hit_message = remembered
                 return [], [], item_information
-        sources = Sources(item_information)
+        sources = Sources(item_information, full_scrape=full_scrape, allow_fallback=not full_scrape)
         result = sources.get_sources(overwrite_torrent_cache=overwrite_cache)
+        if full_scrape and sources._canceled_by_user:
+            return [], [], item_information
+        if sources.fallback_wanted:
+            result, sources = self._full_scrape_fallback(sources, result, item_information)
         if track_empty:
             blockers = sources.empty_scrape_blockers()
             if not result or not result[1]:
@@ -109,6 +117,45 @@ class SourcesHelper:
                     g.log(f"Negative cache: this empty scrape does not count ({', '.join(blockers)})", "info")
             self._note_scrape_outcome(item_information, bool(result and result[1]), not blockers)
         return result
+
+    def _full_scrape_fallback(self, sources, result, item_information):
+        """The normal scrape found fewer playable sources than scraping.fullScrapeFallbackMin and one of the
+        scraping.fullScrapeFallback* settings is on: run a full scrape (Timeout setting, or the maximum timeout) and keep
+        the larger list. A cancelled, failed or smaller full scrape keeps the normal list. When neither found a playable
+        source, the cache assist and cancelled playback the first scrape postponed happen now.
+        Returns (result, the Sources object that produced it)."""
+        mode = sources.fallback_mode
+        found = len(result[1]) if result and len(result) > 1 and result[1] else 0
+        g.log(f"Full scrape fallback ({'max' if mode == 'max' else 'timeout'}): the normal scrape found {found} playable sources", "info")
+        note = g.get_language_string(31768).format(found)
+        g.notification(g.ADDON_NAME, note, time=8000)
+        # The first scrape's progress window was closed a moment ago and Kodi is still taking it down: a window opened now
+        # for the full scrape would be closed with it (it ran invisibly in 3.9.203), so wait until the old one is gone
+        window = getattr(sources, 'window', None)
+        if getattr(window, 'display_style', None) == 0 and not getattr(window, 'silent', True):
+            deadline = time.time() + 3
+            while time.time() < deadline and xbmc.getCondVisibility("Window.IsActive(get_sources.xml)"):
+                xbmc.sleep(50)
+            xbmc.sleep(600)
+        full_sources = None
+        full_result = None
+        try:
+            full_sources = Sources(item_information, full_scrape=mode, fallback_note=note)
+            full_result = full_sources.get_sources(overwrite_torrent_cache=True)
+        except Exception:
+            g.log_stacktrace()
+        full_done = full_sources is not None and full_result is not None and not full_sources._canceled_by_user
+        full_found = len(full_result[1]) if full_done and full_result[1] else 0
+        if full_found and full_found >= found:
+            g.log(f"Full scrape fallback: the full scrape found {full_found} playable sources", "info")
+            return full_result, full_sources
+        if found:
+            g.log(f"Full scrape fallback: keeping the normal list ({found} sources; the full scrape found {full_found})", "info")
+            return result, sources
+        final = full_sources if full_done else sources
+        g.log("Full scrape fallback: no playable source in either scrape", "info")
+        final._finish_without_playable()
+        return (full_result if full_done else result), final
 
     # ── Negative result cache ──
     # A scrape that ran to completion and found nothing at all (no sources, no uncached torrents) is remembered
@@ -126,7 +173,8 @@ class SourcesHelper:
     @staticmethod
     def _negative_cache_checksum():
         # A different scraping setup can find different things; those settings changing forgets the remembered result
-        keys = [f"scraping.tier{n}" for n in range(1, 8)] + ["scraping.allTierSweep", "general.timeout"]
+        keys = [f"scraping.tier{n}" for n in range(1, 8)] + ["scraping.allTierSweep", "general.timeout", "scraping.fullScrapeFallback", "scraping.fullScrapeFallbackMax",
+                                                              "scraping.fullScrapeFallbackMin"]
         return "|".join(str(g.get_setting(k)) for k in keys)
 
     def _remembered_empty_result(self, item_information):

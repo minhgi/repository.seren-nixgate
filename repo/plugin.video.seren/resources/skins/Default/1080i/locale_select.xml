@@ -364,6 +364,7 @@
 						<label>$ADDON[plugin.video.seren 31207]</label>
 						<align>right</align>
 						<textcolor>FFFFFFFF</textcolor>
+						<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 						<onleft>9000</onleft>
 						<onup>6200</onup>
 						<ondown>6102</ondown>
@@ -378,6 +379,7 @@
 						<label>$ADDON[plugin.video.seren 31208]</label>
 						<align>right</align>
 						<textcolor>FFFFFFFF</textcolor>
+						<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 						<onleft>9000</onleft>
 						<onup>6101</onup>
 						<ondown>6103</ondown>
@@ -392,6 +394,7 @@
 						<label>$ADDON[plugin.video.seren 31209]</label>
 						<align>right</align>
 						<textcolor>FFFFFFFF</textcolor>
+						<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 						<onleft>9000</onleft>
 						<onup>6102</onup>
 					</control>
@@ -405,6 +408,7 @@
 						<label>$ADDON[plugin.video.seren 31210]</label>
 						<align>right</align>
 						<textcolor>FFFFFFFF</textcolor>
+						<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 						<visible>String.IsEqual(Window().Property(profile.catalog),anime)</visible>
 						<onleft>9000</onleft>
 					</control>
@@ -418,6 +422,7 @@
 						<label>$ADDON[plugin.video.seren 31211]</label>
 						<align>right</align>
 						<textcolor>FFFFFFFF</textcolor>
+						<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 						<visible>String.IsEqual(Window().Property(profile.catalog),anime)</visible>
 						<onleft>9000</onleft>
 					</control>
@@ -431,6 +436,7 @@
 						<label>$ADDON[plugin.video.seren 31212]</label>
 						<align>right</align>
 						<textcolor>FFFFFFFF</textcolor>
+						<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 						<onleft>9000</onleft>
 						<ondown>6001</ondown>
 					</control>
@@ -444,6 +450,7 @@
 						<label>$ADDON[plugin.video.seren 31213]</label>
 						<align>right</align>
 						<textcolor>FFFFFFFF</textcolor>
+						<focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
 						<onleft>9000</onleft>
 						<onup>6104</onup>
 						<ondown>6200</ondown>

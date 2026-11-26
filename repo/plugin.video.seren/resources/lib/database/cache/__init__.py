@@ -461,7 +461,8 @@ def use_cache(cache_hours=12):
 
             if func.__name__ == "get_sources":
                 overwrite_cache = kwargs.get("overwrite_cache", False)
-                kwargs_cache_value = {k: v for k, v in kwargs.items() if k != "overwrite_cache"}
+                # full_scrape only changes how thoroughly the list is built, so it shares the item's cache entry
+                kwargs_cache_value = {k: v for k, v in kwargs.items() if k not in ("overwrite_cache", "full_scrape")}
 
             else:
                 overwrite_cache = kwargs.pop("overwrite_cache", False)

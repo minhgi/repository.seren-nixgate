@@ -513,9 +513,35 @@
                         <height>30</height>
                         <font>font12</font>
                         <textcolor>FFFFFFFF</textcolor>
+                        <left>0</left>
+                        <width>235</width>
                         <align>right</align>
                         <visible>!String.IsEmpty(Window().Property(item.info.season))</visible>
-                        <label>Season: [COLOR $INFO[Window().Property(settings.color)]]$INFO[Window().Property(item.info.season)] [/COLOR] | Episode: [COLOR $INFO[Window().Property(settings.color)]]$INFO[Window().Property(item.info.episode)][/COLOR]</label>
+                        <label>Season: [COLOR $INFO[Window().Property(settings.color)]]$INFO[Window().Property(item.info.season)][/COLOR]</label>
+                    </control>
+
+                    <control type="label">
+                        <top>65</top>
+                        <height>30</height>
+                        <font>font12</font>
+                        <textcolor>FFFFFFFF</textcolor>
+                        <left>235</left>
+                        <width>30</width>
+                        <align>center</align>
+                        <visible>!String.IsEmpty(Window().Property(item.info.season))</visible>
+                        <label>|</label>
+                    </control>
+
+                    <control type="label">
+                        <top>65</top>
+                        <height>30</height>
+                        <font>font12</font>
+                        <textcolor>FFFFFFFF</textcolor>
+                        <left>265</left>
+                        <width>235</width>
+                        <align>left</align>
+                        <visible>!String.IsEmpty(Window().Property(item.info.season))</visible>
+                        <label>Episode: [COLOR $INFO[Window().Property(settings.color)]]$INFO[Window().Property(item.info.episode)][/COLOR]</label>
                     </control>
 
 					<!-- Year & Rating -->
@@ -524,18 +550,46 @@
                         <height>30</height>
                         <font>font12</font>
                         <textcolor>FFFFFFFF</textcolor>
+                        <left>0</left>
+                        <width>235</width>
                         <align>right</align>
                         <visible>String.IsEmpty(Window().Property(item.info.season))</visible>
-                        <label>$ADDON[plugin.video.seren 30557]: [COLOR $INFO[Window().Property(settings.color)]]$INFO[Window().Property(item.info.year)] [/COLOR] | $ADDON[plugin.video.seren 30558]: [COLOR $INFO[Window().Property(settings.color)]]$INFO[Window().Property(item.info.mpaa)][/COLOR]</label>
+                        <label>$ADDON[plugin.video.seren 30557]: [COLOR $INFO[Window().Property(settings.color)]]$INFO[Window().Property(item.info.year)][/COLOR]</label>
+                    </control>
+
+                    <control type="label">
+                        <top>65</top>
+                        <height>30</height>
+                        <font>font12</font>
+                        <textcolor>FFFFFFFF</textcolor>
+                        <left>235</left>
+                        <width>30</width>
+                        <align>center</align>
+                        <visible>String.IsEmpty(Window().Property(item.info.season))</visible>
+                        <label>|</label>
+                    </control>
+
+                    <control type="label">
+                        <top>65</top>
+                        <height>30</height>
+                        <font>font12</font>
+                        <textcolor>FFFFFFFF</textcolor>
+                        <left>265</left>
+                        <width>235</width>
+                        <align>left</align>
+                        <visible>String.IsEmpty(Window().Property(item.info.season))</visible>
+                        <label>$ADDON[plugin.video.seren 30558]: [COLOR $INFO[Window().Property(settings.color)]]$INFO[Window().Property(item.info.mpaa)][/COLOR]</label>
                     </control>
 
 					<!-- Number of sources listed -->
                     <control type="label">
-                        <top>95</top>
+                        <top>90</top>
                         <height>25</height>
                         <font>font12</font>
                         <textcolor>FFFFFFFF</textcolor>
-                        <align>right</align>
+                        <align>center</align>
+                        <left>0</left>
+                        <width>500</width>
                         <visible>!String.IsEmpty(Window().Property(sources.count))</visible>
                         <label>$ADDON[plugin.video.seren 31600]: [COLOR $INFO[Window().Property(settings.color)]]$INFO[Window().Property(sources.count)][/COLOR]</label>
                     </control>
@@ -570,9 +624,9 @@
 
 			<!-- Buttons -->
             <control type="group">
-                <top>580</top>
+                <top>560</top>
                 <width>500</width>
-                <height>310</height>
+                <height>375</height>
 
 				<!-- Card -->
                 <control type="image">
@@ -585,42 +639,71 @@
                     <top>25</top>
                     <width>500</width>
                     <onleft>1000</onleft>
-                    <itemgap>10</itemgap>
+                    <itemgap>8</itemgap>
 
 					<!-- View Uncached -->
                     <control type="button" id="2001">
                         <width>500</width>
-                        <height>80</height>
+                        <height>60</height>
                         <textoffsetx>20</textoffsetx>
                         <texturefocus colordiffuse="$INFO[Window().Property(settings.color)]">white.png</texturefocus>
                         <texturenofocus colordiffuse="22000000">white.png</texturenofocus>
                         <label>$ADDON[plugin.video.seren 30461]</label>
                         <align>right</align>
                         <textcolor>FFFFFFFF</textcolor>
+                        <focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
                     </control>
 
 					<!-- Filter Results -->
                     <control type="button" id="2002">
                         <width>500</width>
-                        <height>80</height>
+                        <height>60</height>
                         <textoffsetx>20</textoffsetx>
                         <texturefocus colordiffuse="$INFO[Window().Property(settings.color)]">white.png</texturefocus>
                         <texturenofocus colordiffuse="22000000">white.png</texturenofocus>
                         <label>$INFO[Window().Property(filter.label)]</label>
                         <align>right</align>
                         <textcolor>FFFFFFFF</textcolor>
+                        <focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
+                    </control>
+
+					<!-- Full Scrape -->
+                    <control type="button" id="2003">
+                        <width>500</width>
+                        <height>60</height>
+                        <textoffsetx>20</textoffsetx>
+                        <texturefocus colordiffuse="$INFO[Window().Property(settings.color)]">white.png</texturefocus>
+                        <texturenofocus colordiffuse="22000000">white.png</texturenofocus>
+                        <label>$ADDON[plugin.video.seren 31764]</label>
+                        <align>right</align>
+                        <textcolor>FFFFFFFF</textcolor>
+                        <focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
+                    </control>
+
+					<!-- Full Scrape (Max Timeout) -->
+                    <control type="button" id="2004">
+                        <width>500</width>
+                        <height>60</height>
+                        <textoffsetx>20</textoffsetx>
+                        <texturefocus colordiffuse="$INFO[Window().Property(settings.color)]">white.png</texturefocus>
+                        <texturenofocus colordiffuse="22000000">white.png</texturenofocus>
+                        <label>$ADDON[plugin.video.seren 31767]</label>
+                        <align>right</align>
+                        <textcolor>FFFFFFFF</textcolor>
+                        <focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
                     </control>
 
 					<!-- Close -->
                     <control type="button" id="2999">
                         <width>500</width>
-                        <height>80</height>
+                        <height>60</height>
                         <textoffsetx>20</textoffsetx>
                         <texturefocus colordiffuse="$INFO[Window().Property(settings.color)]">white.png</texturefocus>
                         <texturenofocus colordiffuse="22000000">white.png</texturenofocus>
                         <label>$ADDON[plugin.video.seren 30459]</label>
                         <align>right</align>
                         <textcolor>FFFFFFFF</textcolor>
+                        <focusedcolor>$INFO[Window.Property(settings.focustext)]</focusedcolor>
                     </control>
                 </control>
             </control>
