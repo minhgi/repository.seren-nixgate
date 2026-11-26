@@ -253,6 +253,16 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
         except Exception as e:
             raise ActivitySyncFailure(e) from e
 
+    def _read_all_pages(self, url, **params):
+        """Every page of a paged Trakt list as one flat list. Raises ActivitySyncFailure when any page could not be read (no answer, an
+        error status such as 429, a body that is not JSON): get_all_pages_json just stops on a failed page, and the pulls below reset
+        flags or tables before refilling them, so a failed or partial read wiped local data and the sync cursor moved on. Call it BEFORE
+        resetting anything; a 200 with an empty list is a real answer and comes back as []."""
+        pages = self.trakt_api.get_all_pages_json_complete(url, ignore_cache=True, **params)
+        if pages is None:
+            raise ActivitySyncFailure(f"Trakt {url.strip('/')} could not be read completely")
+        return list(itertools.chain.from_iterable(pages))
+
     def _sync_hidden(self):
         try:
             db = hidden.TraktSyncDatabase()
@@ -281,10 +291,7 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
             raise ActivitySyncFailure(e) from e
 
     def _fetch_hidden_section(self, section):
-        items = []
-        for paged_items in self.trakt_api.get_all_pages_json(f"users/hidden/{section}", ignore_cache=True):
-            items.extend(paged_items)
-        return {section: items}
+        return {section: self._read_all_pages(f"users/hidden/{section}")}
 
     def _sync_list_items(self):
         """Full per-list content sync backing the Add/Remove Custom List menu gate in
@@ -315,9 +322,7 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
             rows = []
             for list_id in list_ids:
                 for media_type in ("movies", "shows"):
-                    for paged_items in self.trakt_api.get_all_pages_json(
-                        f"users/me/lists/{list_id}/items/{media_type}", ignore_cache=True
-                    ):
+                    for paged_items in (self._read_all_pages(f"users/me/lists/{list_id}/items/{media_type}"),):
                         # get_all_pages_json's normalization flattens the raw
                         # {"type": "movie", "movie": {"ids": {"trakt": N}, ...}} shape
                         # into a single dict with trakt_id at the top level - same
@@ -345,11 +350,7 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
 
     def _sync_watched_movies(self):
         try:
-            trakt_watched = []
-            for paged_items in self.trakt_api.get_all_pages_json(
-                "/sync/watched/movies", extended="full", limit=100, ignore_cache=True
-            ):
-                trakt_watched.extend(paged_items)
+            trakt_watched = self._read_all_pages("/sync/watched/movies", extended="full", limit=100)
             if len(trakt_watched) == 0:
                 return
             self.insert_trakt_movies(trakt_watched)
@@ -367,11 +368,7 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
 
     def _sync_collection_movies(self):
         try:
-            trakt_collection = []
-            for paged_items in self.trakt_api.get_all_pages_json(
-                "sync/collection/movies", extended="full", limit=100, ignore_cache=True
-            ):
-                trakt_collection.extend(paged_items)
+            trakt_collection = self._read_all_pages("sync/collection/movies", extended="full", limit=100)
             if len(trakt_collection) == 0:
                 return
             self.insert_trakt_movies(trakt_collection)
@@ -389,11 +386,7 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
 
     def _sync_watchlist_movies(self):
         try:
-            trakt_watchlist = []
-            for paged_items in self.trakt_api.get_all_pages_json(
-                "sync/watchlist/movies", extended="full", limit=100, ignore_cache=True
-            ):
-                trakt_watchlist.extend(paged_items)
+            trakt_watchlist = self._read_all_pages("sync/watchlist/movies", extended="full", limit=100)
             self.execute_sql("UPDATE movies SET watchlisted=0")
             if len(trakt_watchlist) == 0:
                 return
@@ -409,11 +402,7 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
 
     def _sync_watchlist_shows(self):
         try:
-            trakt_watchlist = []
-            for paged_items in self.trakt_api.get_all_pages_json(
-                "sync/watchlist/shows", extended="full", limit=100, ignore_cache=True
-            ):
-                trakt_watchlist.extend(paged_items)
+            trakt_watchlist = self._read_all_pages("sync/watchlist/shows", extended="full", limit=100)
             self.execute_sql("UPDATE shows SET watchlisted=0")
             if len(trakt_watchlist) == 0:
                 return
@@ -429,11 +418,7 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
 
     def _sync_favorited_movies(self):
         try:
-            trakt_favorites = []
-            for paged_items in self.trakt_api.get_all_pages_json(
-                "sync/favorites/movies", extended="full", limit=100, ignore_cache=True
-            ):
-                trakt_favorites.extend(paged_items)
+            trakt_favorites = self._read_all_pages("sync/favorites/movies", extended="full", limit=100)
             self.execute_sql("UPDATE movies SET favorited=0")
             if len(trakt_favorites) == 0:
                 return
@@ -449,11 +434,7 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
 
     def _sync_favorited_shows(self):
         try:
-            trakt_favorites = []
-            for paged_items in self.trakt_api.get_all_pages_json(
-                "sync/favorites/shows", extended="full", limit=100, ignore_cache=True
-            ):
-                trakt_favorites.extend(paged_items)
+            trakt_favorites = self._read_all_pages("sync/favorites/shows", extended="full", limit=100)
             self.execute_sql("UPDATE shows SET favorited=0")
             if len(trakt_favorites) == 0:
                 return
@@ -469,10 +450,7 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
 
     def _sync_rated_movies(self):
         try:
-            trakt_rated = self.trakt_api.get_all_pages_json(
-                "/sync/ratings/movies", extended="full", limit=50, ignore_cache=True
-            )
-            trakt_rated = list(itertools.chain.from_iterable(trakt_rated))
+            trakt_rated = self._read_all_pages("/sync/ratings/movies", extended="full", limit=50)
 
             self.insert_trakt_movies(trakt_rated)
 
@@ -510,11 +488,7 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
     def sync_watched_episodes(self):
         try:
             get = MetadataHandler.get_trakt_info
-            trakt_watched = []
-            for paged_items in self.trakt_api.get_all_pages_json(
-                "sync/watched/shows", extended="progress", limit=100, ignore_cache=True
-            ):
-                trakt_watched.extend(paged_items)
+            trakt_watched = self._read_all_pages("sync/watched/shows", extended="progress", limit=100)
             if not trakt_watched:
                 return
             # shows reset on Trakt (rewatch): Next Up counts only the episodes watched since the reset (see reset_watching)
@@ -587,11 +561,7 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
     def sync_collection_episodes(self):
         try:
             get = MetadataHandler.get_trakt_info
-            trakt_collection = []
-            for paged_items in self.trakt_api.get_all_pages_json(
-                "sync/collection/shows", extended="full", limit=100, ignore_cache=True
-            ):
-                trakt_collection.extend(paged_items)
+            trakt_collection = self._read_all_pages("sync/collection/shows", extended="full", limit=100)
             if not trakt_collection:
                 return
 
@@ -657,25 +627,14 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
 
     def _sync_rated_shows(self):
         try:
-            trakt_rated_shows = self.trakt_api.get_all_pages_json(
-                "sync/ratings/shows", extended="full", limit=50, ignore_cache=True
-            )
-            trakt_rated_shows = list(itertools.chain.from_iterable(trakt_rated_shows))
+            trakt_rated_shows = self._read_all_pages("sync/ratings/shows", extended="full", limit=50)
             self.insert_trakt_shows(trakt_rated_shows)
 
-            trakt_rated_seasons = self.trakt_api.get_all_pages_json(
-                "sync/ratings/seasons", extended="full", limit=50, ignore_cache=True
-            )
-            trakt_rated_seasons = list(itertools.chain.from_iterable(trakt_rated_seasons))
+            trakt_rated_seasons = self._read_all_pages("sync/ratings/seasons", extended="full", limit=50)
             self.insert_trakt_shows(i.get("show") for i in trakt_rated_seasons)
 
             def fetch_rated_episodes(rating):
-                items = []
-                for paged_items in self.trakt_api.get_all_pages_json(
-                    f"sync/ratings/episodes/{rating}", extended="full", limit=100, ignore_cache=True, timeout=90
-                ):
-                    items.extend(paged_items)
-                return items
+                return self._read_all_pages(f"sync/ratings/episodes/{rating}", extended="full", limit=100, timeout=90)
 
             self._queue_with_progress(fetch_rated_episodes, [(i,) for i in range(1, 11)])
             trakt_rated_episodes = self.mill_task_queue.wait_completion()
@@ -806,11 +765,17 @@ class TraktSyncDatabase(trakt_sync.TraktSyncDatabase):
 
     def _sync_bookmarks(self, bookmark_type):
         get = MetadataHandler.get_trakt_info
+        # Read every page BEFORE touching the table: a page that fails (no answer, 429, error status) used to end the loop quietly
+        # after the DELETE, leaving the table empty or partial and the sync cursor moved on. Now it raises, so the table is kept and the
+        # activity is tried again at the next sync. An account with no resume points answers 200 [] and still clears the table.
+        pages = self.trakt_api.get_all_pages_json_complete(
+            f"sync/playback/{bookmark_type}", extended="full", timeout=60, limit=50, ignore_cache=True
+        )
+        if pages is None:
+            raise ActivitySyncFailure(f"Trakt sync/playback/{bookmark_type} could not be read completely")
         self.execute_sql("DELETE FROM bookmarks WHERE type=?", (bookmark_type[:-1],))
         base_sql_statement = "INSERT INTO bookmarks VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING"
-        for progress in self.trakt_api.get_all_pages_json(
-            f"sync/playback/{bookmark_type}", extended="full", timeout=60, limit=50, ignore_cache=True
-        ):
+        for progress in pages:
             if bookmark_type == "movies":
                 self.execute_sql(
                     base_sql_statement,

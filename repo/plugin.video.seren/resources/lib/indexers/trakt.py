@@ -779,6 +779,37 @@ class TraktAPI(ApiBase):
                 )
             )
 
+    def get_all_pages_json_complete(self, url, **params):
+        """
+        Like get_all_pages_json, but tells a page that could not be read from the end of the list. get_all_pages_json just stops on
+        a failed page, so a caller that clears a local table first and refills it from the pages cannot tell "Trakt has nothing" from
+        "the request failed".
+        :param url: endpoint to call against
+        :param params: any params for the url (ignore_cache as in get_all_pages_json)
+        :return: list of the normalised pages when every page was read (a 200 with an empty list gives [[]]), None when any page
+        failed: no answer, an error status, or a body that is not JSON. An exception from the request is not caught here.
+        """
+        ignore_cache = params.pop("ignore_cache", False)
+        get_method = self.get if ignore_cache else self.get_cached
+        pages = []
+        for response in self._get_all_pages(get_method, url, **params):
+            if not response:
+                return None
+            try:
+                pages.append(
+                    self._handle_response(
+                        self._try_sort(
+                            response.headers.get("X-Sort-By"),
+                            response.headers.get("X-Sort-How"),
+                            response.json(),
+                        )
+                    )
+                )
+            except (ValueError, AttributeError) as e:
+                g.log(f"Failed to receive JSON from Trakt page of {url} - {e}", "error")
+                return None
+        return pages
+
     def get_page_json(self, url, **params):
         """
         Reads ONE page of a paged trakt endpoint without the cache and returns (normalised page, number of pages).

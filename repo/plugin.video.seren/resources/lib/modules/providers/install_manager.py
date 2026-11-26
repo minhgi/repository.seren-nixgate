@@ -273,18 +273,35 @@ class ProviderInstallManager(CustomProviders, ZipManager):
         :rtype: None
         """
         self.silent = silent
-        update_directory = meta_file["update_directory"]
-        package_name = meta_file["name"]
-        version = meta_file["version"]
+        try:
+            update_directory = meta_file["update_directory"]
+            package_name = meta_file["name"]
+            version = meta_file["version"]
+        except (KeyError, TypeError):
+            g.log("Provider package update skipped: remote meta lacks update_directory, name or version", "error")
+            return
         zip_file = f"{update_directory}{package_name}-{version}.zip"
         try:
             self._get_zip_file(url=zip_file, silent=True)
         except (requests.exceptions.ConnectionError, zipfile.BadZipFile):
             g.close_busy_dialog()
-            xbmcgui.Dialog().ok(g.ADDON_NAME, g.get_language_string(30078))
+            if self.silent:
+                g.log(f"Provider package update could not download {package_name} {version}", "warning")
+            else:
+                xbmcgui.Dialog().ok(g.ADDON_NAME, g.get_language_string(30078))
             return
 
-        result = self._install_zip()
+        try:
+            result = self._install_zip()
+        except (UnsafeZipStructure, InvalidMetaFormat, KeyError, zipfile.BadZipFile) as e:
+            g.log(f"Provider package update failed for {package_name} {version}: {e!r}", "error")
+            if not self.silent:
+                xbmcgui.Dialog().ok(g.ADDON_NAME, g.get_language_string(30072))
+            return
+        except FileIOError as e:
+            g.log(e, "error")
+            self._failed_prompt()
+            return
         if result is not None:
             g.notification(g.ADDON_NAME, g.get_language_string(30080).format(package_name))
 
@@ -311,8 +328,10 @@ class ProviderInstallManager(CustomProviders, ZipManager):
         selection = update[selection]
         self.update(selection)
 
-    @staticmethod
-    def _failed_prompt():
+    def _failed_prompt(self):
+        if self.silent:
+            g.log("Provider package install failed (silent mode, no dialog shown)", "warning")
+            return
         xbmcgui.Dialog().ok(
             g.ADDON_NAME,
             tools.create_multiline_message(line1=g.get_language_string(30077), line2=g.get_language_string(30076)),
@@ -398,21 +417,25 @@ class ProviderInstallManager(CustomProviders, ZipManager):
                 if not package["remote_meta"]:
                     continue
 
-                meta_file = session.get(package["remote_meta"], timeout=10)
-                if meta_file.status_code != 200:
-                    continue
+                try:
+                    meta_file = session.get(package["remote_meta"], timeout=10)
+                    if meta_file.status_code != 200:
+                        continue
 
-                meta_file = json.loads(meta_file.text)
+                    meta_file = json.loads(meta_file.text)
 
-                if meta_file["name"] != package["pack_name"]:
-                    g.log(f"Pack name check failure - {meta_file['name']} : {package['pack_name']}")
+                    if meta_file["name"] != package["pack_name"]:
+                        g.log(f"Pack name check failure - {meta_file['name']} : {package['pack_name']}")
+                        continue
+                    if not tools.compare_version_numbers(package["version"], meta_file["version"]):
+                        continue
+                    if not automatic:
+                        updates.append(meta_file)
+                    else:
+                        ProviderInstallManager().update(meta_file, silent)
+                except (requests.exceptions.RequestException, ValueError, KeyError, TypeError) as e:
+                    g.log(f"Provider package update check failed for {package['pack_name']}: {e!r}", "warning")
                     continue
-                if not tools.compare_version_numbers(package["version"], meta_file["version"]):
-                    continue
-                if not automatic:
-                    updates.append(meta_file)
-                else:
-                    ProviderInstallManager().update(meta_file, silent)
 
         if not silent and update_dialog:
             update_dialog.close()

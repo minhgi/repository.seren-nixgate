@@ -284,7 +284,13 @@ class MDBListSyncDatabase(mdblist_sync.MDBListSyncDatabase):
         "tmdbid" per a spec reading that turned out not to match the live
         API; that would have silently zeroed every bookmark row)."""
         try:
-            entries = self.mdblist_api.get_json("sync/playback") or []
+            entries = self.mdblist_api.get_json("sync/playback")
+            if entries is None:
+                # None means the fetch itself failed (timeout, 429, error status). It must not collapse to [] via `or []`: that
+                # would fall through to the unconditional DELETE FROM bookmarks below with nothing to reinsert, wiping every local
+                # resume point, and the caller would then move the playback_at cursor as if the pull had worked. A genuinely empty
+                # account answers [] (or an empty "items"), which is fine to proceed with.
+                raise ActivitySyncFailure("empty response from MDBList (sync/playback)")
             if isinstance(entries, dict):
                 entries = entries.get("items") or []
 
