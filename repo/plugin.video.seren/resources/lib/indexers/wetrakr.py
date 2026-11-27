@@ -26,6 +26,8 @@ LIST_MAX_PAGES = 40  # backstop for the cursor loop
 JOURNAL_PAGE_LIMIT = 1000  # entries per journal page (WeTrakr's maximum)
 JOURNAL_MAX_PAGES = 3  # a journal longer than this is not worth reading: the sync falls back to reading the lists in full
 DEFAULT_BACKOFF = 60  # seconds without requests after HTTP 429 when the answer carries no Retry-After
+MAX_BACKOFF = 86400  # a longer Retry-After is cut to a day (the longest WeTrakr quota)
+BLOCKED_UNTIL_KEY = "wetrakr.blockedUntil"  # runtime setting: epoch seconds until which an HTTP 429 asks every Seren process for silence
 SIGNED_OUT_NOTICE = "Seren.WeTrakr.SignedOutNotice"  # runtime setting: the "authorize again" notice is shown once per Kodi session
 
 # Seren's own settings of this service
@@ -35,8 +37,6 @@ EXPIRES_KEY = "wetrakr.expires"
 STATUS_KEY = "wetrakr.status"  # the signed-in marker the settings rows gate on (hidden; Account Manager writes it too)
 USERID_KEY = "wetrakr.userid"  # the WeTrakr user id (from the access token) the stored username belongs to
 USERNAME_KEY = "wetrakr.username"  # shown in the settings (GET /account is closed to third-party apps: the name comes from the public profile, see get_username)
-
-_BLOCKED_UNTIL = [0.0]  # time.monotonic() until which an HTTP 429 asks for silence (shared by every API object of this process)
 
 
 def _to_int(value, default=0):
@@ -151,7 +151,7 @@ class WeTrakrAPI:
     def _send(self, method, path, body=None, params=None, token=None, backoff=True, timeout=None):
         """One HTTP request. Returns the Response (any status) or None when nothing could be sent or no answer came (network failure,
         or an HTTP 429 asked for silence a moment ago). backoff=False is for the sign-in polls, where 429 means slow_down."""
-        if backoff and time.monotonic() < _BLOCKED_UNTIL[0]:
+        if backoff and self._blocked():
             return None
         headers = {
             "Content-Type": "application/json",
@@ -171,10 +171,17 @@ class WeTrakrAPI:
             return None
         g.log(f"WeTrakr {method} {path} -> {response.status_code}", "debug")
         if backoff and response.status_code == 429:
-            wait = _to_int(response.headers.get("Retry-After"), DEFAULT_BACKOFF) or DEFAULT_BACKOFF
-            _BLOCKED_UNTIL[0] = time.monotonic() + wait
+            wait = min(_to_int(response.headers.get("Retry-After"), DEFAULT_BACKOFF) or DEFAULT_BACKOFF, MAX_BACKOFF)
+            g.set_runtime_setting(BLOCKED_UNTIL_KEY, time.time() + wait)
             g.log(f"WeTrakr {method} {path}: HTTP 429, no requests for {wait}s", "warning")
         return response
+
+    @staticmethod
+    def _blocked():
+        """True while an HTTP 429 asks for silence. Shared by every Seren process (each sync, poll and menu runs on its own), and a
+        rejected request still counts against the account. A time further off than a day is ignored (a clock that moved)."""
+        until = g.get_float_runtime_setting(BLOCKED_UNTIL_KEY, 0.0) or 0.0
+        return 0 < until - time.time() <= MAX_BACKOFF
 
     @staticmethod
     def _json(response):
@@ -504,6 +511,7 @@ class WeTrakrAPI:
         ID only, never a client secret.
         :return: None
         """
+        g.clear_runtime_setting(BLOCKED_UNTIL_KEY)  # signing in again (maybe with another app key) lifts a pause
         response = self._send("POST", "/oauth/device/code", {"client_id": self.client_id}, backoff=False)
         data = self._json(response)
         if response is None or response.status_code != 200 or not data.get("device_code"):

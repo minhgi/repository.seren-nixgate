@@ -6,7 +6,8 @@ functions so they can be tested without Kodi: the request bodies, the reading of
 WeTrakr resolves every title by TMDb id and numbers seasons and episodes the TMDb way, so everything is sent by TMDb id (a season or an episode
 nested under its show by number). The bodies and the answer shapes were live-probed in TMDb Helper 7.5.3 (2026-11-21): a write answers 2xx with
 counts under `added` / `removed` and names what it did not do under `notFound`, `existing` or `errored`.
-WeTrakr is not a bridge service: nothing here is mirrored to Trakt, MDBList or Simkl (modules/cross_sync.py is not touched).
+Since 3.9.214 a rating, and since 3.9.215 Set as watched / unwatched, is mirrored to the other services by modules/cross_sync.py when its
+WeTrakr settings are On. Reset Resume Position, Put on hold and Drop Show are not mirrored.
 """
 
 import datetime
@@ -252,6 +253,10 @@ class WeTrakrManager:
         self._notify(STR_ALREADY if status == "already" else (STR_DONE_WATCHED if watched else STR_DONE_UNWATCHED))
         self._resync_watched()
         self._refresh()
+        if status == "ok":  # something changed on WeTrakr ('already' changes nothing and could add a second play elsewhere)
+            from resources.lib.modules import cross_sync
+
+            cross_sync.mirror_watched_from_wetrakr(info, watched)
 
     def _write_through_watched(self, target, watched):
         """A movie / an episode in the local copy at once (a show / a season is left to the read that follows). A title set as watched must
@@ -343,6 +348,9 @@ class WeTrakrManager:
         else:
             self._notify(STR_DONE_RATING_REMOVED if rating == 0 else STR_DONE_RATED)
         # a rating changes no list: nothing to refresh; the watched stamp and the journal mark are left alone (a rating is not a watched mark)
+        from resources.lib.modules import cross_sync
+
+        cross_sync.mirror_rating_from_wetrakr(target, rating)
 
     def _reset_ratings_stamp(self):
         try:

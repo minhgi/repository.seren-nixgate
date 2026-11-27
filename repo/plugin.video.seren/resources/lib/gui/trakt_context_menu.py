@@ -339,7 +339,7 @@ class TraktContextMenu:
         if scope == "wetrakr" and g.wetrakr_active():
             # Local data only (no request): Set as watched / unwatched gated on WeTrakr's own copy (wetrakr_manager.watched_gate), Rate always
             # (a rating changes nothing else on the account), Reset Resume Position only while the copy holds a resume point. Placed like
-            # MDBList's and Simkl's: the watched toggle, then Rate, Clear Progress last. WeTrakr is not a bridge service: no cross_sync.
+            # MDBList's and Simkl's: the watched toggle, then Rate, Clear Progress last. The mirrors live in wetrakr_manager.
             from resources.lib.database.wetrakr_sync import WeTrakrSyncDatabase
             from resources.lib.gui import wetrakr_manager
 
@@ -1193,6 +1193,18 @@ class TraktContextMenu:
             g.container_refresh()
         g.trigger_widget_refresh()
 
+    @staticmethod
+    def _mdblist_resync_after_season_mark(item_information):
+        if item_information.get("mediatype") != "season":
+            return
+        from resources.lib.database.mdblist_sync.activities import MDBListSyncDatabase
+
+        g.show_busy_dialog()  # the read takes several seconds with a large watched history
+        try:
+            MDBListSyncDatabase().resync_after_season_mark(item_information)
+        finally:
+            g.close_busy_dialog()
+
     def _mdblist_mark_watched(self, item_information):
         payload = self._info_to_mdblist_object(item_information)
         if payload is None:
@@ -1210,6 +1222,7 @@ class TraktContextMenu:
         from resources.lib.database.mdblist_sync import MDBListSyncDatabase
 
         MDBListSyncDatabase().write_watched_locally(item_information["mediatype"], item_information)
+        self._mdblist_resync_after_season_mark(item_information)
         cleared_progress = self._mdblist_clear_playback_entries(item_information)
 
         g.notification(
@@ -1240,6 +1253,7 @@ class TraktContextMenu:
         from resources.lib.database.mdblist_sync import MDBListSyncDatabase
 
         MDBListSyncDatabase().write_unwatched_locally(item_information["mediatype"], item_information)
+        self._mdblist_resync_after_season_mark(item_information)
 
         g.notification(
             f"{g.ADDON_NAME}: {self.header_text}",

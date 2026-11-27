@@ -41,6 +41,19 @@ class MDBListSyncDatabase(mdblist_sync.MDBListSyncDatabase):
         clear_list_cache()
         self.sync_activities()
 
+    def resync_after_season_mark(self, info):
+        """After a SEASON was set watched / unwatched (here or by a copy from another menu) read MDBList's watched data again: a season mark
+        writes no local episode rows (write_watched_locally covers movies and episodes), so the season menu would keep the old option until the
+        next periodic sync, and that sync's stamp check does not look at a season-only change. Only the watched read; no activity record is
+        written, so the periodic sync decides as before. A failed read keeps the local rows."""
+        if info.get("mediatype") != "season":
+            return
+        try:
+            with GlobalLock("mdblist.sync"):
+                self._sync_watched()
+        except Exception as e:  # pylint: disable=broad-except
+            g.log(f"MDBListSync: watched data not read again after a season mark: {e}", "error")
+
     def sync_activities(self):
         with GlobalLock("mdblist.sync"):
             if not g.get_bool_setting("mdblist.enabled") or not (g.get_setting("mdblist.auth") or g.get_setting("mdblist.apikey")):

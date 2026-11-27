@@ -116,6 +116,7 @@ try:
     bridge_trigger = BridgeTrigger()
     bridge_trigger.start()
 
+    loop_number = 0
     while not monitor.abortRequested():
         xbmc.executebuiltin('RunPlugin("plugin://plugin.video.seren/?action=runMaintenance")')
         if not g.wait_for_abort(15):  # Sleep to make sure tokens refreshed during maintenance
@@ -124,7 +125,9 @@ try:
             xbmc.executebuiltin('RunPlugin("plugin://plugin.video.seren/?action=syncMDBListActivities")')
         if not g.wait_for_abort(15):  # interpreters are never created all at once (deadlock risk under RLI)
             xbmc.executebuiltin('RunPlugin("plugin://plugin.video.seren/?action=syncSimklActivities")')
-        if g.wetrakr_active():  # WeTrakr's sync on its own tick too, only when signed in and enabled: no extra wait or interpreter for anyone else
+        # WeTrakr's sync on its own tick too, only when signed in and enabled: no extra wait or interpreter for anyone else. Every second
+        # loop (the first one included): its daily request limit is shared by all users.
+        if loop_number % 2 == 0 and g.wetrakr_active():
             if not g.wait_for_abort(15):
                 xbmc.executebuiltin('RunPlugin("plugin://plugin.video.seren/?action=syncWeTrakrActivities")')
         if not g.wait_for_abort(15):  # Sleep to let the provider syncs above actually complete first
@@ -133,6 +136,7 @@ try:
             # Orphaned-metadata cleanup (at most once a day) then the local timezone check, in one interpreter.
             # 30 s = the gap the timezone check had after bridgeSync when it was its own RunPlugin.
             xbmc.executebuiltin('RunPlugin("plugin://plugin.video.seren/?action=cycleHousekeeping")')
+        loop_number += 1
         if g.wait_for_abort(60 * randint(13, 17)):
             break
 finally:

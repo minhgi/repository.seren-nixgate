@@ -7968,13 +7968,13 @@ msgstr "Shows you've watched episodes of on WeTrakr, newest first"
 
 #: /resources/settings.xml
 msgctxt "#31734"
-msgid "Watched marks to WeTrakr"
-msgstr "Watched marks to WeTrakr"
+msgid "Watched marks with WeTrakr"
+msgstr "Watched marks with WeTrakr"
 
 #: /resources/settings.xml
 msgctxt "#31735"
-msgid "Copies the watched movies and episodes that Trakt, MDBList and Simkl hold to your WeTrakr account, one way only: nothing is read back from WeTrakr into the other services, and a title you unwatch on WeTrakr is not sent again. A title this bridge itself copied is taken off WeTrakr again once it is unwatched on all the other services (needs the removals setting \"also watched history\"); what WeTrakr already had is never removed. Specials (season 0) are left out. Up to 100 movies and 300 episodes are sent per run, so a large library takes several runs. Log only writes what would be sent to the Kodi log and sends nothing. Needs Cross-Service Sync on and a WeTrakr sign-in."
-msgstr "Copies the watched movies and episodes that Trakt, MDBList and Simkl hold to your WeTrakr account, one way only: nothing is read back from WeTrakr into the other services, and a title you unwatch on WeTrakr is not sent again. A title this bridge itself copied is taken off WeTrakr again once it is unwatched on all the other services (needs the removals setting \"also watched history\"); what WeTrakr already had is never removed. Specials (season 0) are left out. Up to 100 movies and 300 episodes are sent per run, so a large library takes several runs. Log only writes what would be sent to the Kodi log and sends nothing. Needs Cross-Service Sync on and a WeTrakr sign-in."
+msgid "On makes WeTrakr a full part of the watched movie and episode sync: what you watch on WeTrakr is copied to the other services and what they hold is copied to WeTrakr, including anything only WeTrakr has the first time. Unwatching works both ways when the removals setting is \"also watched history\", also for marks you made on WeTrakr yourself. It also counts as one of the two services the sync needs. Specials (season 0) are left out. Large libraries take several runs. Log only writes what would be copied to the Kodi log and changes nothing."
+msgstr "On makes WeTrakr a full part of the watched movie and episode sync: what you watch on WeTrakr is copied to the other services and what they hold is copied to WeTrakr, including anything only WeTrakr has the first time. Unwatching works both ways when the removals setting is \"also watched history\", also for marks you made on WeTrakr yourself. It also counts as one of the two services the sync needs. Specials (season 0) are left out. Large libraries take several runs. Log only writes what would be copied to the Kodi log and changes nothing."
 
 #: /resources/lib/gui/wetrakr_manager.py
 msgctxt "#31736"
@@ -8146,3 +8146,43 @@ msgstr "Full Scrape When Fewer Than (Sources)"
 msgctxt "#31774"
 msgid "How many playable sources a normal scrape has to find to count as enough. When it finds fewer than this, the full scrape switch that is on above runs a full scrape. Default 10. Only used while one of the two switches above is on."
 msgstr "How many playable sources a normal scrape has to find to count as enough. When it finds fewer than this, the full scrape switch that is on above runs a full scrape. Default 10. Only used while one of the two switches above is on."
+
+msgctxt "#31775"
+msgid "WeTrakr watchlist and collection"
+msgstr "WeTrakr watchlist and collection"
+
+msgctxt "#31776"
+msgid "On adds WeTrakr to the watchlist sync (its planning list) and the collection sync (its library). A title WeTrakr already has as watching, watched, on hold or dropped is not moved to planning. The sync only removes library copies it made itself, never copies you added. Needs watched marks with WeTrakr set to On. Log only writes what would be copied to the log and changes nothing."
+msgstr "On adds WeTrakr to the watchlist sync (its planning list) and the collection sync (its library). A title WeTrakr already has as watching, watched, on hold or dropped is not moved to planning. The sync only removes library copies it made itself, never copies you added. Needs watched marks with WeTrakr set to On. Log only writes what would be copied to the log and changes nothing."
+
+msgctxt "#31777"
+msgid "WeTrakr resume points"
+msgstr "WeTrakr resume points"
+
+msgctxt "#31778"
+msgid "On uploads the resume points Trakt holds to WeTrakr. No play is logged, WeTrakr keeps its own position when it is the same or newer, and it takes none for a title already watched. A movie with a resume position leaves your WeTrakr watchlist or Dropped list while it has one; clearing the position puts it back. Each point is sent once, so one you clear on WeTrakr is not put back. Resume points are not copied from WeTrakr to the other services. Needs watched marks with WeTrakr set to On. Log only writes how many would be sent to the log and changes nothing."
+msgstr "On uploads the resume points Trakt holds to WeTrakr. No play is logged, WeTrakr keeps its own position when it is the same or newer, and it takes none for a title already watched. A movie with a resume position leaves your WeTrakr watchlist or Dropped list while it has one; clearing the position puts it back. Each point is sent once, so one you clear on WeTrakr is not put back. Resume points are not copied from WeTrakr to the other services. Needs watched marks with WeTrakr set to On. Log only writes how many would be sent to the log and changes nothing."
+
+msgctxt "#31779"
+msgid "WeTrakr ratings"
+msgstr "WeTrakr ratings"
+
+msgctxt "#31780"
+msgid "On sends a rating you give or remove in Seren on Simkl to WeTrakr, and one you give or remove on WeTrakr to Trakt and MDBList. Season ratings given on WeTrakr stay there. Ratings sent to Simkl have their own setting, Simkl ratings. Ratings you already have are not copied, and ratings made on a website or in another app are not picked up. Needs watched marks with WeTrakr set to On. Log only writes what would be sent to the log and sends nothing to or from WeTrakr."
+msgstr "On sends a rating you give or remove in Seren on Simkl to WeTrakr, and one you give or remove on WeTrakr to Trakt and MDBList. Season ratings given on WeTrakr stay there. Ratings sent to Simkl have their own setting, Simkl ratings. Ratings you already have are not copied, and ratings made on a website or in another app are not picked up. Needs watched marks with WeTrakr set to On. Log only writes what would be sent to the log and sends nothing to or from WeTrakr."
+
+msgctxt "#31781"
+msgid "WeTrakr menu actions"
+msgstr "WeTrakr menu actions"
+
+msgctxt "#31782"
+msgid "On carries Mark as Watched or Unwatched from the Trakt, MDBList or Simkl manager to WeTrakr, and Set as Watched or Unwatched from the WeTrakr manager to those three. Watchlist and collection changes made in the Trakt or Simkl manager also go to WeTrakr, if WeTrakr watchlist and collection is On. A title already on a WeTrakr list is not moved to the watchlist, and a library copy you made on WeTrakr is never removed. Needs watched marks with WeTrakr set to On. Log only writes what the manager would send to the log; it sends nothing, but the background sync still works as set."
+msgstr "On carries Mark as Watched or Unwatched from the Trakt, MDBList or Simkl manager to WeTrakr, and Set as Watched or Unwatched from the WeTrakr manager to those three. Watchlist and collection changes made in the Trakt or Simkl manager also go to WeTrakr, if WeTrakr watchlist and collection is On. A title already on a WeTrakr list is not moved to the watchlist, and a library copy you made on WeTrakr is never removed. Needs watched marks with WeTrakr set to On. Log only writes what the manager would send to the log; it sends nothing, but the background sync still works as set."
+
+msgctxt "#31783"
+msgid "Simkl ratings"
+msgstr "Simkl ratings"
+
+msgctxt "#31784"
+msgid "On copies a movie or show rating you give or remove in the WeTrakr manager to Simkl. A rating can mark a title as watched on Simkl, so it is sent only for a movie Simkl lists as completed, or a show already on one of your Simkl lists. Simkl is asked right before sending. Removing a rating is sent without that check. Season and episode ratings are not sent. Needs WeTrakr ratings set to On. Log only writes what would be sent to the log and sends no rating to Simkl."
+msgstr "On copies a movie or show rating you give or remove in the WeTrakr manager to Simkl. A rating can mark a title as watched on Simkl, so it is sent only for a movie Simkl lists as completed, or a show already on one of your Simkl lists. Simkl is asked right before sending. Removing a rating is sent without that check. Season and episode ratings are not sent. Needs WeTrakr ratings set to On. Log only writes what would be sent to the log and sends no rating to Simkl."
